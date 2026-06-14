@@ -1,0 +1,116 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code
+# settings.json is user-specific (e.g., remote.autoForwardPorts affects all DevContainers)
+# settings.json はユーザー固有（例: remote.autoForwardPorts は全 DevContainer に影響）
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Sandbox runtime state (update check, etc.)
+# サンドボックス実行時の状態ファイル（更新チェックなど）
+.sandbox/.state/
+.sandbox/.host-os
+
+# Build artifacts (regenerate with: cd .sandbox/sandbox-mcp && make install)
+# ビルド成果物（再生成: cd .sandbox/sandbox-mcp && make install）
+.sandbox/sandbox-mcp/sandbox-mcp
+.sandbox/sandbox-mcp/search-history
+
+# DevContainer
+.env
+# Exclude env files, but allow samples
+# 環境変数ファイルは除外するが、サンプルは許可する
+.env.*
+!.env.example
+!.env.*.sample
+!.env.*.example
+
+# Backup files created by sync scripts
+# sync スクリプトが作成するバックアップファイル
+.sandbox/backups/
+
+
+# Secrets and sensitive data
+# Demo secrets (demo-apps/securenote-api/secrets/) are tracked with `git add -f`
+# デモ用 secrets (demo-apps/securenote-api/secrets/) は `git add -f` で追加済み
+secrets/
+*.key
+*.pem
+
+# Claude Code
+# https://docs.anthropic.com/en/docs/claude-code/settings
+#
+# Personal settings go in .claude/settings.local.json, personal commands in ~/.claude/commands/
+# Install custom commands: .sandbox/scripts/install-commands.sh --list
+#
+# To share .claude/settings.json or .claude/commands/ with your team,
+# comment out the line below and exclude only .claude/settings.local.json instead:
+#   .claude/settings.local.json
+#
+# 個人設定は .claude/settings.local.json に、個人用コマンドは ~/.claude/commands/ に配置
+# カスタムコマンドのインストール: .sandbox/scripts/install-commands.sh --list
+#
+# チームで .claude/settings.json や .claude/commands/ を共有したい場合は、
+# 下の行をコメントアウトし、代わりに .claude/settings.local.json のみ除外してください:
+#   .claude/settings.local.json
+#
+# Demo app settings (demo-apps/.claude/, demo-apps-ios/.claude/) are tracked with `git add -f`
+# デモアプリの設定 (demo-apps/.claude/, demo-apps-ios/.claude/) は `git add -f` で追加済み
+.claude/
+.claude.json
+.claude.json.backup
+
+# Gemini CLI
+# https://github.com/google-gemini/gemini-cli
+# Personal settings - use .gemini/settings.json.example as template
+# 個人設定 - .gemini/settings.json.example をテンプレートとして使用
+.gemini/
+
+# MCP server configuration (use .mcp.json.example as template)
+# MCP サーバー設定（.mcp.json.example をテンプレートとして使用）
+.mcp.json
+
+# Google Cloud
+.config/gcloud/
+
+# Docker volumes
+*.volume
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+ReleaseNotes-draft.md
+CommitMsg-draft.md
+
+# Test artifacts (from .sandbox/scripts/test-*.sh)
+.test-secrets-*
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
