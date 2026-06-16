@@ -1,109 +1,105 @@
 # host-tools
 
-このディレクトリのスクリプトは、DockMCP の `run_host_tool` 経由でホスト OS（macOS）上で実行されます。
+[日本語版はこちら](README.ja.md)
 
-## ⚠️ スクリプトを追加・変更したら必ず実行
+Scripts in this directory are executed on the host OS via DockMCP's `run_host_tool`.
+
+## ⚠️ Run after adding or modifying scripts
 
 ```bash
 dkmcp tools sync
 ```
 
-**ホスト OS 上で**上記コマンドを実行しないと、変更が DockMCP に反映されません。
+Run this on the **host OS** — changes won't take effect in DockMCP until you do.
 
-### なぜ必要か
+### Why is this needed?
 
-このディレクトリはコンテナ内（ステージング）です。
-実際に実行されるのは `~/.dkmcp/host-tools/<project-id>/` にある承認済みコピーです。
+This directory is inside the container (staging area).
+Scripts are only executed from the approved copy at `~/.dkmcp/host-tools/<project-id>/`.
 
 ```
-1. .sandbox/host-tools/ にスクリプトを置く   ← AI・開発者が編集できる
-2. dkmcp tools sync を実行                  ← ホスト OS で差分を確認・承認
-3. ~/.dkmcp/host-tools/<project-id>/ にコピー ← ここが実際に実行される
+1. Place scripts in .sandbox/host-tools/   ← AI and developers can edit here
+2. Run dkmcp tools sync                    ← Review and approve changes on host OS
+3. Approved copy goes to ~/.dkmcp/host-tools/<project-id>/  ← Only this is executed
 ```
 
-SHA256 ハッシュで変更を検知するため、**編集のたびに再承認が必要**です。
+Changes are detected via SHA256 hash, so **re-approval is required after every edit**.
 
-詳細: [docs/host-access.md](../../docs/host-access.md)
+Details: [docs/host-access.md](../../docs/host-access.md)
 
-## スクリプト一覧
+---
 
-| ファイル | 用途 |
-|---------|------|
-| `xcode-build.sh` | Xcode ビルド（構文チェック用） |
-| `xcode-test.sh` | Xcode テスト実行（xcresulttool で結果表示） |
-| `xcode-archive.sh` | Xcode アーカイブ（TestFlight / App Store 提出用） |
-| `copy-credentials.sh` | 認証情報のコピー |
-| `mac-memory.sh` | macOS メモリ使用状況確認 |
+## Scripts
 
-## xcode スクリプト共通オプション
+| File | Purpose | Platform |
+|------|---------|----------|
+| `xcode-build.sh` | Xcode build (syntax check) | macOS only |
+| `xcode-test.sh` | Xcode test runner | macOS only |
+| `xcode-archive.sh` | Xcode archive (for TestFlight / App Store submission) | macOS only |
+| `copy-credentials.sh` | Copy credentials | Cross-platform |
+| `mac-memory.sh` | macOS memory usage report | macOS only |
 
-3 つの xcode スクリプトはいずれも `.xcodeproj` を自動検出します。
+---
+
+## xcode-build.sh / xcode-test.sh / xcode-archive.sh
+
+> **macOS only.** Requires Xcode installed on the host OS.
+
+Auto-detects `.xcodeproj` and runs the build/test/archive.
 
 ```bash
-# 自動検出（WORKSPACE_DIR 2階層以内を検索）
+# Auto-detect (searches within 2 levels of WORKSPACE_DIR)
 ./xcode-build.sh
 
-# 明示指定
+# Specify project explicitly
 ./xcode-build.sh --project /path/to/MyApp.xcodeproj
 
-# スキームを指定（デフォルト: .xcodeproj のベース名）
+# Specify scheme (default: base name of .xcodeproj)
 ./xcode-build.sh --scheme MyAppDebug
 ```
 
-## xcode-test.sh の `--only` オプションについて
+### `--only` option in xcode-test.sh
 
-`--only` に指定するのは **ファイル名ではなく Swift の `struct` 名**（`@Suite` に対応する型名）。
-
-```bash
-# ❌ ファイル名で指定 → 0 テストになる
-./xcode-test.sh --only FeatureTests   # ファイル名
-
-# ✅ struct 名で指定
-./xcode-test.sh --only HandleFeatureTests   # ファイル内の struct 名
-```
-
-ファイル内に複数の `@Suite struct` がある場合、それぞれを個別に指定する必要があります。
-ファイル名と同名の外枠 `struct` を持つファイルは `--only ファイル名` でまとめて実行できます。
-
-```swift
-// 推奨パターン: 外枠 struct をファイル名と一致させる
-@Suite struct FeatureTests {             // ← --only FeatureTests で一括実行可
-    @Suite struct HandleFeatureTests { ... }
-    @Suite struct PerformFeatureTests  { ... }
-}
-```
-
-### テストターゲットの指定
-
-`--only` でターゲット名が省略された場合、`<Scheme>Tests` が自動補完されます。
-別のターゲット名の場合は `--test-target` で指定してください。
+`--only` takes a **Swift `struct` name**, not a file name.
 
 ```bash
-# デフォルト: MyAppTests/HandleFeatureTests
-./xcode-test.sh --only HandleFeatureTests
+# ✅ Specify by struct name
+./xcode-test.sh --only MyFeatureTests
 
-# 別ターゲット: MyAppIntegrationTests/HandleFeatureTests
-./xcode-test.sh --test-target MyAppIntegrationTests --only HandleFeatureTests
-
-# TargetName/ClassName 形式でも可（自動補完されない）
-./xcode-test.sh --only "MyAppTests/HandleFeatureTests"
+# ❌ Specify by file name → 0 tests run
+./xcode-test.sh --only MyFeature   # file name
 ```
 
-### UI テストの実行
-
-デフォルトでは `<Scheme>UITests` ターゲットはスキップされます。
+Use `--test-target` to specify a test target explicitly.
 
 ```bash
-# UI テストもあわせて実行
-./xcode-test.sh --no-skip-ui-tests
+# Default: <Scheme>Tests/MyFeatureTests
+./xcode-test.sh --only MyFeatureTests
+
+# Specify a different target
+./xcode-test.sh --test-target MyAppIntegrationTests --only MyFeatureTests
 ```
 
-## ビルドエラーの確認方法
+UI tests are skipped by default. Pass `--no-skip-ui-tests` to include them.
 
-`xcode-build.sh` 実行後にエラーが出た場合、サマリーが以下に保存されます：
+### Checking build errors
+
+After running `xcode-build.sh`, any errors are saved to:
 
 ```
 <workspace>/tmp/xcode-build-errors.txt
 ```
 
-コンテナ内から `Read` ツールで直接読めます。
+Readable from inside the container with the Read tool.
+
+---
+
+## copy-credentials.sh
+
+Copies credentials to the appropriate location. Works cross-platform.
+
+---
+
+## mac-memory.sh
+
+> **macOS only.** Reports memory usage on macOS.
