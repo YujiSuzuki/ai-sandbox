@@ -29,6 +29,8 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_VALIDATE_FAILED="⚠️  秘匿検証に失敗しました"
     MSG_SYNC_CHECK_FAILED="⚠️  秘匿同期チェックに失敗しましたが、続行します..."
     MSG_REGISTERING="📦 SandboxMCP 登録"
+    MSG_FETCHING="  📥 sandbox-mcp を取得中..."
+    MSG_FETCH_FAILED="⚠️  sandbox-mcp の取得に失敗しましたが、続行します..."
     MSG_REGISTER_FAILED="⚠️  SandboxMCP 登録に失敗しましたが、続行します..."
     MSG_NO_GO="⚠️  Go がインストールされていないため、SandboxMCP 登録をスキップします"
     MSG_DKMCP_REGISTER_FAILED="⚠️  DockMCP 登録に失敗しましたが、続行します..."
@@ -42,6 +44,8 @@ else
     MSG_VALIDATE_FAILED="⚠️  Secret validation failed"
     MSG_SYNC_CHECK_FAILED="⚠️  Secret sync check failed, but continuing..."
     MSG_REGISTERING="📦 Registering SandboxMCP"
+    MSG_FETCHING="  📥 Fetching sandbox-mcp..."
+    MSG_FETCH_FAILED="⚠️  Failed to fetch sandbox-mcp, but continuing..."
     MSG_REGISTER_FAILED="⚠️  SandboxMCP registration failed, but continuing..."
     MSG_NO_GO="⚠️  Go not installed, skipping SandboxMCP registration"
     MSG_DKMCP_REGISTER_FAILED="⚠️  DockMCP registration failed, but continuing..."
@@ -105,13 +109,22 @@ fi
 # 7. Register SandboxMCP (if Go is available)
 # SandboxMCP 登録（Go がある場合）
 if command -v go >/dev/null 2>&1; then
+    SANDBOX_MCP_DIR="/workspace/.sandbox/sandbox-mcp"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "$MSG_REGISTERING"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    make -C /workspace/.sandbox/sandbox-mcp register || {
-        echo "$MSG_REGISTER_FAILED"
-    }
+    if [ ! -d "$SANDBOX_MCP_DIR" ]; then
+        echo "$MSG_FETCHING"
+        git clone https://github.com/YujiSuzuki/sandbox-mcp "$SANDBOX_MCP_DIR" || {
+            echo "$MSG_FETCH_FAILED"
+        }
+    fi
+    if [ -d "$SANDBOX_MCP_DIR" ]; then
+        make -C "$SANDBOX_MCP_DIR" install && make -C "$SANDBOX_MCP_DIR" register || {
+            echo "$MSG_REGISTER_FAILED"
+        }
+    fi
 else
     echo ""
     echo "$MSG_NO_GO"
