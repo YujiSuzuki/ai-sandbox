@@ -20,6 +20,8 @@ All you need is **Docker** and **VS Code**. [CLI-only usage is also supported](d
 This project is designed for local development environments and is not intended for production use. See "[Limitations](#limitations)" and "[FAQ](#faq)" for details.
 
 > [!NOTE]
+> **DockMCP** is an optional companion tool that runs on your **host OS** to enable cross-container access from inside the sandbox. It is maintained as a [separate repository](https://github.com/YujiSuzuki/dkmcp) and installed independently — this template works without it if you don't need cross-container access.
+>
 > **Using DockMCP standalone with CLI tools (Claude Code, Gemini CLI, etc.) is not recommended.** CLI tools running on the host OS can execute `docker` commands directly, so there is no benefit to routing through DockMCP. However, for apps like **Claude Desktop** that can only access external systems via MCP, DockMCP standalone is useful for container operations. For standalone setup, see [DockMCP README](https://github.com/YujiSuzuki/dkmcp#readme).
 
 

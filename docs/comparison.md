@@ -13,7 +13,7 @@ How AI Sandbox + DockMCP compares to other AI security tools, and why they work 
 [Claude Code Sandboxing](https://code.claude.com/docs/en/sandboxing) uses OS-level primitives (Seatbelt on macOS, bubblewrap on Linux) to restrict filesystem writes and network access. You can also add `Read` deny rules in permissions to block AI from reading specific files.
 
 **Strengths:**
-- OS-level execution restrictions (no extra setup)
+- OS-level execution restrictions (no extra setup on macOS; Linux/WSL2 requires installing `bubblewrap` and `socat`)
 - Read deny rules to block access to specific files
 - Reduces permission fatigue
 
@@ -103,4 +103,4 @@ You can use Claude Code's sandbox *inside* the AI Sandbox for maximum protection
 | Cross-container access | Restricted | Isolated | Controlled via DockMCP |
 | Secret masking in output | No | No | Automatic |
 | Startup validation | No | No | Automatic sync check |
-| Setup complexity | None (built-in) | Docker Desktop | Docker + docker-compose |
+| Setup complexity | None on macOS; bubblewrap/socat on Linux/WSL2 | Docker Desktop | Docker + docker-compose |
