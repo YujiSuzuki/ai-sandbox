@@ -12,7 +12,7 @@
 # Options:
 #   --check       Silent check (exit code: 0=connected, 1=not registered, 2=registered but offline)
 #   --status      Human-readable status report
-#   --url <url>   Custom DockMCP URL (default: http://host.docker.internal:8080/sse)
+#   --url <url>   Custom DockMCP URL (default: http://host.docker.internal:18080/sse)
 #   --unregister  Remove DockMCP from all detected AI tools
 #   --help, -h    Show this help
 #
@@ -34,7 +34,7 @@
 # オプション:
 #   --check       サイレントチェック（終了コード: 0=接続済, 1=未登録, 2=登録済だがオフライン）
 #   --status      人向けのステータスレポート
-#   --url <url>   カスタム DockMCP URL（デフォルト: http://host.docker.internal:8080/sse）
+#   --url <url>   カスタム DockMCP URL（デフォルト: http://host.docker.internal:18080/sse）
 #   --unregister  全 AI ツールから DockMCP を削除
 #   --help, -h    ヘルプ表示
 
@@ -111,7 +111,7 @@ fi
 # ─── Constants / 定数 ──────────────────────────────────────────
 
 WORKSPACE="${WORKSPACE:-/workspace}"
-DEFAULT_URL="http://host.docker.internal:8080/sse"
+DEFAULT_URL="http://host.docker.internal:18080/sse"
 DKMCP_NAME="dkmcp"
 
 # ─── Help / ヘルプ ─────────────────────────────────────────────

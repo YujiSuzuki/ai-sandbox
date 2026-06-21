@@ -239,8 +239,8 @@ rm /usr/local/bin/dkmcp
 
 Claude CodeがDockMCPツールを認識しない場合：
 
-1. **VS Codeのポートパネルを確認** - DockMCPのポート（デフォルトでは8080）がフォワードされていたら停止
-2. **DockMCPが実行中か確認** - `curl http://localhost:8080/health`（ホストOS上で）
+1. **VS Codeのポートパネルを確認** - DockMCPのポート（デフォルトでは18080）がフォワードされていたら停止
+2. **DockMCPが実行中か確認** - `curl http://localhost:18080/health`（ホストOS上で）
 3. **MCP再接続を試す** - Claude Codeで `/mcp` を実行し、「Reconnect」を選択
 4. **VS Codeを完全に再起動**（Cmd+Q / Alt+F4）- Reconnectで解決しない場合
 
@@ -299,7 +299,7 @@ dkmcp client logs securenote-api
 dkmcp client exec securenote-api "npm test"
 ```
 
-> **`--url` について:** デフォルトで `http://host.docker.internal:8080` に接続します。`dkmcp.yaml` でサーバーのポートを変更した場合は、`--url` フラグまたは環境変数 `DOCKMCP_SERVER_URL` で明示的に指定してください。
+> **`--url` について:** デフォルトで `http://host.docker.internal:18080` に接続します。`dkmcp.yaml` でサーバーのポートを変更した場合は、`--url` フラグまたは環境変数 `DOCKMCP_SERVER_URL` で明示的に指定してください。
 > ```bash
 > dkmcp client list --url http://host.docker.internal:9090
 > # または

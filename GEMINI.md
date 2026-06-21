@@ -154,8 +154,8 @@ If DockMCP MCP tools are not available, proactively check registration and offer
 
 If `--check` returns 1 (not registered), offer to run `setup-dkmcp.sh` for the user.
 If `--check` returns 2 (registered but offline), troubleshoot in this order:
-1. **Check VS Code Ports panel** — stop forwarding port 8080 if listed (most common cause)
-2. **Verify DockMCP is running on host**: `curl http://localhost:8080/health`
+1. **Check VS Code Ports panel** — stop forwarding port 18080 if listed (most common cause)
+2. **Verify DockMCP is running on host**: `curl http://localhost:18080/health`
 3. **Restart VS Code completely** (Cmd+Q → reopen)
 
 For DockMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#dockmcp-setup-and-troubleshooting).

@@ -153,7 +153,7 @@ test_check_registered_but_offline() {
   "mcpServers": {
     "dkmcp": {
       "type": "sse",
-      "url": "http://host.docker.internal:8080/sse"
+      "url": "http://host.docker.internal:18080/sse"
     }
   }
 }
@@ -187,7 +187,7 @@ test_register_fallback_creates_mcp_json() {
   "mcpServers": {
     "dkmcp": {
       "type": "sse",
-      "url": "http://host.docker.internal:8080/sse"
+      "url": "http://host.docker.internal:18080/sse"
     }
   }
 }
@@ -255,7 +255,7 @@ test_unregister_removes_dkmcp() {
   "mcpServers": {
     "dkmcp": {
       "type": "sse",
-      "url": "http://host.docker.internal:8080/sse"
+      "url": "http://host.docker.internal:18080/sse"
     },
     "sandbox-mcp": {
       "type": "stdio",
@@ -381,7 +381,7 @@ test_detect_claude_user_scope() {
   "mcpServers": {
     "dkmcp": {
       "type": "sse",
-      "url": "http://host.docker.internal:8080/sse"
+      "url": "http://host.docker.internal:18080/sse"
     }
   }
 }
@@ -419,7 +419,7 @@ test_detect_claude_project_scope() {
       "mcpServers": {
         "dkmcp": {
           "type": "sse",
-          "url": "http://host.docker.internal:8080/sse"
+          "url": "http://host.docker.internal:18080/sse"
         }
       }
     }
@@ -493,7 +493,7 @@ test_gemini_unregister() {
   "mcpServers": {
     "dkmcp": {
       "type": "sse",
-      "url": "http://host.docker.internal:8080/sse"
+      "url": "http://host.docker.internal:18080/sse"
     },
     "other-mcp": {
       "type": "stdio",
@@ -541,7 +541,7 @@ test_detect_gemini_registered() {
   "mcpServers": {
     "dkmcp": {
       "type": "sse",
-      "url": "http://host.docker.internal:8080/sse"
+      "url": "http://host.docker.internal:18080/sse"
     }
   }
 }

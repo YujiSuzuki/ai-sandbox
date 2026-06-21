@@ -77,7 +77,7 @@ RUN sudo apt-get update && sudo apt-get install -y iptables ipset curl \
 
 DockMCP communicates with the host OS via `host.docker.internal`. The official script allows host network traffic, so DockMCP should work without issues.
 
-If you experience connection problems, verify that the firewall rules allow access to the DockMCP port (default: 8080).
+If you experience connection problems, verify that the firewall rules allow access to the DockMCP port (default: 18080).
 
 ### Using AI tools other than Claude Code
 

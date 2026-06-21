@@ -222,10 +222,10 @@ In the AI Sandbox shell:
 
 ```bash
 # Claude Code
-claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:18080/sse
 
 # Gemini CLI
-gemini mcp add --transport sse dkmcp http://host.docker.internal:8080/sse
+gemini mcp add --transport sse dkmcp http://host.docker.internal:18080/sse
 ```
 
 For Claude Code, run `/mcp` → "Reconnect".

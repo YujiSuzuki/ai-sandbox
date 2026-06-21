@@ -199,7 +199,7 @@ dkmcp serve --config configs/dkmcp.example.yaml --sync
 ### Expected Result
 
 ```
-DockMCP server started on :8080
+DockMCP server started on :18080
 Security mode: moderate
 Allowed containers: securenote-*, demo-*
 ```
@@ -209,7 +209,7 @@ Keep this terminal open (the server keeps running).
 ### Verify Connection (from another host terminal)
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:18080/health
 # → 200 OK means success
 ```
 
@@ -221,10 +221,10 @@ Switch back to the **VS Code DevContainer terminal**:
 
 ```bash
 # For Claude Code
-claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:18080/sse
 
 # For Gemini CLI
-gemini mcp add --transport sse dkmcp http://host.docker.internal:8080/sse
+gemini mcp add --transport sse dkmcp http://host.docker.internal:18080/sse
 ```
 
 After registering, activate the connection:
@@ -255,7 +255,7 @@ Try asking the AI:
 
 - See [Troubleshooting](reference.md#troubleshooting)
 - Verify the DockMCP server is running (Step 5)
-- Check if port 8080 is being forwarded in VS Code's Ports panel — if so, stop it
+- Check if port 18080 is being forwarded in VS Code's Ports panel — if so, stop it
 
 ---
 
@@ -342,8 +342,8 @@ With setup complete, continue based on what you want to do.
 
 ### Can't connect to DockMCP
 
-1. Verify the DockMCP server is running: `curl http://localhost:8080/health`
-2. Check if port 8080 is being forwarded in VS Code's Ports panel — if so, stop it
+1. Verify the DockMCP server is running: `curl http://localhost:18080/health`
+2. Check if port 18080 is being forwarded in VS Code's Ports panel — if so, stop it
 3. Try `/mcp` → "Reconnect"
 4. Restart VS Code completely (`Cmd+Q` → reopen)
 

@@ -19,7 +19,7 @@ Detailed diagrams explaining how AI Sandbox + DockMCP works.
 │  │  Container access gateway                    │ │   │
 │  │                                              │ │   │
 │  └────────────────────↑─────────────────────────┘ │   │
-│                       │ :8080                     │   │
+│                       │ :18080                     │   │
 │  ┌────────────────────│─────────────────────────┐ │   │
 │  │ Docker Engine      │                         │ │   │
 │  │                    │                         │ │   │
@@ -40,11 +40,11 @@ Detailed diagrams explaining how AI Sandbox + DockMCP works.
 <details>
 <summary>Tree format</summary>
 
-**Data flow:** AI (AI Sandbox) → DockMCP (:8080) → Other containers
+**Data flow:** AI (AI Sandbox) → DockMCP (:18080) → Other containers
 
 ```
 Host OS
-├── DockMCP Server (:8080)
+├── DockMCP Server (:18080)
 │   ├── HTTP/SSE API for AI
 │   ├── Security policy enforcement
 │   └── Container access gateway

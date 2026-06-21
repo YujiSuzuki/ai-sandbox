@@ -33,22 +33,22 @@ Use DockMCP MCP tools to interact with other containers:
 If MCP tools are not available, diagnose with:
 
 ```bash
-dkmcp client list --url http://host.docker.internal:8080
+dkmcp client list --url http://host.docker.internal:18080
 ```
 
 | Result | Symptom | Cause | Solution |
 |--------|---------|-------|----------|
 | ✅ Success | Container list displayed | MCP connection not established | Restart VS Code (Cmd+Q / Alt+F4) |
-| ❌ Failure | Timeout / No response | Port forwarding interference | Stop port 8080 in VS Code Ports panel, restart |
+| ❌ Failure | Timeout / No response | Port forwarding interference | Stop port 18080 in VS Code Ports panel, restart |
 
 ### Fallback: DockMCP Client Commands
 
 If MCP tools are unavailable, use `dkmcp client` directly:
 
 ```bash
-dkmcp client list --url http://host.docker.internal:8080
-dkmcp client logs --url http://host.docker.internal:8080 securenote-api
-dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm test"
+dkmcp client list --url http://host.docker.internal:18080
+dkmcp client logs --url http://host.docker.internal:18080 securenote-api
+dkmcp client exec --url http://host.docker.internal:18080 securenote-api "npm test"
 ```
 
 If `dkmcp` not found, tell user to run: `cd /workspace/dkmcp && make install`

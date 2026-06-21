@@ -239,8 +239,8 @@ rm /usr/local/bin/dkmcp
 
 If Claude Code doesn't recognize DockMCP tools:
 
-1. **Check VS Code ports panel** - Stop if DockMCP's port (default 8080) is being forwarded
-2. **Verify DockMCP is running** - `curl http://localhost:8080/health` (on host OS)
+1. **Check VS Code ports panel** - Stop if DockMCP's port (default 18080) is being forwarded
+2. **Verify DockMCP is running** - `curl http://localhost:18080/health` (on host OS)
 3. **Try MCP reconnect** - In Claude Code, run `/mcp` and select "Reconnect"
 4. **Fully restart VS Code** (Cmd+Q / Alt+F4) - If Reconnect doesn't help
 
@@ -299,7 +299,7 @@ dkmcp client logs securenote-api
 dkmcp client exec securenote-api "npm test"
 ```
 
-> **About `--url`:** Defaults to `http://host.docker.internal:8080`. If you changed the server port in `dkmcp.yaml`, specify it explicitly via the `--url` flag or `DOCKMCP_SERVER_URL` environment variable.
+> **About `--url`:** Defaults to `http://host.docker.internal:18080`. If you changed the server port in `dkmcp.yaml`, specify it explicitly via the `--url` flag or `DOCKMCP_SERVER_URL` environment variable.
 > ```bash
 > dkmcp client list --url http://host.docker.internal:9090
 > # or

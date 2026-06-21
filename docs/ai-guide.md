@@ -26,7 +26,7 @@ If DockMCP server is restarted, SSE connections drop. Inform user to run `/mcp` 
 
 ```bash
 # Inside AI Sandbox
-claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:18080/sse
 ```
 
 After adding, restart VS Code for it to connect.
@@ -37,7 +37,7 @@ Check if tools like `list_containers`, `get_logs` are available.
 
 ### Troubleshooting
 
-1. **Verify DockMCP is running**: `curl http://localhost:8080/health` (on host OS)
+1. **Verify DockMCP is running**: `curl http://localhost:18080/health` (on host OS)
 2. **Try MCP Reconnect**: `/mcp` → "Reconnect" in Claude Code
 3. **Restart VS Code completely**: Cmd+Q (macOS) / Alt+F4 (Windows/Linux)
 
@@ -45,7 +45,7 @@ If issues persist, verify MCP configuration:
 
 ```bash
 cat ~/.claude.json | jq '.mcpServers.dkmcp'
-# Should show: "url": "http://host.docker.internal:8080/sse"
+# Should show: "url": "http://host.docker.internal:18080/sse"
 ```
 
 **"Client not initialized" error:** Even when `/mcp` shows "connected", MCP tools may fail. This is caused by VS Code extension session management timing issues. Try:

@@ -1721,7 +1721,7 @@ test_dkmcp_port_flag_effective() {
     if [ "$DRY_RUN" = "true" ]; then
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would start server with --port $test_port" "--port $test_port でサーバー起動")${NC}"
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would verify server responds on port $test_port" "ポート $test_port で応答を確認")${NC}"
-        echo -e "  ${BLUE}[DRY-RUN] $(msg "Would verify server does NOT respond on default port 8080" "デフォルトポート 8080 で応答しないことを確認")${NC}"
+        echo -e "  ${BLUE}[DRY-RUN] $(msg "Would verify server does NOT respond on default port 18080" "デフォルトポート 18080 で応答しないことを確認")${NC}"
         pass "$(msg "--port flag effectiveness (dry-run)" "--port フラグ有効性 (dry-run)")"
         return
     fi
@@ -1757,10 +1757,10 @@ test_dkmcp_port_flag_effective() {
         responds_on_custom=true
     fi
 
-    # Test 2: Server should NOT respond on default port 8080 (unless something else is running)
-    # テスト2: デフォルトポート8080では応答しないか（他のプロセスが使用中でない限り）
+    # Test 2: Server should NOT respond on default port 18080 (unless something else is running)
+    # テスト2: デフォルトポート18080では応答しないか（他のプロセスが使用中でない限り）
     local responds_on_default=false
-    if curl -s --max-time 2 "http://localhost:8080/health" >/dev/null 2>&1; then
+    if curl -s --max-time 2 "http://localhost:18080/health" >/dev/null 2>&1; then
         responds_on_default=true
     fi
 

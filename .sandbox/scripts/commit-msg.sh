@@ -537,7 +537,7 @@ if [[ -z "$MSG_FILE" ]]; then
     echo -e "${BOLD}${MSG_RECENT}${NC}"
     echo "──────────────────────────────────────"
     echo ""
-    git log -n 5 --format="  %C(dim)%h%C(reset) %s" 2>/dev/null || true
+    git log -n 5 --format="  %C(dim)%h%C(reset) %s%n%w(0,4,4)%+b" 2>/dev/null || true
     echo ""
     echo "──────────────────────────────────────"
     echo ""
