@@ -101,7 +101,7 @@
 
   // Before container build: auto-create env files from .example templates (first-time setup)
   // コンテナビルド前: .example テンプレートから環境変数ファイルを自動生成（初回セットアップ）
-  "initializeCommand": ".sandbox/scripts/init-host-env.sh .",
+  "initializeCommand": ".sandbox/scripts/init-host-env.sh --silent .",
 
   // On startup: run orchestrated startup script
   // 起動時: 統合起動スクリプトを実行

@@ -108,9 +108,9 @@ test_creates_env_sandbox_from_example() {
     # .env.sandbox.example を作成
     echo "TEST_VAR=test_value" > "$TEST_PROJECT/.env.sandbox.example"
 
-    # Run script
-    # スクリプトを実行
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Run script in silent mode
+    # サイレントモードで実行
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         local content
@@ -138,7 +138,7 @@ test_creates_empty_env_sandbox() {
     # Don't create .env.sandbox.example
     # .env.sandbox.example を作成しない
 
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if [ ! -s "$TEST_PROJECT/.env.sandbox" ]; then
@@ -165,7 +165,7 @@ test_creates_cli_env_from_example() {
     # Create .env.example
     echo "CLI_VAR=cli_value" > "$TEST_PROJECT/cli_sandbox/.env.example"
 
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/cli_sandbox/.env" ]; then
         local content
@@ -193,7 +193,7 @@ test_creates_empty_cli_env() {
 
     # Don't create .env.example
 
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/cli_sandbox/.env" ]; then
         if [ ! -s "$TEST_PROJECT/cli_sandbox/.env" ]; then
@@ -224,7 +224,7 @@ test_skips_existing_env_sandbox() {
     # 異なる内容の .env.sandbox.example を作成
     echo "NEW_VALUE=should_not_replace" > "$TEST_PROJECT/.env.sandbox.example"
 
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     local content
     content=$(cat "$TEST_PROJECT/.env.sandbox")
@@ -252,7 +252,7 @@ test_skips_existing_cli_env() {
     # Create different .env.example
     echo "NEW_CLI=should_not_replace" > "$TEST_PROJECT/cli_sandbox/.env.example"
 
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     local content
     content=$(cat "$TEST_PROJECT/cli_sandbox/.env")
@@ -275,7 +275,7 @@ test_skips_missing_cli_sandbox_dir() {
 
     # Don't create cli_sandbox directory
 
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ ! -d "$TEST_PROJECT/cli_sandbox" ]; then
         pass "Does not create cli_sandbox directory"
@@ -295,7 +295,7 @@ test_output_shows_initialization() {
     setup
 
     local output
-    output=$(bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+    output=$(bash "$SCRIPT" --silent "$TEST_PROJECT" 2>&1)
 
     if echo "$output" | grep -q "Created\|作成"; then
         pass "Output shows initialization message"
@@ -315,8 +315,8 @@ test_uses_current_directory() {
     setup
     cd "$TEST_PROJECT"
 
-    # Run without argument
-    bash "$SCRIPT" > /dev/null 2>&1
+    # Run without project_root argument (silent mode to avoid interactive prompt)
+    bash "$SCRIPT" --silent > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         pass "Uses current directory when no argument"
@@ -337,15 +337,15 @@ test_help_option() {
     local output
     output=$(bash "$SCRIPT" --help 2>&1)
 
-    if echo "$output" | grep -q "interactive" && echo "$output" | grep -q "対話モード"; then
+    if echo "$output" | grep -q "silent" && echo "$output" | grep -q "サイレントモード"; then
         pass "--help shows usage information"
     else
-        fail "--help should show usage with interactive mode info"
+        fail "--help should show usage with silent mode info"
     fi
 }
 
 # Test 12: Interactive mode with Japanese selection (new file)
-# テスト12: 対話モードで日本語選択（新規ファイル）
+# テスト12: 対話モード（デフォルト）で日本語選択（新規ファイル）
 test_interactive_japanese_new_file() {
     echo ""
     echo "=== Test: Interactive mode with Japanese selection (new file) ==="
@@ -358,8 +358,8 @@ NODE_ENV=development
 LANG=C.UTF-8
 EOF
 
-    # Run with interactive mode, select Japanese (2), decline TZ (2)
-    echo -e "2\n2" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2)
+    echo -e "2\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -375,7 +375,7 @@ EOF
 }
 
 # Test 13: Interactive mode with English selection (new file)
-# テスト13: 対話モードで英語選択（新規ファイル）
+# テスト13: 対話モード（デフォルト）で英語選択（新規ファイル）
 test_interactive_english_new_file() {
     echo ""
     echo "=== Test: Interactive mode with English selection (new file) ==="
@@ -387,8 +387,8 @@ NODE_ENV=development
 LANG=ja_JP.UTF-8
 EOF
 
-    # Run with interactive mode, select English (1)
-    echo "1" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    # Run in default (interactive) mode, select English (1)
+    echo "1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -404,7 +404,7 @@ EOF
 }
 
 # Test 14: Interactive mode updates existing file when confirmed
-# テスト14: 対話モードで既存ファイルを確認後に更新
+# テスト14: 対話モード（デフォルト）で既存ファイルを確認後に更新
 test_interactive_update_existing() {
     echo ""
     echo "=== Test: Interactive mode updates existing file when confirmed ==="
@@ -414,8 +414,8 @@ test_interactive_update_existing() {
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
-    # Run with interactive mode, select Japanese (2), decline TZ (2), confirm update (y)
-    echo -e "2\n2\ny" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), confirm update (y)
+    echo -e "2\n2\ny" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode updates language when confirmed"
@@ -427,7 +427,7 @@ test_interactive_update_existing() {
 }
 
 # Test 15: Interactive mode preserves existing file when declined
-# テスト15: 対話モードで更新を拒否した場合は既存ファイルを保持
+# テスト15: 対話モード（デフォルト）で更新を拒否した場合は既存ファイルを保持
 test_interactive_decline_update() {
     echo ""
     echo "=== Test: Interactive mode preserves existing file when declined ==="
@@ -437,8 +437,8 @@ test_interactive_decline_update() {
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
-    # Run with interactive mode, select Japanese (2), decline TZ (2), decline update (n)
-    echo -e "2\n2\nn" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline update (n)
+    echo -e "2\n2\nn" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode preserves language when declined"
@@ -464,7 +464,7 @@ LANG=C.UTF-8
 EOF
 
     # Select Japanese (2), accept TZ (1 = default)
-    echo -e "2\n1" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    echo -e "2\n1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
@@ -494,7 +494,7 @@ LANG=C.UTF-8
 EOF
 
     # Select Japanese (2), decline TZ (2)
-    echo -e "2\n2" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    echo -e "2\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
@@ -524,7 +524,7 @@ LANG=C.UTF-8
 EOF
 
     # Select English (1) — no TZ prompt should appear
-    echo "1" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    echo "1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
@@ -554,7 +554,7 @@ LANG=C.UTF-8
 EOF
 
     # Select Japanese (2), accept TZ (1), confirm update (y)
-    echo -e "2\n1\ny" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    echo -e "2\n1\ny" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
         pass "TZ=Asia/Tokyo added to existing file"
@@ -574,7 +574,7 @@ test_creates_host_os_file() {
     setup
     mkdir -p "$TEST_PROJECT/.sandbox"
 
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     local host_os_file="$TEST_PROJECT/.sandbox/.host-os"
     if [ ! -f "$host_os_file" ]; then
@@ -627,7 +627,7 @@ test_host_os_file_overwritten() {
     # 古い .host-os を作成
     printf "oldos\noldarch\n" > "$TEST_PROJECT/.sandbox/.host-os"
 
-    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
     local os_name
     os_name=$(sed -n '1p' "$TEST_PROJECT/.sandbox/.host-os")

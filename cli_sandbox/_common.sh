@@ -93,7 +93,7 @@ set -- "${REMAINING_ARGS[@]}"
 
 # Host-side initialization: create env files from templates and write host OS info
 # ホスト側の初期化: テンプレートからenvファイル作成、ホストOS情報の書き出し
-.sandbox/scripts/init-host-env.sh .
+.sandbox/scripts/init-host-env.sh --silent .
 
 # Load environment files for docker-compose variable substitution
 # docker-compose.yml の変数置換(${...})を有効にするため、事前に環境変数を読み込む

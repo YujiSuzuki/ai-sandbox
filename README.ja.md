@@ -150,7 +150,7 @@ DockMCP とは別に **SandboxMCP** がコンテナ内で動作し、`.sandbox/`
 > [!TIP]
 > **💡 日本語環境にする場合:** DevContainer（または cli_sandbox）を開く前に、ホストOS上で以下を実行：
 > ```bash
-> .sandbox/scripts/init-host-env.sh -i
+> .sandbox/scripts/init-host-env.sh
 > ```
 > 言語選択で `2) 日本語` を選ぶと、コンテナ内のターミナル出力が日本語になります。
 > （コンテナ内からでも実行できます）

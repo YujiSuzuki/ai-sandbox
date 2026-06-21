@@ -6,43 +6,43 @@
 # Architecture conversion: x86_64→amd64, aarch64→arm64 for cross-build compatibility
 #
 # Usage:
-#   Automatic (startup):  init-host-env.sh [project_root]
-#   Manual (interactive): init-host-env.sh -i [project_root]
-#                         init-host-env.sh --interactive [project_root]
+#   Interactive (default): init-host-env.sh [project_root]
+#   Silent (startup):      init-host-env.sh --silent [project_root]
+#                          init-host-env.sh -s [project_root]
 #
 # This script is called from:
-#   - cli_sandbox/_common.sh (CLI sandbox startup)
-#   - .devcontainer/devcontainer.json initializeCommand (DevContainer startup)
+#   - cli_sandbox/_common.sh (CLI sandbox startup) — with --silent
+#   - .devcontainer/devcontainer.json initializeCommand (DevContainer startup) — with --silent
 #
 # Writes host OS info to .sandbox/.host-os for cross-build support (used by dkmcp/Makefile build-host)
 # ---
 # ホスト側の初期化: テンプレートからenvファイル作成、ホストOS情報の書き出し
 #
 # 使用法:
-#   自動（起動時）:       init-host-env.sh [project_root]
-#   手動（対話式）:       init-host-env.sh -i [project_root]
-#                         init-host-env.sh --interactive [project_root]
+#   対話式（デフォルト）: init-host-env.sh [project_root]
+#   サイレント（起動時）: init-host-env.sh --silent [project_root]
+#                         init-host-env.sh -s [project_root]
 #
 # クロスビルド用にホストOS情報を .sandbox/.host-os に書き出す
 
 set -euo pipefail
 
 # Parse arguments / 引数のパース
-INTERACTIVE=false
+INTERACTIVE=true
 PROJECT_ROOT="."
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -i|--interactive)
-            INTERACTIVE=true
+        -s|--silent)
+            INTERACTIVE=false
             shift
             ;;
         -h|--help)
-            echo "Usage: init-host-env.sh [-i|--interactive] [project_root]"
-            echo "  -i, --interactive  Enable interactive mode (prompt for language)"
-            echo "                     対話モードを有効化（言語を選択できます）"
-            echo "  project_root       Project root directory (default: current directory)"
-            echo "                     プロジェクトルート（デフォルト: カレントディレクトリ）"
+            echo "Usage: init-host-env.sh [--silent] [project_root]"
+            echo "  -s, --silent  Silent mode: skip interactive prompts (used on startup)"
+            echo "                サイレントモード: 対話をスキップ（起動時自動実行用）"
+            echo "  project_root  Project root directory (default: current directory)"
+            echo "                プロジェクトルート（デフォルト: カレントディレクトリ）"
             exit 0
             ;;
         *)
