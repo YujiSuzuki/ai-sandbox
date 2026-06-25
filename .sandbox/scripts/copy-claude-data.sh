@@ -56,6 +56,15 @@ done
 
 [[ -z "$DEST" ]] && { echo "Error: dest-dir is required" >&2; usage; }
 
+show_diff_if_changed() {
+    local src="$1"
+    local dest="$2"
+    if [[ -f "$dest" ]] && ! diff -q "$src" "$dest" > /dev/null 2>&1; then
+        echo "    [diff: $dest]"
+        diff --color=always -u "$dest" "$src" | sed 's/^/    /' || true
+    fi
+}
+
 copy_dir() {
     local src="$1"
     local dest="$2"
@@ -72,6 +81,7 @@ copy_dir() {
         local rel="${file#$src/}"
         local dest_file="$dest/$rel"
         mkdir -p "$(dirname "$dest_file")"
+        show_diff_if_changed "$file" "$dest_file"
         cp -p "$file" "$dest_file"
         count=$((count + 1))
     done < <(find "$src" -type f -print0)
@@ -89,6 +99,7 @@ copy_file() {
     fi
 
     mkdir -p "$(dirname "$dest")"
+    show_diff_if_changed "$src" "$dest"
     cp -p "$src" "$dest"
     echo "  $label → $dest"
 }

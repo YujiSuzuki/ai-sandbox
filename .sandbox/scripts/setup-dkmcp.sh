@@ -1,5 +1,6 @@
 #!/bin/bash
 # setup-dkmcp.sh
+# ⚠️ このスクリプトはコンテナ（サンドボックス）内専用です。ホスト OS では動作しません。
 # Register DockMCP as an MCP server for AI tools (Claude Code, Gemini CLI)
 #
 # Detects available AI tools and registers DockMCP as an SSE MCP server.

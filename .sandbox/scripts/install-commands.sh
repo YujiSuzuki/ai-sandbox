@@ -133,7 +133,7 @@ list_commands() {
     local files=()
     while IFS= read -r -d '' f; do
         files+=("$f")
-    done < <(find "$COMMANDS_SRC_DIR" -maxdepth 1 -name "*.md" -print0 2>/dev/null | sort -z)
+    done < <(find -L "$COMMANDS_SRC_DIR" -maxdepth 1 -name "*.md" -print0 2>/dev/null | sort -z)
 
     if [[ ${#files[@]} -eq 0 ]]; then
         msg "No commands available in $COMMANDS_SRC_DIR" \
@@ -244,7 +244,7 @@ install_all() {
     local files=()
     while IFS= read -r -d '' f; do
         files+=("$f")
-    done < <(find "$COMMANDS_SRC_DIR" -maxdepth 1 -name "*.md" -print0 2>/dev/null | sort -z)
+    done < <(find -L "$COMMANDS_SRC_DIR" -maxdepth 1 -name "*.md" -print0 2>/dev/null | sort -z)
 
     if [[ ${#files[@]} -eq 0 ]]; then
         msg "No commands available to install" \
@@ -311,7 +311,7 @@ interactive_select() {
     local files=()
     while IFS= read -r -d '' f; do
         files+=("$f")
-    done < <(find "$COMMANDS_SRC_DIR" -maxdepth 1 -name "*.md" -print0 2>/dev/null | sort -z)
+    done < <(find -L "$COMMANDS_SRC_DIR" -maxdepth 1 -name "*.md" -print0 2>/dev/null | sort -z)
 
     if [[ ${#files[@]} -eq 0 ]]; then
         msg "No commands available to install" \
