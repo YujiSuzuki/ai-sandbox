@@ -1,6 +1,6 @@
 #!/bin/bash
 # setup-dkmcp.sh
-# ⚠️ このスクリプトはコンテナ（サンドボックス）内専用です。ホスト OS では動作しません。
+# ⚠️ This script is for use inside the container (sandbox) only. It does not work on the host OS.
 # Register DockMCP as an MCP server for AI tools (Claude Code, Gemini CLI)
 #
 # Detects available AI tools and registers DockMCP as an SSE MCP server.
@@ -23,6 +23,7 @@
 #   .sandbox/scripts/setup-dkmcp.sh --status     # Show detailed status
 #   .sandbox/scripts/setup-dkmcp.sh --unregister # Remove DockMCP registration
 # ---
+# ⚠️ このスクリプトはコンテナ（サンドボックス）内専用です。ホスト OS では動作しません。
 # DockMCP を AI ツール（Claude Code, Gemini CLI）に MCP サーバーとして登録
 #
 # 利用可能な AI ツールを検出し、DockMCP を SSE MCP サーバーとして登録します。
