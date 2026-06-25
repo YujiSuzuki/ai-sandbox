@@ -358,8 +358,8 @@ NODE_ENV=development
 LANG=C.UTF-8
 EOF
 
-    # Run in default (interactive) mode, select Japanese (2), decline TZ (2)
-    echo -e "2\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2)
+    echo -e "2\n2\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -387,8 +387,8 @@ NODE_ENV=development
 LANG=ja_JP.UTF-8
 EOF
 
-    # Run in default (interactive) mode, select English (1)
-    echo "1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Run in default (interactive) mode, select English (1), decline install (2)
+    echo -e "1\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -414,8 +414,8 @@ test_interactive_update_existing() {
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
-    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), confirm update (y)
-    echo -e "2\n2\ny" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2), confirm update (y)
+    echo -e "2\n2\n2\ny" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode updates language when confirmed"
@@ -437,8 +437,8 @@ test_interactive_decline_update() {
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
-    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline update (n)
-    echo -e "2\n2\nn" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2), decline update (n)
+    echo -e "2\n2\n2\nn" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode preserves language when declined"
@@ -463,8 +463,8 @@ LANG=C.UTF-8
 # TZ=Asia/Tokyo
 EOF
 
-    # Select Japanese (2), accept TZ (1 = default)
-    echo -e "2\n1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Select Japanese (2), accept TZ (1), decline install (2)
+    echo -e "2\n1\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
@@ -493,8 +493,8 @@ LANG=C.UTF-8
 # TZ=Asia/Tokyo
 EOF
 
-    # Select Japanese (2), decline TZ (2)
-    echo -e "2\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Select Japanese (2), decline TZ (2), decline install (2)
+    echo -e "2\n2\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
@@ -523,8 +523,8 @@ LANG=C.UTF-8
 # TZ=Asia/Tokyo
 EOF
 
-    # Select English (1) — no TZ prompt should appear
-    echo "1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Select English (1), decline install (2) — no TZ prompt should appear
+    echo -e "1\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
@@ -553,8 +553,8 @@ NODE_ENV=development
 LANG=C.UTF-8
 EOF
 
-    # Select Japanese (2), accept TZ (1), confirm update (y)
-    echo -e "2\n1\ny" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    # Select Japanese (2), accept TZ (1), decline install (2), confirm update (y)
+    echo -e "2\n1\n2\ny" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
     if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
         pass "TZ=Asia/Tokyo added to existing file"
@@ -640,6 +640,675 @@ test_host_os_file_overwritten() {
     cleanup
 }
 
+# ─── dkmcp helper: create mock bin dir ───────────────────────────────────────
+# Usage: _setup_dkmcp_mocks <fake_gopath_var> <mock_bin_var>
+#   Sets named variables to temp dirs and prepends mock_bin to PATH.
+#   fake_go is written to mock_bin/go; callers customise dkmcp and gopath/bin.
+_setup_dkmcp_mocks() {
+    local _fp_var="$1" _mb_var="$2"
+    local _fp _mb
+    _fp=$(mktemp -d)
+    _mb=$(mktemp -d)
+    eval "$_fp_var='$_fp'"
+    eval "$_mb_var='$_mb'"
+
+    # Fake go binary
+    cat > "$_mb/go" << GOEOF
+#!/bin/bash
+if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
+    echo "$_fp"
+elif [ "\$1" = "install" ]; then
+    mkdir -p "$_fp/bin"
+    touch "$_fp/bin/dkmcp"
+    chmod +x "$_fp/bin/dkmcp"
+    exit 0
+fi
+GOEOF
+    chmod +x "$_mb/go"
+
+    # Default fake dkmcp (records calls, creates yaml on init)
+    cat > "$_mb/dkmcp" << 'DKMCPEOF'
+#!/bin/bash
+if [ "$1" = "init" ]; then
+    ws=""
+    shift
+    while [ $# -gt 0 ]; do
+        [ "$1" = "--workspace" ] && ws="$2"
+        shift
+    done
+    [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/dkmcp.yaml"
+fi
+exit 0
+DKMCPEOF
+    chmod +x "$_mb/dkmcp"
+
+    export PATH="$_mb:$PATH"
+}
+
+_cleanup_mocks() {
+    local fp="$1" mb="$2"
+    rm -rf "$fp" "$mb"
+}
+
+# ─── dkmcp tests ──────────────────────────────────────────────────────────────
+
+# Test 22: dkmcp already installed → skip install prompt, run init
+test_interactive_dkmcp_already_installed() {
+    echo ""
+    echo "=== Test: dkmcp already installed — no install prompt ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    # Input: language=1(English), port=default(1)
+    local output
+    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "dkmcp が見つかりません"; then
+        fail "Install prompt should NOT appear when dkmcp is already installed"
+    else
+        pass "No install prompt when dkmcp already installed"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 23: dkmcp not installed, user accepts → go install called, binary confirmed
+test_interactive_dkmcp_install_accepted() {
+    echo ""
+    echo "=== Test: dkmcp install accepted → go install executed ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+
+    # Input: language=1, install=1(yes), port=default(1)
+    local output
+    output=$(echo -e "1\n1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "インストールが完了"; then
+        pass "dkmcp install completed message shown"
+    else
+        fail "Expected install completion message, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 24: dkmcp not installed, user declines → init and next steps skipped
+test_interactive_dkmcp_install_declined() {
+    echo ""
+    echo "=== Test: dkmcp install declined → init skipped ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+
+    # Input: language=1, install=2(no)
+    local output
+    output=$(echo -e "1\n2" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "セットアップをスキップしました"; then
+        pass "Skip message shown when install declined"
+    else
+        fail "Expected skip message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "セットアップが完了しました"; then
+        fail "Next-steps message should NOT appear when install declined"
+    else
+        pass "Next-steps message not shown when install declined"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 25: go not found → error shown, init skipped
+test_interactive_dkmcp_no_go() {
+    echo ""
+    echo "=== Test: go command not found → error shown ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    rm -f "$mb/go"  # No go in mock bin
+
+    # Run with PATH that excludes system go (use only /usr/bin:/bin + mock_bin)
+    local output
+    output=$(echo -e "1" | PATH="$mb:/usr/bin:/bin:/usr/sbin:/sbin" bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "go コマンドが見つかりません"; then
+        pass "Error shown when go is not found"
+    else
+        fail "Expected go-not-found error, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 26: default port → dkmcp init called without --port
+test_interactive_dkmcp_init_default_port() {
+    echo ""
+    echo "=== Test: default port → dkmcp init without --port ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    # Override dkmcp to log args
+    cat > "$mb/dkmcp" << DEOF
+#!/bin/bash
+echo "\$@" >> "$TEST_PROJECT/dkmcp-calls.log"
+if [ "\$1" = "init" ]; then
+    ws=""
+    shift
+    while [ \$# -gt 0 ]; do
+        [ "\$1" = "--workspace" ] && ws="\$2"
+        shift
+    done
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+fi
+exit 0
+DEOF
+    chmod +x "$mb/dkmcp"
+
+    # Input: language=1, port=default(1)
+    echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+
+    if [ -f "$TEST_PROJECT/dkmcp-calls.log" ]; then
+        local call
+        call=$(cat "$TEST_PROJECT/dkmcp-calls.log")
+        if echo "$call" | grep -q "\-\-port"; then
+            fail "dkmcp init should NOT include --port for default: $call"
+        else
+            pass "dkmcp init called without --port for default"
+        fi
+    else
+        fail "dkmcp was not called"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 27: custom port → dkmcp init called with --port 9999
+test_interactive_dkmcp_init_custom_port() {
+    echo ""
+    echo "=== Test: custom port 9999 → dkmcp init --port 9999 ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    cat > "$mb/dkmcp" << DEOF
+#!/bin/bash
+echo "\$@" >> "$TEST_PROJECT/dkmcp-calls.log"
+if [ "\$1" = "init" ]; then
+    ws=""
+    shift
+    while [ \$# -gt 0 ]; do
+        [ "\$1" = "--workspace" ] && ws="\$2"
+        shift
+    done
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+fi
+exit 0
+DEOF
+    chmod +x "$mb/dkmcp"
+
+    # Input: language=1, port=custom(2), port_number=9999
+    echo -e "1\n2\n9999" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+
+    if [ -f "$TEST_PROJECT/dkmcp-calls.log" ]; then
+        local call
+        call=$(cat "$TEST_PROJECT/dkmcp-calls.log")
+        if echo "$call" | grep -q "\-\-port 9999"; then
+            pass "dkmcp init called with --port 9999"
+        else
+            fail "Expected --port 9999 in: $call"
+        fi
+    else
+        fail "dkmcp was not called"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 28: dkmcp.yaml already exists → init skipped, next steps shown
+test_interactive_dkmcp_init_already_exists() {
+    echo ""
+    echo "=== Test: dkmcp.yaml exists → init skipped, next steps shown ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    mkdir -p "$TEST_PROJECT/.sandbox/config"
+    touch "$TEST_PROJECT/.sandbox/config/dkmcp.yaml"
+
+    local output
+    output=$(echo -e "1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "設定ファイルは既に存在します"; then
+        pass "Existing yaml: skip message shown"
+    else
+        fail "Expected existing-yaml message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "dkmcp serve"; then
+        pass "Next steps shown even when yaml exists"
+    else
+        fail "Expected next-steps with dkmcp serve, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 29: init success → next steps shown
+test_interactive_dkmcp_next_steps_shown() {
+    echo ""
+    echo "=== Test: init success → next steps shown ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    local output
+    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "dkmcp serve"; then
+        pass "Next steps (dkmcp serve) shown after init success"
+    else
+        fail "Expected next steps, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 30: --silent mode → dkmcp setup entirely skipped
+test_silent_mode_skips_dkmcp_setup() {
+    echo ""
+    echo "=== Test: --silent mode skips dkmcp setup ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+
+    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
+
+    if [ -f "$TEST_PROJECT/.sandbox/config/dkmcp.yaml" ]; then
+        fail "dkmcp.yaml should NOT be created in --silent mode"
+    else
+        pass "dkmcp.yaml not created in --silent mode"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 31: go install fails → error shown, init skipped
+test_interactive_dkmcp_install_go_install_fails() {
+    echo ""
+    echo "=== Test: go install fails → error shown, init skipped ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+
+    # Override go to fail on install
+    cat > "$mb/go" << GOEOF
+#!/bin/bash
+if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
+    echo "$fp"
+elif [ "\$1" = "install" ]; then
+    echo "go install failed: some error" >&2
+    exit 1
+fi
+GOEOF
+    chmod +x "$mb/go"
+
+    local output
+    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "インストールに失敗"; then
+        pass "Install failure error shown"
+    else
+        fail "Expected install failure message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "セットアップが完了"; then
+        fail "Next steps should NOT appear after install failure"
+    else
+        pass "Next steps not shown after install failure"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 32: go install succeeds but binary not found → failure
+test_interactive_dkmcp_install_binary_not_found_after_install() {
+    echo ""
+    echo "=== Test: go install ok but binary missing → install failure ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+
+    # go install succeeds but does NOT create the binary
+    cat > "$mb/go" << GOEOF
+#!/bin/bash
+if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
+    echo "$fp"
+elif [ "\$1" = "install" ]; then
+    exit 0
+fi
+GOEOF
+    chmod +x "$mb/go"
+
+    local output
+    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "インストールに失敗"; then
+        pass "Binary-not-found after install treated as failure"
+    else
+        fail "Expected failure message, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 33: invalid port string → validation error
+test_interactive_dkmcp_init_invalid_port_string() {
+    echo ""
+    echo "=== Test: invalid port string 'abc' → validation error ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    # Input: lang=1, port=custom(2), bad=abc, then valid=8080
+    local output
+    output=$(echo -e "1\n2\nabc\n8080" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "無効なポート番号"; then
+        pass "Validation error shown for non-integer port"
+    else
+        fail "Expected validation error for 'abc', got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 34: out-of-range port → validation error
+test_interactive_dkmcp_init_invalid_port_out_of_range() {
+    echo ""
+    echo "=== Test: out-of-range port 99999 → validation error ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    cat > "$mb/dkmcp" << DEOF
+#!/bin/bash
+echo "\$@" >> "$TEST_PROJECT/dkmcp-calls.log"
+if [ "\$1" = "init" ]; then
+    ws=""
+    shift
+    while [ \$# -gt 0 ]; do
+        [ "\$1" = "--workspace" ] && ws="\$2"
+        shift
+    done
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+fi
+exit 0
+DEOF
+    chmod +x "$mb/dkmcp"
+
+    # bad=99999, then valid=8080
+    local output
+    output=$(echo -e "1\n2\n99999\n8080" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "無効なポート番号"; then
+        pass "Validation error for out-of-range port 99999"
+    else
+        fail "Expected validation error for 99999, got: $output"
+    fi
+
+    if [ -f "$TEST_PROJECT/dkmcp-calls.log" ]; then
+        local call
+        call=$(cat "$TEST_PROJECT/dkmcp-calls.log")
+        if echo "$call" | grep -q "\-\-port 99999"; then
+            fail "dkmcp init should NOT be called with invalid port 99999"
+        else
+            pass "dkmcp init not called with invalid port"
+        fi
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 35: 3 invalid inputs → fallback to default port 18080
+test_interactive_dkmcp_port_retry_fallback() {
+    echo ""
+    echo "=== Test: 3 invalid inputs → fallback to default port 18080 ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    cat > "$mb/dkmcp" << DEOF
+#!/bin/bash
+echo "\$@" >> "$TEST_PROJECT/dkmcp-calls.log"
+if [ "\$1" = "init" ]; then
+    ws=""
+    shift
+    while [ \$# -gt 0 ]; do
+        [ "\$1" = "--workspace" ] && ws="\$2"
+        shift
+    done
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+fi
+exit 0
+DEOF
+    chmod +x "$mb/dkmcp"
+
+    # 3 invalid ports → fallback
+    local output
+    output=$(echo -e "1\n2\nabc\nxyz\n99999" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "デフォルトポート（18080）を使用します"; then
+        pass "Fallback message shown after 3 invalid ports"
+    else
+        fail "Expected fallback message, got: $output"
+    fi
+
+    if [ -f "$TEST_PROJECT/dkmcp-calls.log" ]; then
+        local call
+        call=$(cat "$TEST_PROJECT/dkmcp-calls.log")
+        if echo "$call" | grep -q "\-\-port"; then
+            fail "dkmcp init should NOT have --port on fallback: $call"
+        else
+            pass "dkmcp init called without --port on fallback"
+        fi
+    else
+        fail "dkmcp init was not called after fallback"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 36: go env GOPATH returns empty → fallback to $HOME/go/bin
+test_interactive_dkmcp_gopath_empty() {
+    echo ""
+    echo "=== Test: GOPATH empty → fallback to \$HOME/go/bin ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+
+    local fake_home
+    fake_home=$(mktemp -d)
+
+    # go returns empty GOPATH; binary only in $HOME/go/bin
+    cat > "$mb/go" << GOEOF
+#!/bin/bash
+if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
+    echo ""
+elif [ "\$1" = "install" ]; then
+    mkdir -p "$fake_home/go/bin"
+    touch "$fake_home/go/bin/dkmcp"
+    chmod +x "$fake_home/go/bin/dkmcp"
+    exit 0
+fi
+GOEOF
+    chmod +x "$mb/go"
+
+    cat > "$mb/dkmcp" << DEOF
+#!/bin/bash
+if [ "\$1" = "init" ]; then
+    ws=""
+    shift
+    while [ \$# -gt 0 ]; do
+        [ "\$1" = "--workspace" ] && ws="\$2"
+        shift
+    done
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+fi
+exit 0
+DEOF
+    chmod +x "$mb/dkmcp"
+
+    local output
+    output=$(HOME="$fake_home" bash -c "export PATH='$mb:$PATH'; echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'" 2>&1)
+
+    if echo "$output" | grep -q "インストールが完了\|セットアップが完了"; then
+        pass "Empty GOPATH: fallback to \$HOME/go/bin works"
+    else
+        fail "Expected success with HOME/go fallback, got: $output"
+    fi
+
+    rm -rf "$fake_home"
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 37: go env GOPATH exits non-zero → error shown
+test_interactive_dkmcp_gopath_command_fails() {
+    echo ""
+    echo "=== Test: go env GOPATH fails → error shown ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+
+    cat > "$mb/go" << 'GOEOF'
+#!/bin/bash
+if [ "$1" = "env" ] && [ "$2" = "GOPATH" ]; then
+    exit 1
+fi
+GOEOF
+    chmod +x "$mb/go"
+
+    local output
+    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "GOPATH が取得できません"; then
+        pass "Error shown when go env GOPATH fails"
+    else
+        fail "Expected GOPATH error, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 38: next steps shows absolute path (PROJECT_ROOT=.)
+test_interactive_dkmcp_next_steps_shows_absolute_path() {
+    echo ""
+    echo "=== Test: next steps shows absolute path ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    local abs_path
+    abs_path="$(cd "$TEST_PROJECT" && pwd)"
+
+    local output
+    output=$(cd "$TEST_PROJECT" && echo -e "1\n1" | PATH="$mb:$PATH" bash "$SCRIPT" "." 2>&1)
+
+    if echo "$output" | grep -q "$abs_path"; then
+        pass "Next steps shows absolute path: $abs_path"
+    else
+        fail "Expected absolute path in next steps, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test 39: dkmcp init fails → error shown, next steps skipped
+test_interactive_dkmcp_init_fails_skips_next_steps() {
+    echo ""
+    echo "=== Test: dkmcp init fails → error shown, next steps skipped ==="
+
+    setup
+    local fp mb
+    _setup_dkmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+
+    # dkmcp init always fails
+    cat > "$mb/dkmcp" << 'DEOF'
+#!/bin/bash
+if [ "$1" = "init" ]; then
+    echo "init failed" >&2
+    exit 1
+fi
+exit 0
+DEOF
+    chmod +x "$mb/dkmcp"
+
+    local output
+    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+
+    if echo "$output" | grep -q "設定ファイル生成に失敗"; then
+        pass "Error shown when dkmcp init fails"
+    else
+        fail "Expected init failure message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "dkmcp serve"; then
+        fail "Next steps should NOT appear after init failure"
+    else
+        pass "Next steps not shown after init failure"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -669,6 +1338,24 @@ main() {
     test_interactive_tz_update_existing
     test_creates_host_os_file
     test_host_os_file_overwritten
+    test_interactive_dkmcp_already_installed
+    test_interactive_dkmcp_install_accepted
+    test_interactive_dkmcp_install_declined
+    test_interactive_dkmcp_no_go
+    test_interactive_dkmcp_init_default_port
+    test_interactive_dkmcp_init_custom_port
+    test_interactive_dkmcp_init_already_exists
+    test_interactive_dkmcp_next_steps_shown
+    test_silent_mode_skips_dkmcp_setup
+    test_interactive_dkmcp_install_go_install_fails
+    test_interactive_dkmcp_install_binary_not_found_after_install
+    test_interactive_dkmcp_init_invalid_port_string
+    test_interactive_dkmcp_init_invalid_port_out_of_range
+    test_interactive_dkmcp_port_retry_fallback
+    test_interactive_dkmcp_gopath_empty
+    test_interactive_dkmcp_gopath_command_fails
+    test_interactive_dkmcp_next_steps_shows_absolute_path
+    test_interactive_dkmcp_init_fails_skips_next_steps
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

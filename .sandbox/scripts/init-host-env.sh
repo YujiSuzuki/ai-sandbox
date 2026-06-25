@@ -55,6 +55,9 @@ done
 created=0
 SELECTED_LANG=""
 SELECTED_TZ=""
+DKMCP_AVAILABLE=false
+DKMCP_INIT_SUCCESS=false
+_DKMCP_CANCELLED=false
 
 # Interactive language selection / 対話式の言語選択
 select_language() {
@@ -97,6 +100,185 @@ select_timezone_for_japanese() {
             echo "→ TZ=Asia/Tokyo を設定します"
             ;;
     esac
+}
+
+# SIGINT handler for dkmcp setup / dkmcp セットアップ中の SIGINT ハンドラー
+_dkmcp_sigint_handler() {
+    echo ""
+    echo "インストールをキャンセルしました。"
+    _DKMCP_CANCELLED=true
+}
+
+# dkmcp install check / dkmcp インストール確認
+setup_dkmcp_install() {
+    trap '_dkmcp_sigint_handler' INT
+
+    if ! command -v go > /dev/null 2>&1; then
+        echo ""
+        echo "エラー: go コマンドが見つかりません。"
+        echo "dkmcp をインストールするには Go が必要です。"
+        echo "https://go.dev/doc/install を参照してインストールしてください。"
+        return 0
+    fi
+
+    local gopath_raw
+    if ! gopath_raw=$(go env GOPATH 2>/dev/null); then
+        echo ""
+        echo "GOPATH が取得できません。\`go env GOPATH\` を確認してください。"
+        return 0
+    fi
+    if [ -z "$gopath_raw" ]; then
+        gopath_raw="$HOME/go"
+    fi
+    local gopath_bin="$gopath_raw/bin"
+
+    if [ -f "$gopath_bin/dkmcp" ]; then
+        DKMCP_AVAILABLE=true
+        return 0
+    fi
+
+    echo ""
+    echo "dkmcp が見つかりません。インストールしますか？"
+    echo "  1) はい (go install github.com/YujiSuzuki/dkmcp@latest を実行)"
+    echo "  2) いいえ"
+    echo ""
+    read -r -p "1 または 2 を入力 [1]: " install_choice || true
+    if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+
+    case "$install_choice" in
+        2)
+            local display_path
+            display_path="$(cd "$PROJECT_ROOT" 2>/dev/null && pwd)" || display_path="/path/to/your-workspace"
+            echo ""
+            echo "DockMCP のセットアップをスキップしました。"
+            echo "後からセットアップするには以下を実行してください:"
+            echo "  go install github.com/YujiSuzuki/dkmcp@latest"
+            echo "  dkmcp init --workspace $display_path"
+            echo "  dkmcp serve --workspace $display_path"
+            return 0
+            ;;
+        *)
+            echo "インストール中... (go install github.com/YujiSuzuki/dkmcp@latest)"
+            if ! go install github.com/YujiSuzuki/dkmcp@latest 2>&1; then
+                if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+                echo "エラー: dkmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/dkmcp@latest"
+                return 0
+            fi
+            if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+            if [ ! -f "$gopath_bin/dkmcp" ]; then
+                echo "エラー: dkmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/dkmcp@latest"
+                return 0
+            fi
+            echo "dkmcp のインストールが完了しました。"
+            DKMCP_AVAILABLE=true
+            ;;
+    esac
+}
+
+# dkmcp init (port selection + execution) / ポート確認・dkmcp init 実行
+setup_dkmcp_init() {
+    if [ "$DKMCP_AVAILABLE" != true ]; then return 0; fi
+
+    local abs_project_root
+    if ! abs_project_root="$(cd "$PROJECT_ROOT" && pwd)"; then
+        echo ""
+        echo "エラー: プロジェクトルートのパスを解決できません。dkmcp セットアップをスキップします。"
+        return 0
+    fi
+
+    if [ -f "$abs_project_root/.sandbox/config/dkmcp.yaml" ]; then
+        DKMCP_INIT_SUCCESS=skipped
+        show_dkmcp_next_steps "$abs_project_root"
+        return 0
+    fi
+
+    echo ""
+    echo "DockMCP の設定ファイルを生成します。"
+    echo "ポートはデフォルト（18080）でよいですか？"
+    echo "  1) はい (default)"
+    echo "  2) いいえ（カスタムポートを指定）"
+    echo ""
+    read -r -p "1 または 2 を入力 [1]: " port_choice || true
+    if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+
+    local port=""
+    if [ "$port_choice" = "2" ]; then
+        local retry=0
+        while [ $retry -lt 3 ]; do
+            read -r -p "ポート番号を入力してください（1024–65535）: " port_input || true
+            if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+
+            if [ -z "$port_input" ]; then
+                port=""
+                break
+            fi
+
+            if ! echo "$port_input" | grep -qE '^[0-9]+$'; then
+                echo "無効なポート番号です。整数（1〜65535）を入力してください:"
+                retry=$((retry + 1))
+                continue
+            fi
+
+            local port_num=$((port_input + 0))
+            if [ "$port_num" -le 0 ] || [ "$port_num" -ge 65536 ]; then
+                echo "無効なポート番号です。整数（1〜65535）を入力してください:"
+                retry=$((retry + 1))
+                continue
+            fi
+
+            if [ "$port_num" -le 1023 ]; then
+                echo "警告: ポート $port_num は管理者権限が必要な場合があります。"
+            fi
+
+            port="$port_input"
+            break
+        done
+
+        if [ $retry -ge 3 ]; then
+            echo "ポート番号の入力に失敗しました。デフォルトポート（18080）を使用します。"
+            port=""
+        fi
+    fi
+
+    local init_exit=0
+    if [ -n "$port" ]; then
+        dkmcp init --workspace "$abs_project_root" --port "$port" 2>&1 || init_exit=$?
+    else
+        dkmcp init --workspace "$abs_project_root" 2>&1 || init_exit=$?
+    fi
+
+    if [ $init_exit -ne 0 ]; then
+        echo ""
+        echo "エラー: DockMCP の設定ファイル生成に失敗しました。"
+        echo "不完全な設定ファイルが残っている場合は手動で削除してください:"
+        echo "  rm .sandbox/config/dkmcp.yaml"
+        echo "その後、再度 init-host-env.sh を実行してください。"
+        return 0
+    fi
+
+    DKMCP_INIT_SUCCESS=true
+    show_dkmcp_next_steps "$abs_project_root"
+}
+
+# Show next steps after dkmcp setup / dkmcp セットアップ後の次ステップ案内
+show_dkmcp_next_steps() {
+    local workspace_path="$1"
+
+    local message
+    case "$DKMCP_INIT_SUCCESS" in
+        true)    message="DockMCP のセットアップが完了しました。" ;;
+        skipped) message="DockMCP の設定ファイルは既に存在します。" ;;
+        *)       return 0 ;;
+    esac
+
+    echo ""
+    echo "----------------------------------------"
+    echo "$message"
+    echo ""
+    echo "起動するには以下のコマンドを実行してください:"
+    echo "  dkmcp serve --workspace '$workspace_path'"
+    echo "----------------------------------------"
+    echo ""
 }
 
 # Apply language setting to .env.sandbox / .env.sandbox に言語設定を適用
@@ -143,6 +325,9 @@ apply_timezone_setting() {
 # 対話モードの場合、言語選択を行う
 if [ "$INTERACTIVE" = true ]; then
     select_language
+    setup_dkmcp_install
+    setup_dkmcp_init
+    trap - INT
 fi
 
 # --- .env.sandbox ---
