@@ -54,9 +54,15 @@ Follow these steps precisely.
 4. Do **NOT** speculatively read source code files. Only read a source file if the spec document explicitly names it AND checking it is necessary to judge an issue.
 
 5. Optionally gather recent git history for context (does not affect review scope):
+   Find the git root from the spec document's directory:
    ```bash
-   git -C <nearest-project-root> log --oneline -10 2>/dev/null || true
+   git -C <spec-doc-directory> rev-parse --show-toplevel 2>/dev/null
    ```
+   If this returns a path, use it as `<project-root>` and run:
+   ```bash
+   git -C <project-root> log --oneline -10
+   ```
+   If it fails (no git repository found), skip this step.
 
 ### Step 2: Context Input
 
@@ -110,7 +116,7 @@ Report format:
 - Issue: <description>
 - Impact: Critical / High / Medium / Low
 - Category: Accuracy
-- Excerpt: <verbatim quote of the relevant text, 1–5 lines>
+- Excerpt: <verbatim quote of the relevant text, 1–5 lines — **REQUIRED**; write "N/A" if no specific text exists>
 ```
 
 ---
@@ -214,7 +220,7 @@ Scoring criteria (pass these directly to the agent):
 - **75**: Clear problem that would likely cause incorrect implementation or require rework — implementer could not safely proceed without clarification
 - **100**: Definite blocker — contradictory specs, circular dependency, or a decision that must be made before implementation can start
 
-The agent returns a confidence score (0 / 25 / 50 / 75 / 100) for each issue, using the format `ISSUE-N: <score>`. If an issue's Excerpt field is missing, score it 50 and append "(No excerpt provided)" after the score.
+The agent returns a confidence score (0 / 25 / 50 / 75 / 100) for each issue, using the format `ISSUE-N: <score>`. If an issue's Excerpt field is missing, score it 75 (treat conservatively — assume the issue is genuine) and append "(No excerpt — scored conservatively)" after the score.
 
 ### Step 6: Validation
 

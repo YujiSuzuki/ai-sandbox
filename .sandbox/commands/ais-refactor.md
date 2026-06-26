@@ -189,6 +189,7 @@ The validation agent receives:
 - The filtered list of suggestions (those scoring >= 50)
 - The relevant source code for each suggestion
 - The original agent's reasoning
+- The full text of the Non-Suggestions section from this command
 
 For each suggestion, the validation agent must:
 1. Re-read the cited code location

@@ -173,6 +173,7 @@ The validation agent receives:
 - The filtered list of issues (those scoring >= 75)
 - The relevant source code for each issue
 - The original agent's reasoning
+- The full text of the False Positive Examples section from this command
 
 For each issue, the validation agent must:
 1. Re-read the cited code location

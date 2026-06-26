@@ -195,6 +195,7 @@ The validation agent receives:
 - The filtered list of tests (those scoring >= 50)
 - The relevant source code for each test
 - The original agent's reasoning
+- The full text of the Anti-Patterns section from this command
 
 For each test, the validation agent must:
 1. Re-read the target source code

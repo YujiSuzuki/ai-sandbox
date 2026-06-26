@@ -89,6 +89,11 @@ Only if the 2nd argument is not provided, use the AskUserQuestion tool to get:
 
 2. Record the list of changed files
 
+3. Read the full content of security-relevant configuration files in the project root (even if unchanged), for Agent #4:
+   ```bash
+   find <project-path> -maxdepth 2 -type f \( -name "package.json" -o -name "go.mod" -o -name "Cargo.toml" -o -name "Dockerfile" -o -name "nginx.conf" -o -name "*.yaml" -o -name "*.yml" -o -name ".env.example" \) 2>/dev/null | head -20
+   ```
+
 #### For Non-Git Mode:
 
 1. Collect source code from specified files/directories:
@@ -191,10 +196,13 @@ The validation agent receives:
 - The filtered list of issues (those scoring >= 50)
 - The relevant source code for each issue
 - The original agent's reasoning
+- The full text of the False Positive Examples section from this command
 
 For each issue, the validation agent must:
 1. Re-read the cited code location
 2. Confirm the issue is real (not a false positive from the examples in the False Positive section)
+   - For issues scored 50–74: confirm if the vulnerability is real, even if exploitation requires specific conditions
+   - For issues scored ≥ 75: apply strict verification — confirm only if the issue has a plausible exploit path
 3. Return: **CONFIRMED** or **REJECTED** with a one-line reason
 
 Remove REJECTED issues from the final report.

@@ -88,6 +88,7 @@ Launch 5 parallel Sonnet agents. Pass to each agent:
 - Document type classification and style analysis from Step 3
 - Output language (instruct agents: "Output all results in <language>")
 - Instruction: "Generate proposals in the **exact same style** as the existing document. Match heading levels, bullet formats, UT item formats, and language."
+- Instruction: "Do NOT generate proposals to resolve ⚠️ markers, TBD, '未定', '確認中', or similar unresolved markers — only the user can resolve these. Instead, note them as 'existing unresolved item — skipped'."
 
 Each agent produces proposals in this format:
 

@@ -167,6 +167,7 @@ Collect ALL issues from Step 5 and pass them to a **single Haiku agent** for bat
 Provide the agent with:
 - The full list of issues from all agents
 - The review target code (diff or full files)
+- ALL sibling command files in the same directory (required to verify Agent #3 cross-command consistency findings)
 - The scoring criteria below
 
 Scoring criteria (pass these criteria directly to the agent):
@@ -186,6 +187,7 @@ The validation agent receives:
 - The filtered list of issues (those scoring >= 75)
 - The relevant source code for each issue
 - The original agent's reasoning
+- The full text of the False Positive Examples section from this command
 
 For each issue, the validation agent must:
 1. Re-read the cited code location
