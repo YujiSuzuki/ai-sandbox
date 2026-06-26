@@ -21,9 +21,9 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 本プロジェクトはローカル開発環境での使用を想定しており、本番環境での使用は想定されていません。制約事項については「[制約事項](#制約事項)」と「[よくある質問](#よくある質問)」を参照してください。
 
 > [!NOTE]
-> **HostMCP** は、サンドボックスの内側からコンテナ間アクセスを可能にするオプションの補助ツールで、**ホスト OS** 上で動作します。[別リポジトリ](https://github.com/YujiSuzuki/hostmcp)として管理されており、独立してインストールします。コンテナ間アクセスが不要な場合、このテンプレートは HostMCP なしでも動作します。
+> **HostMCP** は、**ホスト OS** 上で動作するオプションの補助ツールです。サンドボックス内の AI に対して、Docker コンテナへのアクセス・ホストツールの実行・ホスト OS コマンドの実行など、ホスト環境への制御されたアクセスを提供します。[別リポジトリ](https://github.com/YujiSuzuki/hostmcp)として管理されており、独立してインストールします。これらの機能が不要な場合、このテンプレートは HostMCP なしでも動作します。
 >
-> **ホスト OS で動かす CLI ツール（Claude Code, Gemini CLI 等）での HostMCP 単体利用は非推奨です。** ホスト OS で動く CLI は `docker` コマンドを直接実行できるため、HostMCP を経由するメリットがありません。一方、**Claude Desktop** のように MCP 経由でしか外部アクセスできないアプリでは、HostMCP 単体でもコンテナ操作に有用です。スタンドアロンセットアップについては [HostMCP README](https://github.com/YujiSuzuki/hostmcp#readme) を参照してください。
+> **ホスト OS で動かす CLI ツール（Claude Code, Gemini CLI 等）での HostMCP 単体利用は非推奨です。** ホスト OS で動く CLI は `docker` コマンドやホストツールを直接実行できるため、HostMCP を経由するメリットがありません。一方、**Claude Desktop** のように MCP 経由でしか外部アクセスできないアプリでは、HostMCP 単体でもコンテナ操作やホストツール実行に有用です。スタンドアロンセットアップについては [HostMCP README](https://github.com/YujiSuzuki/hostmcp#readme) を参照してください。
 
 
 ---
