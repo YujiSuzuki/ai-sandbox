@@ -229,7 +229,7 @@ fi
 
 # ─── Show recent commits / 直近のコミット履歴表示 ───────────────
 
-if [[ "$SHOW_LOG" == true ]]; then
+show_log() {
     echo ""
     # shellcheck disable=SC2059
     printf -v log_title "$MSG_RECENT_TITLE" "$LOG_COUNT"
@@ -243,6 +243,10 @@ if [[ "$SHOW_LOG" == true ]]; then
 
     echo "──────────────────────────────────────"
     echo ""
+}
+
+if [[ "$SHOW_LOG" == true ]]; then
+    show_log
     exit 0
 fi
 
@@ -255,6 +259,7 @@ echo ""
 
 # Check for staged changes / ステージ済み変更があるか確認
 if [[ -z "$MSG_FILE" ]]; then
+    show_log
     # Draft mode: must have staged changes
     STAGED_COUNT=$(git diff --cached --name-only | wc -l)
     if [[ "$STAGED_COUNT" -eq 0 ]]; then
