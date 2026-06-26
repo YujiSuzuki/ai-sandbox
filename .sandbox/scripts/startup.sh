@@ -6,9 +6,11 @@
 
 set -e  # Exit on error
 
+WORKSPACE="${WORKSPACE:-/workspace}"
+
 # Import common functions from _startup_common.sh if available
-if [[ -f "/workspace/.sandbox/scripts/_startup_common.sh" ]]; then
-    source "/workspace/.sandbox/scripts/_startup_common.sh"
+if [[ -f "$WORKSPACE/.sandbox/scripts/_startup_common.sh" ]]; then
+    source "$WORKSPACE/.sandbox/scripts/_startup_common.sh"
 fi
 
 # Parse arguments
@@ -32,6 +34,8 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_FETCHING="  📥 sandbox-mcp を取得中..."
     MSG_FETCH_FAILED="⚠️  sandbox-mcp の取得に失敗しましたが、続行します..."
     MSG_REGISTER_FAILED="⚠️  SandboxMCP 登録に失敗しましたが、続行します..."
+    MSG_REGISTER_OK="  ✅ 登録済み"
+    MSG_REGISTER_SKIP="  ⚠️  登録失敗（既に登録済み？）"
     MSG_NO_GO="⚠️  Go がインストールされていないため、SandboxMCP 登録をスキップします"
     MSG_DKMCP_REGISTER_FAILED="⚠️  DockMCP 登録に失敗しましたが、続行します..."
     MSG_DKMCP_CONNECTED="🔗 DockMCP: ✅ registered, 接続OK"
@@ -47,6 +51,8 @@ else
     MSG_FETCHING="  📥 Fetching sandbox-mcp..."
     MSG_FETCH_FAILED="⚠️  Failed to fetch sandbox-mcp, but continuing..."
     MSG_REGISTER_FAILED="⚠️  SandboxMCP registration failed, but continuing..."
+    MSG_REGISTER_OK="  ✅ registered"
+    MSG_REGISTER_SKIP="  ⚠️  registration failed (already registered?)"
     MSG_NO_GO="⚠️  Go not installed, skipping SandboxMCP registration"
     MSG_DKMCP_REGISTER_FAILED="⚠️  DockMCP registration failed, but continuing..."
     MSG_DKMCP_CONNECTED="🔗 DockMCP: ✅ registered, connected"
@@ -70,61 +76,64 @@ BANNER
 
 # 1. Merge Claude settings (low-failure, essential)
 # Claude 設定のマージ（失敗しにくい、必須）
-/workspace/.sandbox/scripts/merge-claude-settings.sh || {
+"$WORKSPACE/.sandbox/scripts/merge-claude-settings.sh" || {
     echo "$MSG_MERGE_FAILED"
     echo ""
 }
 
 # 2. Compare secret config consistency (report mismatches first)
 # 秘匿設定の整合性チェック（不一致を先に報告）
-/workspace/.sandbox/scripts/compare-secret-config.sh || {
+"$WORKSPACE/.sandbox/scripts/compare-secret-config.sh" || {
     echo "$MSG_COMPARE_FAILED"
     echo ""
 }
 
 # 3. Validate secrets (critical check)
 # 秘匿検証（重要チェック）
-/workspace/.sandbox/scripts/validate-secrets.sh || {
+"$WORKSPACE/.sandbox/scripts/validate-secrets.sh" || {
     echo "$MSG_VALIDATE_FAILED"
     echo ""
 }
 
 # 4. Check secret sync (warning only)
 # 秘匿同期チェック（警告のみ）
-/workspace/.sandbox/scripts/check-secret-sync.sh || {
+"$WORKSPACE/.sandbox/scripts/check-secret-sync.sh" || {
     echo "$MSG_SYNC_CHECK_FAILED"
     echo ""
 }
 
 # 5. Check for upstream updates (informational only)
 # 上流更新チェック（情報提供のみ）
-/workspace/.sandbox/scripts/check-upstream-updates.sh || true
+"$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh" || true
 
 # 6. Show sponsor message (informational only, skip with --no-sponsor)
 # スポンサーメッセージ表示（情報提供のみ、--no-sponsor でスキップ）
 if [ "$NO_SPONSOR" = "false" ]; then
-    /workspace/.sandbox/scripts/show-sponsor.sh || true
+    "$WORKSPACE/.sandbox/scripts/show-sponsor.sh" || true
 fi
 
 # 7. Register SandboxMCP (if Go is available)
 # SandboxMCP 登録（Go がある場合）
 if command -v go >/dev/null 2>&1; then
-    SANDBOX_MCP_DIR="/workspace/.sandbox/sandbox-mcp"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "$MSG_REGISTERING"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    if [ ! -d "$SANDBOX_MCP_DIR" ]; then
-        echo "$MSG_FETCHING"
-        git clone https://github.com/YujiSuzuki/sandbox-mcp "$SANDBOX_MCP_DIR" || {
-            echo "$MSG_FETCH_FAILED"
-        }
-    fi
-    if [ -d "$SANDBOX_MCP_DIR" ]; then
-        make -C "$SANDBOX_MCP_DIR" install && make -C "$SANDBOX_MCP_DIR" register || {
-            echo "$MSG_REGISTER_FAILED"
-        }
-    fi
+    echo "$MSG_FETCHING"
+    go install github.com/YujiSuzuki/sandbox-mcp@latest && {
+        if command -v claude >/dev/null 2>&1; then
+            claude mcp add sandbox-mcp sandbox-mcp \
+                && echo "  [Claude] $MSG_REGISTER_OK" \
+                || echo "  [Claude] $MSG_REGISTER_SKIP"
+        fi
+        if command -v gemini >/dev/null 2>&1; then
+            gemini mcp add sandbox-mcp sandbox-mcp \
+                && echo "  [Gemini] $MSG_REGISTER_OK" \
+                || echo "  [Gemini] $MSG_REGISTER_SKIP"
+        fi
+    } || {
+        echo "$MSG_REGISTER_FAILED"
+    }
 else
     echo ""
     echo "$MSG_NO_GO"
@@ -133,7 +142,7 @@ fi
 # 7. Register DockMCP if not registered, or show one-liner status
 # DockMCP 登録（未登録なら登録、登録済みなら1行サマリー）
 dkmcp_check=0
-/workspace/.sandbox/scripts/setup-dkmcp.sh --check 2>/dev/null || dkmcp_check=$?
+"$WORKSPACE/.sandbox/scripts/setup-dkmcp.sh" --check 2>/dev/null || dkmcp_check=$?
 if [ "$dkmcp_check" -eq 0 ]; then
     # Registered + connected → one-liner
     # 登録済み＋接続OK → 1行サマリー
@@ -148,7 +157,7 @@ else
     # Not registered → full registration
     # 未登録 → フル登録出力
     echo ""
-    /workspace/.sandbox/scripts/setup-dkmcp.sh || {
+    "$WORKSPACE/.sandbox/scripts/setup-dkmcp.sh" || {
         echo "$MSG_DKMCP_REGISTER_FAILED"
         echo ""
     }

@@ -69,12 +69,25 @@ STUB
 # Stub: no-op common functions
 STUB
 
-    # Create no-op Makefile for sandbox-mcp register (step 6)
-    cat > "$TEST_DIR/workspace/.sandbox/sandbox-mcp/Makefile" << 'STUB'
-.PHONY: register
-register:
-	@true
+    # Create stub bin directory for go/claude/gemini (step 7 SandboxMCP, not under test)
+    mkdir -p "$TEST_DIR/bin"
+    cat > "$TEST_DIR/bin/go" << 'STUB'
+#!/bin/bash
+# Stub: go install succeeds silently
+exit 0
 STUB
+    cat > "$TEST_DIR/bin/claude" << 'STUB'
+#!/bin/bash
+# Stub: claude mcp add succeeds silently
+exit 0
+STUB
+    cat > "$TEST_DIR/bin/gemini" << 'STUB'
+#!/bin/bash
+# Stub: gemini mcp add succeeds silently
+exit 0
+STUB
+    chmod +x "$TEST_DIR/bin/go" "$TEST_DIR/bin/claude" "$TEST_DIR/bin/gemini"
+    export PATH="$TEST_DIR/bin:$PATH"
 
     # Copy actual startup.sh and rewrite paths to use test directory
     sed "s|/workspace|$TEST_DIR/workspace|g" "$STARTUP_SCRIPT" \
@@ -112,6 +125,43 @@ STUB
 }
 
 # ─── Tests ──────────────────────────────────────────────────
+
+# Test 0: SandboxMCP registration shows per-CLI success/failure output
+test_sandboxmcp_registration_output() {
+    echo ""
+    echo "=== Test: SandboxMCP registration shows per-CLI output ==="
+
+    setup
+    create_dkmcp_stub 0
+
+    # claude succeeds, gemini fails
+    cat > "$TEST_DIR/bin/claude" << 'STUB'
+#!/bin/bash
+exit 0
+STUB
+    cat > "$TEST_DIR/bin/gemini" << 'STUB'
+#!/bin/bash
+exit 1
+STUB
+    chmod +x "$TEST_DIR/bin/claude" "$TEST_DIR/bin/gemini"
+
+    local output
+    output=$(bash "$TEST_DIR/workspace/.sandbox/scripts/startup.sh" 2>&1)
+
+    if echo "$output" | grep -q "\[Claude\].*registered\|\[Claude\].*登録済み"; then
+        pass "Shows [Claude] success message"
+    else
+        fail "Should show [Claude] success message"
+    fi
+
+    if echo "$output" | grep -q "\[Gemini\].*failed\|\[Gemini\].*失敗"; then
+        pass "Shows [Gemini] failure message"
+    else
+        fail "Should show [Gemini] failure message"
+    fi
+
+    cleanup
+}
 
 # Test 1: When --check returns 0 (registered + connected), shows one-liner with "connected"
 test_oneliner_when_registered_and_connected() {
@@ -246,6 +296,7 @@ main() {
     echo "  startup.sh DockMCP Auto-Registration Tests"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+    test_sandboxmcp_registration_output
     test_oneliner_when_registered_and_connected
     test_oneliner_when_registered_but_offline
     test_full_output_when_not_registered
