@@ -1,9 +1,9 @@
 #!/bin/bash
-# release.sh
+# github-release.sh
 # Generate release notes draft for AI-assisted refinement, then publish
 #
 # Usage:
-#   .sandbox/scripts/release.sh <version> [options]
+#   .sandbox/scripts/github-release.sh <version> [options]
 #
 # Arguments:
 #   <version>     Release version (e.g. v0.4.0). Must be semver with v prefix.
@@ -11,24 +11,32 @@
 # Options:
 #   --notes-file <file>  Use refined release notes file to create tag + GitHub Release
 #   --prev               Show the latest GitHub Release notes for reference
+#   --repo <path>        Target git repository (default: current directory)
 #   --help, -h           Show this help
 #
 # AI Workflow:
-#   1. Run release.sh <version> to generate draft (auto-categorizes commits)
-#   2. Run release.sh --prev to check the previous release tone
+#   1. Run github-release.sh <version> to generate draft (auto-categorizes commits)
+#   2. Run github-release.sh --prev to check the previous release tone
 #   3. Refine the draft in ReleaseNotes-draft.md to match the project's tone
+#      NOTE: When --repo is used, ReleaseNotes-draft.md is written INSIDE the repo directory
+#            (e.g., --repo /path/to/repo  =>  /path/to/repo/ReleaseNotes-draft.md)
+#            Edit that file, NOT a file in the current working directory.
 #   4. Show the draft to the user for approval
-#   5. Run release.sh <version> --notes-file ReleaseNotes-draft.md to publish
+#   5. Run github-release.sh <version> --notes-file ReleaseNotes-draft.md to publish
+#      NOTE: Relative paths are resolved from your current working directory, not the repo.
+#            Both relative and absolute paths work correctly.
 #
 # Examples:
-#   .sandbox/scripts/release.sh v0.4.0                              # Generate draft
-#   .sandbox/scripts/release.sh --prev                               # Show previous release
-#   .sandbox/scripts/release.sh v0.4.0 --notes-file notes.md        # Publish release
+#   .sandbox/scripts/github-release.sh v0.4.0                              # Generate draft
+#   .sandbox/scripts/github-release.sh --prev                               # Show previous release
+#   .sandbox/scripts/github-release.sh v0.4.0 --notes-file notes.md        # Publish release
+#   .sandbox/scripts/github-release.sh v0.4.0 --repo /path/to/other-repo   # Target another repo
+#   .sandbox/scripts/github-release.sh v0.4.0 --repo /path/to/other-repo --notes-file notes.md
 # ---
 # リリースノートのドラフトを生成し、AI と推敲してからリリースする
 #
 # 使用法:
-#   .sandbox/scripts/release.sh <version> [options]
+#   .sandbox/scripts/github-release.sh <version> [options]
 #
 # 引数:
 #   <version>     リリースバージョン（例: v0.4.0）。v付き semver 形式。
@@ -36,14 +44,20 @@
 # オプション:
 #   --notes-file <file>  推敲済みリリースノートを指定してタグ + GitHub Release を作成
 #   --prev               直近の GitHub Release のリリースノートを表示
+#   --repo <path>        対象の git リポジトリ（デフォルト: カレントディレクトリ）
 #   --help, -h           ヘルプ表示
 #
 # AI ワークフロー:
-#   1. release.sh <version> を実行してドラフトを生成（コミットを自動分類）
-#   2. release.sh --prev で直近リリースのトーンを確認する
+#   1. github-release.sh <version> を実行してドラフトを生成（コミットを自動分類）
+#   2. github-release.sh --prev で直近リリースのトーンを確認する
 #   3. ReleaseNotes-draft.md のドラフトをプロジェクトのトーンに合わせて推敲する
+#      注意: --repo を指定した場合、ReleaseNotes-draft.md はそのリポジトリ内に生成される
+#            （例: --repo /path/to/repo  =>  /path/to/repo/ReleaseNotes-draft.md）
+#            カレントディレクトリではなく、そのファイルを編集すること。
 #   4. ユーザーにドラフトを提示して承認を得る
-#   5. release.sh <version> --notes-file ReleaseNotes-draft.md でリリース実行
+#   5. github-release.sh <version> --notes-file ReleaseNotes-draft.md でリリース実行
+#      注意: 相対パスはカレントディレクトリ基準で解決される（リポジトリ内ではない）。
+#            相対パス・絶対パスどちらでも正しく動作する。
 
 set -euo pipefail
 
@@ -95,7 +109,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_RELEASE_COMPLETE="リリース %s 完了！ 🎉"
     MSG_LATEST_RELEASE="📌 最新リリース:"
     MSG_NO_RELEASES="リリースが見つかりません。"
-    MSG_VERSION_REQUIRED="バージョン引数が必要です。使用法: release.sh <version> [--notes-file <file>]"
+    MSG_VERSION_REQUIRED="バージョン引数が必要です。使用法: github-release.sh <version> [--notes-file <file>]"
     MSG_REQUIRES_GH="gh CLI または curl + jq が必要です。"
     MSG_NO_REPO="git remote から GitHub リポジトリを検出できません。"
 else
@@ -128,7 +142,7 @@ else
     MSG_RELEASE_COMPLETE="Release %s complete! 🎉"
     MSG_LATEST_RELEASE="📌 Latest Release:"
     MSG_NO_RELEASES="No releases found."
-    MSG_VERSION_REQUIRED="Version argument required. Usage: release.sh <version> [--notes-file <file>]"
+    MSG_VERSION_REQUIRED="Version argument required. Usage: github-release.sh <version> [--notes-file <file>]"
     MSG_REQUIRES_GH="Requires gh CLI or curl + jq."
     MSG_NO_REPO="Could not detect GitHub repository from git remote."
 fi
@@ -138,6 +152,7 @@ fi
 VERSION=""
 NOTES_FILE=""
 SHOW_PREV=false
+REPO=""
 DRAFT_FILE="ReleaseNotes-draft.md"
 
 # Get GitHub API repo path from git remote / git remote から GitHub API 用のリポジトリパスを取得
@@ -149,7 +164,7 @@ get_github_repo() {
 
 show_help() {
     cat <<'EOF'
-Usage: .sandbox/scripts/release.sh <version> [options]
+Usage: .sandbox/scripts/github-release.sh <version> [options]
 
 Arguments:
   <version>     Release version (e.g. v0.4.0)
@@ -157,13 +172,18 @@ Arguments:
 Options:
   --notes-file <file>  Use refined release notes to create tag + GitHub Release
   --prev               Show the latest GitHub Release notes for reference
+  --repo <path>        Target git repository (default: current directory)
   --help, -h           Show this help
 
 Workflow:
-  1. release.sh v0.4.0                          # Generate draft
-  2. release.sh --prev                          # Check previous release
-  3. Refine ReleaseNotes-draft.md with AI       # Collaborate
-  4. release.sh v0.4.0 --notes-file ReleaseNotes-draft.md  # Publish
+  1. github-release.sh v0.4.0                          # Generate draft
+  2. github-release.sh --prev                          # Check previous release
+  3. Refine ReleaseNotes-draft.md with AI              # Collaborate
+  4. github-release.sh v0.4.0 --notes-file ReleaseNotes-draft.md  # Publish
+
+Multi-repo example:
+  .sandbox/scripts/github-release.sh v0.4.0 --repo /path/to/other-repo
+  .sandbox/scripts/github-release.sh v0.4.0 --repo /path/to/other-repo --notes-file /abs/path/notes.md
 EOF
     exit 0
 }
@@ -174,6 +194,9 @@ while [[ $# -gt 0 ]]; do
             [[ -z "${2:-}" ]] && die "--notes-file requires a file path"
             NOTES_FILE="$2"; shift 2 ;;
         --prev)     SHOW_PREV=true; shift ;;
+        --repo)
+            [[ -z "${2:-}" ]] && die "--repo requires a directory path"
+            REPO="$2"; shift 2 ;;
         --help|-h)  show_help ;;
         -*)         die "Unknown option: $1" ;;
         *)
@@ -186,6 +209,21 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# ─── Resolve target repository / 対象リポジトリに移動 ────────────
+
+if [[ -n "$REPO" ]]; then
+    if [[ ! -d "$REPO" ]]; then
+        die "Repository directory not found: $REPO"
+    fi
+    # Resolve NOTES_FILE to absolute path before cd (relative paths would otherwise
+    # resolve inside REPO after cd, not in the caller's working directory)
+    if [[ -n "$NOTES_FILE" ]] && [[ "$NOTES_FILE" != /* ]]; then
+        NOTES_FILE="$(cd "$(dirname "$NOTES_FILE")" 2>/dev/null && pwd)/$(basename "$NOTES_FILE")" \
+            || NOTES_FILE="$(pwd)/$NOTES_FILE"
+    fi
+    cd "$REPO"
+fi
 
 # ─── Show previous release / 前回のリリースノート表示 ───────────
 
@@ -371,12 +409,15 @@ if [[ -z "$NOTES_FILE" ]]; then
     echo ""
     ok "${DRAFT_FILE} ${MSG_WROTE}"
     echo ""
+    REPO_FLAG=""
+    [[ -n "$REPO" ]] && REPO_FLAG=" --repo $(pwd)"
+
     echo -e "  ${BOLD}${MSG_NEXT_STEPS}${NC}"
     echo -e "    ${MSG_STEP1}"
-    echo -e "      ${CYAN}.sandbox/scripts/release.sh --prev${NC}"
+    echo -e "      ${CYAN}.sandbox/scripts/github-release.sh --prev${REPO_FLAG}${NC}"
     echo -e "    ${MSG_STEP2}"
     echo -e "    ${MSG_STEP3}"
-    echo -e "      ${CYAN}.sandbox/scripts/release.sh ${VERSION} --notes-file ${DRAFT_FILE}${NC}"
+    echo -e "      ${CYAN}.sandbox/scripts/github-release.sh ${VERSION} --notes-file ${DRAFT_FILE}${REPO_FLAG}${NC}"
     echo ""
     exit 0
 fi
