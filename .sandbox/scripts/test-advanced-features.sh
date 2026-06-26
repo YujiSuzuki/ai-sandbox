@@ -6,8 +6,8 @@
 #
 # Test Sections / テストセクション:
 #   [Default - always run / デフォルト - 常に実行]
-#     1. Custom DockMCP configuration / カスタムDockMCP設定
-#     2. Multiple DockMCP instances / 複数のDockMCPインスタンス
+#     1. Custom HostMCP configuration / カスタムHostMCP設定
+#     2. Multiple HostMCP instances / 複数のHostMCPインスタンス
 #     3. Project name customization / プロジェクト名のカスタマイズ
 #     4. Multiple DevContainer instances / 複数DevContainer起動
 #   [Optional - requires flags / オプション - フラグ必須]
@@ -34,8 +34,8 @@
 #                セクション1-4のみ実行（安全、読み取り専用）
 #   --host-only  Run only tests that require host OS
 #                ホストOS専用テストのみ実行
-#   --all        Run sections 1-4 + section 9 (DockMCP server tests)
-#                セクション1-4 + セクション9（DockMCPサーバーテスト）
+#   --all        Run sections 1-4 + section 9 (HostMCP server tests)
+#                セクション1-4 + セクション9（HostMCPサーバーテスト）
 #   --full       Run ALL sections 1-9
 #                全セクション1-9を実行
 #   --dry-run    Show what would be done without actually doing it
@@ -56,7 +56,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKSPACE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-DKMCP_DIR="$WORKSPACE_DIR/dkmcp"
+DKMCP_DIR="$WORKSPACE_DIR/hostmcp"
 DEVCONTAINER_DIR="$WORKSPACE_DIR/.devcontainer"
 CLI_SANDBOX_DIR="$WORKSPACE_DIR/cli_sandbox"
 
@@ -100,10 +100,10 @@ show_help() {
     echo "Test Sections / テストセクション:"
     echo ""
     echo "  [Default - always run / デフォルト - 常に実行]"
-    echo "    1. Custom DockMCP Configuration    (5 tests) - read-only"
-    echo "       カスタムDockMCP設定             （5テスト）- 読み取り専用"
-    echo "    2. Multiple DockMCP Instances      (3 tests) - read-only"
-    echo "       複数DockMCPインスタンス         （3テスト）- 読み取り専用"
+    echo "    1. Custom HostMCP Configuration    (5 tests) - read-only"
+    echo "       カスタムHostMCP設定             （5テスト）- 読み取り専用"
+    echo "    2. Multiple HostMCP Instances      (3 tests) - read-only"
+    echo "       複数HostMCPインスタンス         （3テスト）- 読み取り専用"
     echo "    3. Project Name Customization      (4 tests) - read-only"
     echo "       プロジェクト名カスタマイズ      （4テスト）- 読み取り専用"
     echo "    4. Multiple DevContainer Instances (4 tests) - read-only"
@@ -134,8 +134,8 @@ show_help() {
     echo "  --host-only    Run only tests that require host OS"
     echo "                 ホストOS専用テストのみ実行"
     echo ""
-    echo "  --all          Run sections 1-4 + section 9 (DockMCP server tests)"
-    echo "                 セクション1-4 + セクション9（DockMCPサーバーテスト）"
+    echo "  --all          Run sections 1-4 + section 9 (HostMCP server tests)"
+    echo "                 セクション1-4 + セクション9（HostMCPサーバーテスト）"
     echo ""
     echo "  --full         Run ALL sections 1-9"
     echo "                 全セクション1-9を実行"
@@ -361,13 +361,13 @@ confirm_dangerous_operation() {
     echo "  - Create Docker volumes (prefix: ${TEST_VOLUME_PREFIX})"
     echo "  - Delete Docker volumes matching the test prefix"
     echo "  - Create temporary files in /tmp"
-    echo "  - Start/stop DockMCP server processes${NC}"
+    echo "  - Start/stop HostMCP server processes${NC}"
     echo ""
     echo "これらの操作は:"
     echo "  - Dockerボリュームを作成します（プレフィックス: ${TEST_VOLUME_PREFIX}）"
     echo "  - テストプレフィックスに一致するDockerボリュームを削除します"
     echo "  - /tmp に一時ファイルを作成します"
-    echo "  - DockMCPサーバープロセスを起動/停止します"
+    echo "  - HostMCPサーバープロセスを起動/停止します"
     echo ""
 
     read -p "Continue? / 続行しますか？ [y/N] " -n 1 -r
@@ -434,30 +434,30 @@ has_docker() {
     command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1
 }
 
-# Check if dkmcp binary is available
-has_dkmcp() {
-    command -v dkmcp >/dev/null 2>&1
+# Check if hostmcp binary is available
+has_hostmcp() {
+    command -v hostmcp >/dev/null 2>&1
 }
 
 ###############################################################################
-# Section 1: Custom DockMCP Configuration Tests
-# カスタムDockMCP設定のテスト
+# Section 1: Custom HostMCP Configuration Tests
+# カスタムHostMCP設定のテスト
 ###############################################################################
 
-test_dkmcp_config_exists() {
-    info "DockMCP example config exists"
+test_hostmcp_config_exists() {
+    info "HostMCP example config exists"
 
-    if [ -f "$DKMCP_DIR/configs/dkmcp.example.yaml" ]; then
-        pass "DockMCP example config exists"
+    if [ -f "$DKMCP_DIR/configs/hostmcp.example.yaml" ]; then
+        pass "HostMCP example config exists"
     else
-        fail "DockMCP example config not found at $DKMCP_DIR/configs/dkmcp.example.yaml"
+        fail "HostMCP example config not found at $DKMCP_DIR/configs/hostmcp.example.yaml"
     fi
 }
 
-test_dkmcp_config_valid_yaml() {
-    info "DockMCP config is valid YAML"
+test_hostmcp_config_valid_yaml() {
+    info "HostMCP config is valid YAML"
 
-    local config_file="$DKMCP_DIR/configs/dkmcp.example.yaml"
+    local config_file="$DKMCP_DIR/configs/hostmcp.example.yaml"
 
     if [ ! -f "$config_file" ]; then
         skip "Config file not found"
@@ -467,51 +467,51 @@ test_dkmcp_config_valid_yaml() {
     # Check if yq or python is available for YAML validation
     if command -v yq >/dev/null 2>&1; then
         if yq eval '.' "$config_file" >/dev/null 2>&1; then
-            pass "DockMCP config is valid YAML (checked with yq)"
+            pass "HostMCP config is valid YAML (checked with yq)"
         else
-            fail "DockMCP config has invalid YAML syntax"
+            fail "HostMCP config has invalid YAML syntax"
         fi
     elif command -v python3 >/dev/null 2>&1 && python3 -c "import yaml" 2>/dev/null; then
         # Only use Python if PyYAML is installed
         if python3 -c "import yaml; yaml.safe_load(open('$config_file'))" 2>/dev/null; then
-            pass "DockMCP config is valid YAML (checked with Python)"
+            pass "HostMCP config is valid YAML (checked with Python)"
         else
-            fail "DockMCP config has invalid YAML syntax"
+            fail "HostMCP config has invalid YAML syntax"
         fi
     elif command -v go >/dev/null 2>&1; then
-        # Use dkmcp itself to validate (it will fail to start if config is invalid)
-        if has_dkmcp; then
-            # Try to parse config with dkmcp (dry-run style check)
+        # Use hostmcp itself to validate (it will fail to start if config is invalid)
+        if has_hostmcp; then
+            # Try to parse config with hostmcp (dry-run style check)
             local output
-            output=$(dkmcp serve --config "$config_file" --help 2>&1) || true
+            output=$(hostmcp serve --config "$config_file" --help 2>&1) || true
             # If help shows without parse error, config is likely valid
             if echo "$output" | grep -qi "error.*yaml\|parse\|invalid"; then
-                fail "DockMCP config has invalid YAML syntax"
+                fail "HostMCP config has invalid YAML syntax"
             else
-                pass "DockMCP config appears valid (dkmcp accepts config)"
+                pass "HostMCP config appears valid (hostmcp accepts config)"
             fi
         else
             # Fallback: basic syntax check
             if grep -q "security:" "$config_file" && grep -q "mode:" "$config_file"; then
-                pass "DockMCP config appears valid (basic check)"
+                pass "HostMCP config appears valid (basic check)"
             else
-                fail "DockMCP config missing required fields"
+                fail "HostMCP config missing required fields"
             fi
         fi
     else
         # Fallback: basic syntax check
         if grep -q "security:" "$config_file" && grep -q "mode:" "$config_file"; then
-            pass "DockMCP config appears valid (basic check)"
+            pass "HostMCP config appears valid (basic check)"
         else
-            fail "DockMCP config missing required fields"
+            fail "HostMCP config missing required fields"
         fi
     fi
 }
 
-test_dkmcp_config_has_security_modes() {
-    info "DockMCP config supports security modes (strict/moderate/permissive)"
+test_hostmcp_config_has_security_modes() {
+    info "HostMCP config supports security modes (strict/moderate/permissive)"
 
-    local config_file="$DKMCP_DIR/configs/dkmcp.example.yaml"
+    local config_file="$DKMCP_DIR/configs/hostmcp.example.yaml"
 
     if [ ! -f "$config_file" ]; then
         skip "Config file not found"
@@ -520,21 +520,21 @@ test_dkmcp_config_has_security_modes() {
 
     # Check if config mentions security modes
     if grep -qE "mode:.*\"?(strict|moderate|permissive)\"?" "$config_file"; then
-        pass "DockMCP config has security mode setting"
+        pass "HostMCP config has security mode setting"
     else
         # Check in Go source code for supported modes
         if grep -rq "strict\|moderate\|permissive" "$DKMCP_DIR/internal/security/" 2>/dev/null; then
-            pass "DockMCP supports security modes (found in source)"
+            pass "HostMCP supports security modes (found in source)"
         else
             fail "Security modes not found in config or source"
         fi
     fi
 }
 
-test_dkmcp_config_allowed_containers() {
-    info "DockMCP config supports allowed_containers"
+test_hostmcp_config_allowed_containers() {
+    info "HostMCP config supports allowed_containers"
 
-    local config_file="$DKMCP_DIR/configs/dkmcp.example.yaml"
+    local config_file="$DKMCP_DIR/configs/hostmcp.example.yaml"
 
     if [ ! -f "$config_file" ]; then
         skip "Config file not found"
@@ -542,16 +542,16 @@ test_dkmcp_config_allowed_containers() {
     fi
 
     if grep -q "allowed_containers:" "$config_file"; then
-        pass "DockMCP config has allowed_containers setting"
+        pass "HostMCP config has allowed_containers setting"
     else
-        fail "DockMCP config missing allowed_containers setting"
+        fail "HostMCP config missing allowed_containers setting"
     fi
 }
 
-test_dkmcp_config_exec_whitelist() {
-    info "DockMCP config supports exec_whitelist"
+test_hostmcp_config_exec_whitelist() {
+    info "HostMCP config supports exec_whitelist"
 
-    local config_file="$DKMCP_DIR/configs/dkmcp.example.yaml"
+    local config_file="$DKMCP_DIR/configs/hostmcp.example.yaml"
 
     if [ ! -f "$config_file" ]; then
         skip "Config file not found"
@@ -559,56 +559,56 @@ test_dkmcp_config_exec_whitelist() {
     fi
 
     if grep -q "exec_whitelist:" "$config_file"; then
-        pass "DockMCP config has exec_whitelist setting"
+        pass "HostMCP config has exec_whitelist setting"
     else
-        fail "DockMCP config missing exec_whitelist setting"
+        fail "HostMCP config missing exec_whitelist setting"
     fi
 }
 
 ###############################################################################
-# Section 2: Multiple DockMCP Instances Tests
-# 複数DockMCPインスタンスのテスト
+# Section 2: Multiple HostMCP Instances Tests
+# 複数HostMCPインスタンスのテスト
 ###############################################################################
 
-test_dkmcp_serve_port_flag() {
-    info "DockMCP serve command supports --port flag"
+test_hostmcp_serve_port_flag() {
+    info "HostMCP serve command supports --port flag"
 
-    if ! has_dkmcp; then
-        skip "dkmcp binary not found (run 'make install' in dkmcp/)"
+    if ! has_hostmcp; then
+        skip "hostmcp binary not found (run 'make install' in hostmcp/)"
         return
     fi
 
     local help_output
-    help_output=$(dkmcp serve --help 2>&1) || true
+    help_output=$(hostmcp serve --help 2>&1) || true
 
     if echo "$help_output" | grep -qE "(--port|-p)"; then
-        pass "DockMCP serve supports --port flag"
+        pass "HostMCP serve supports --port flag"
     else
-        fail "DockMCP serve does not support --port flag"
+        fail "HostMCP serve does not support --port flag"
         echo "  Help output: $help_output"
     fi
 }
 
-test_dkmcp_serve_config_flag() {
-    info "DockMCP serve command supports --config flag"
+test_hostmcp_serve_config_flag() {
+    info "HostMCP serve command supports --config flag"
 
-    if ! has_dkmcp; then
-        skip "dkmcp binary not found"
+    if ! has_hostmcp; then
+        skip "hostmcp binary not found"
         return
     fi
 
     local help_output
-    help_output=$(dkmcp serve --help 2>&1) || true
+    help_output=$(hostmcp serve --help 2>&1) || true
 
     if echo "$help_output" | grep -qE "(--config|-c)"; then
-        pass "DockMCP serve supports --config flag"
+        pass "HostMCP serve supports --config flag"
     else
-        fail "DockMCP serve does not support --config flag"
+        fail "HostMCP serve does not support --config flag"
     fi
 }
 
-test_dkmcp_multiple_configs_exist() {
-    info "Multiple DockMCP config examples can exist"
+test_hostmcp_multiple_configs_exist() {
+    info "Multiple HostMCP config examples can exist"
 
     local configs_dir="$DKMCP_DIR/configs"
 
@@ -617,12 +617,12 @@ test_dkmcp_multiple_configs_exist() {
         config_count=$(find "$configs_dir" -name "*.yaml" -o -name "*.yml" | wc -l)
 
         if [ "$config_count" -ge 1 ]; then
-            pass "DockMCP configs directory exists with $config_count config(s)"
+            pass "HostMCP configs directory exists with $config_count config(s)"
         else
             fail "No YAML configs found in $configs_dir"
         fi
     else
-        fail "DockMCP configs directory not found"
+        fail "HostMCP configs directory not found"
     fi
 }
 
@@ -879,10 +879,10 @@ cleanup_temp_files() {
     done
 }
 
-test_create_custom_dkmcp_config() {
-    info "[File Test] Create and validate custom DockMCP config"
+test_create_custom_hostmcp_config() {
+    info "[File Test] Create and validate custom HostMCP config"
 
-    local test_config="/tmp/test-dkmcp-strict-$$.yaml"
+    local test_config="/tmp/test-hostmcp-strict-$$.yaml"
     local cleanup_files=("$test_config")
 
     # Create a strict mode config
@@ -917,10 +917,10 @@ EOF
     cleanup_temp_files "${cleanup_files[@]}"
 }
 
-test_create_permissive_dkmcp_config() {
-    info "[File Test] Create permissive DockMCP config"
+test_create_permissive_hostmcp_config() {
+    info "[File Test] Create permissive HostMCP config"
 
-    local test_config="/tmp/test-dkmcp-permissive-$$.yaml"
+    local test_config="/tmp/test-hostmcp-permissive-$$.yaml"
     local cleanup_files=("$test_config")
 
     # Create a permissive mode config
@@ -1494,16 +1494,16 @@ test_volume_cleanup_on_failure() {
 # セクション9: サーバー統合テスト（ホストOS専用）
 ###############################################################################
 
-test_dkmcp_serve_starts() {
-    info "$(msg "[Integration] DockMCP server can start" "[統合] DockMCPサーバーが起動できるか")"
+test_hostmcp_serve_starts() {
+    info "$(msg "[Integration] HostMCP server can start" "[統合] HostMCPサーバーが起動できるか")"
 
     if is_devcontainer && [ "$HOST_ONLY" != "true" ]; then
         skip "$(msg "Integration test - run on host OS" "統合テスト - ホストOSで実行してください")"
         return
     fi
 
-    if ! has_dkmcp; then
-        skip "$(msg "dkmcp binary not found" "dkmcpバイナリが見つかりません")"
+    if ! has_hostmcp; then
+        skip "$(msg "hostmcp binary not found" "hostmcpバイナリが見つかりません")"
         return
     fi
 
@@ -1514,7 +1514,7 @@ test_dkmcp_serve_starts() {
 
     # Try to start server briefly and check if it responds
     # サーバーを起動して応答を確認
-    local config_file="$DKMCP_DIR/configs/dkmcp.example.yaml"
+    local config_file="$DKMCP_DIR/configs/hostmcp.example.yaml"
     local test_port=18080
 
     if [ ! -f "$config_file" ]; then
@@ -1523,10 +1523,10 @@ test_dkmcp_serve_starts() {
     fi
 
     if [ "$DRY_RUN" = "true" ]; then
-        echo -e "  ${BLUE}[DRY-RUN] $(msg "Would start DockMCP server on port $test_port" "ポート $test_port でDockMCPサーバーを起動")${NC}"
+        echo -e "  ${BLUE}[DRY-RUN] $(msg "Would start HostMCP server on port $test_port" "ポート $test_port でHostMCPサーバーを起動")${NC}"
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would check health endpoint" "ヘルスエンドポイントを確認")${NC}"
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would stop server" "サーバーを停止")${NC}"
-        pass "$(msg "DockMCP server start (dry-run)" "DockMCPサーバー起動 (dry-run)")"
+        pass "$(msg "HostMCP server start (dry-run)" "HostMCPサーバー起動 (dry-run)")"
         return
     fi
 
@@ -1541,9 +1541,9 @@ test_dkmcp_serve_starts() {
 
     # Start server in background, capture stderr
     # バックグラウンドでサーバーを起動、stderrをキャプチャ
-    local server_log="/tmp/dkmcp-test-$$.log"
+    local server_log="/tmp/hostmcp-test-$$.log"
     track_file "$server_log"
-    dkmcp serve --port $test_port --config "$config_file" >"$server_log" 2>&1 &
+    hostmcp serve --port $test_port --config "$config_file" >"$server_log" 2>&1 &
     local server_pid=$!
     track_process $server_pid
 
@@ -1555,9 +1555,9 @@ test_dkmcp_serve_starts() {
     if kill -0 $server_pid 2>/dev/null; then
         # Try health check
         if curl -s "http://localhost:$test_port/health" >/dev/null 2>&1; then
-            pass "$(msg "DockMCP server starts and responds to health check" "DockMCPサーバー起動、ヘルスチェック応答OK")"
+            pass "$(msg "HostMCP server starts and responds to health check" "HostMCPサーバー起動、ヘルスチェック応答OK")"
         else
-            pass "$(msg "DockMCP server starts (health endpoint not available)" "DockMCPサーバー起動（ヘルスエンドポイントなし）")"
+            pass "$(msg "HostMCP server starts (health endpoint not available)" "HostMCPサーバー起動（ヘルスエンドポイントなし）")"
         fi
 
         # Stop server
@@ -1565,7 +1565,7 @@ test_dkmcp_serve_starts() {
         wait $server_pid 2>/dev/null || true
         remove_from_array "STARTED_PROCESSES" "$server_pid"
     else
-        fail "$(msg "DockMCP server failed to start" "DockMCPサーバーの起動に失敗")"
+        fail "$(msg "HostMCP server failed to start" "HostMCPサーバーの起動に失敗")"
         # Show server output for debugging
         if [ -f "$server_log" ] && [ -s "$server_log" ]; then
             echo -e "  ${RED}$(msg "Server output:" "サーバー出力:")${NC}"
@@ -1587,16 +1587,16 @@ test_dkmcp_serve_starts() {
     remove_from_array "CREATED_FILES" "$server_log"
 }
 
-test_dkmcp_multiple_instances() {
-    info "$(msg "[Integration] Multiple DockMCP instances can run" "[統合] 複数のDockMCPインスタンスが起動できるか")"
+test_hostmcp_multiple_instances() {
+    info "$(msg "[Integration] Multiple HostMCP instances can run" "[統合] 複数のHostMCPインスタンスが起動できるか")"
 
     if is_devcontainer && [ "$HOST_ONLY" != "true" ]; then
         skip "$(msg "Integration test - run on host OS" "統合テスト - ホストOSで実行してください")"
         return
     fi
 
-    if ! has_dkmcp; then
-        skip "$(msg "dkmcp binary not found" "dkmcpバイナリが見つかりません")"
+    if ! has_hostmcp; then
+        skip "$(msg "hostmcp binary not found" "hostmcpバイナリが見つかりません")"
         return
     fi
 
@@ -1605,7 +1605,7 @@ test_dkmcp_multiple_instances() {
         return
     fi
 
-    local config_file="$DKMCP_DIR/configs/dkmcp.example.yaml"
+    local config_file="$DKMCP_DIR/configs/hostmcp.example.yaml"
     local port1=18081
     local port2=18082
 
@@ -1615,11 +1615,11 @@ test_dkmcp_multiple_instances() {
     fi
 
     if [ "$DRY_RUN" = "true" ]; then
-        echo -e "  ${BLUE}[DRY-RUN] $(msg "Would start DockMCP instance 1 on port $port1" "ポート $port1 でインスタンス1を起動")${NC}"
-        echo -e "  ${BLUE}[DRY-RUN] $(msg "Would start DockMCP instance 2 on port $port2" "ポート $port2 でインスタンス2を起動")${NC}"
+        echo -e "  ${BLUE}[DRY-RUN] $(msg "Would start HostMCP instance 1 on port $port1" "ポート $port1 でインスタンス1を起動")${NC}"
+        echo -e "  ${BLUE}[DRY-RUN] $(msg "Would start HostMCP instance 2 on port $port2" "ポート $port2 でインスタンス2を起動")${NC}"
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would verify both are running" "両方が起動していることを確認")${NC}"
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would stop both instances" "両方のインスタンスを停止")${NC}"
-        pass "$(msg "Multiple DockMCP instances (dry-run)" "複数DockMCPインスタンス (dry-run)")"
+        pass "$(msg "Multiple HostMCP instances (dry-run)" "複数HostMCPインスタンス (dry-run)")"
         return
     fi
 
@@ -1635,16 +1635,16 @@ test_dkmcp_multiple_instances() {
 
     # Start two instances with logging
     # 2つのインスタンスをログ付きで起動
-    local log1="/tmp/dkmcp-test1-$$.log"
-    local log2="/tmp/dkmcp-test2-$$.log"
+    local log1="/tmp/hostmcp-test1-$$.log"
+    local log2="/tmp/hostmcp-test2-$$.log"
     track_file "$log1"
     track_file "$log2"
 
-    dkmcp serve --port $port1 --config "$config_file" >"$log1" 2>&1 &
+    hostmcp serve --port $port1 --config "$config_file" >"$log1" 2>&1 &
     local pid1=$!
     track_process $pid1
 
-    dkmcp serve --port $port2 --config "$config_file" >"$log2" 2>&1 &
+    hostmcp serve --port $port2 --config "$config_file" >"$log2" 2>&1 &
     local pid2=$!
     track_process $pid2
 
@@ -1670,9 +1670,9 @@ test_dkmcp_multiple_instances() {
     remove_from_array "STARTED_PROCESSES" "$pid2"
 
     if $instance1_ok && $instance2_ok; then
-        pass "$(msg "Multiple DockMCP instances can run simultaneously" "複数DockMCPインスタンスが同時に起動可能")"
+        pass "$(msg "Multiple HostMCP instances can run simultaneously" "複数HostMCPインスタンスが同時に起動可能")"
     else
-        fail "$(msg "Failed to run multiple DockMCP instances" "複数DockMCPインスタンスの起動に失敗")"
+        fail "$(msg "Failed to run multiple HostMCP instances" "複数HostMCPインスタンスの起動に失敗")"
         echo "  $(msg "Instance 1 (port $port1):" "インスタンス1 (ポート $port1):") $instance1_ok"
         echo "  $(msg "Instance 2 (port $port2):" "インスタンス2 (ポート $port2):") $instance2_ok"
         # Show error details
@@ -1692,7 +1692,7 @@ test_dkmcp_multiple_instances() {
     remove_from_array "CREATED_FILES" "$log2"
 }
 
-test_dkmcp_port_flag_effective() {
+test_hostmcp_port_flag_effective() {
     info "$(msg "[Integration] --port flag binds to specified port" "[統合] --port フラグが指定ポートで待ち受けるか")"
 
     if is_devcontainer && [ "$HOST_ONLY" != "true" ]; then
@@ -1700,8 +1700,8 @@ test_dkmcp_port_flag_effective() {
         return
     fi
 
-    if ! has_dkmcp; then
-        skip "$(msg "dkmcp binary not found" "dkmcpバイナリが見つかりません")"
+    if ! has_hostmcp; then
+        skip "$(msg "hostmcp binary not found" "hostmcpバイナリが見つかりません")"
         return
     fi
 
@@ -1710,7 +1710,7 @@ test_dkmcp_port_flag_effective() {
         return
     fi
 
-    local config_file="$DKMCP_DIR/configs/dkmcp.example.yaml"
+    local config_file="$DKMCP_DIR/configs/hostmcp.example.yaml"
     local test_port=19090
 
     if [ ! -f "$config_file" ]; then
@@ -1734,9 +1734,9 @@ test_dkmcp_port_flag_effective() {
     fi
 
     # Start server with custom port
-    local server_log="/tmp/dkmcp-port-test-$$.log"
+    local server_log="/tmp/hostmcp-port-test-$$.log"
     track_file "$server_log"
-    dkmcp serve --port $test_port --config "$config_file" >"$server_log" 2>&1 &
+    hostmcp serve --port $test_port --config "$config_file" >"$server_log" 2>&1 &
     local server_pid=$!
     track_process $server_pid
 
@@ -1778,7 +1778,7 @@ test_dkmcp_port_flag_effective() {
     fi
 }
 
-test_dkmcp_config_strict_mode() {
+test_hostmcp_config_strict_mode() {
     info "$(msg "[Integration] mode: strict blocks exec commands" "[統合] mode: strict が exec をブロックするか")"
 
     if is_devcontainer && [ "$HOST_ONLY" != "true" ]; then
@@ -1786,8 +1786,8 @@ test_dkmcp_config_strict_mode() {
         return
     fi
 
-    if ! has_dkmcp; then
-        skip "$(msg "dkmcp binary not found" "dkmcpバイナリが見つかりません")"
+    if ! has_hostmcp; then
+        skip "$(msg "hostmcp binary not found" "hostmcpバイナリが見つかりません")"
         return
     fi
 
@@ -1797,7 +1797,7 @@ test_dkmcp_config_strict_mode() {
     fi
 
     local test_port=19091
-    local strict_config="/tmp/dkmcp-strict-$$.yaml"
+    local strict_config="/tmp/hostmcp-strict-$$.yaml"
 
     if [ "$DRY_RUN" = "true" ]; then
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would create strict mode config" "strictモード設定を作成")${NC}"
@@ -1836,9 +1836,9 @@ EOF
 
     # Start server with strict config
     # strict設定でサーバーを起動
-    local server_log="/tmp/dkmcp-strict-test-$$.log"
+    local server_log="/tmp/hostmcp-strict-test-$$.log"
     track_file "$server_log"
-    dkmcp serve --port $test_port --config "$strict_config" >"$server_log" 2>&1 &
+    hostmcp serve --port $test_port --config "$strict_config" >"$server_log" 2>&1 &
     local server_pid=$!
     track_process $server_pid
 
@@ -1883,7 +1883,7 @@ EOF
     fi
 }
 
-test_dkmcp_allowed_containers_effective() {
+test_hostmcp_allowed_containers_effective() {
     info "$(msg "[Integration] allowed_containers filters container access" "[統合] allowed_containers がコンテナアクセスをフィルタするか")"
 
     if is_devcontainer && [ "$HOST_ONLY" != "true" ]; then
@@ -1891,8 +1891,8 @@ test_dkmcp_allowed_containers_effective() {
         return
     fi
 
-    if ! has_dkmcp; then
-        skip "$(msg "dkmcp binary not found" "dkmcpバイナリが見つかりません")"
+    if ! has_hostmcp; then
+        skip "$(msg "hostmcp binary not found" "hostmcpバイナリが見つかりません")"
         return
     fi
 
@@ -1902,7 +1902,7 @@ test_dkmcp_allowed_containers_effective() {
     fi
 
     local test_port=19092
-    local filter_config="/tmp/dkmcp-filter-$$.yaml"
+    local filter_config="/tmp/hostmcp-filter-$$.yaml"
 
     if [ "$DRY_RUN" = "true" ]; then
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would create config with allowed_containers: [\"nonexistent-*\"]" "allowed_containers: [\"nonexistent-*\"] の設定を作成")${NC}"
@@ -1944,9 +1944,9 @@ EOF
 
     # Start server
     # サーバーを起動
-    local server_log="/tmp/dkmcp-filter-test-$$.log"
+    local server_log="/tmp/hostmcp-filter-test-$$.log"
     track_file "$server_log"
-    dkmcp serve --port $test_port --config "$filter_config" >"$server_log" 2>&1 &
+    hostmcp serve --port $test_port --config "$filter_config" >"$server_log" 2>&1 &
     local server_pid=$!
     track_process $server_pid
 
@@ -1984,7 +1984,7 @@ EOF
     fi
 }
 
-test_dkmcp_exec_whitelist_effective() {
+test_hostmcp_exec_whitelist_effective() {
     info "$(msg "[Integration] exec_whitelist blocks non-whitelisted commands" "[統合] exec_whitelist がホワイトリスト外コマンドをブロックするか")"
 
     if is_devcontainer && [ "$HOST_ONLY" != "true" ]; then
@@ -1992,8 +1992,8 @@ test_dkmcp_exec_whitelist_effective() {
         return
     fi
 
-    if ! has_dkmcp; then
-        skip "$(msg "dkmcp binary not found" "dkmcpバイナリが見つかりません")"
+    if ! has_hostmcp; then
+        skip "$(msg "hostmcp binary not found" "hostmcpバイナリが見つかりません")"
         return
     fi
 
@@ -2010,7 +2010,7 @@ test_dkmcp_exec_whitelist_effective() {
     fi
 
     local test_port=19093
-    local whitelist_config="/tmp/dkmcp-whitelist-$$.yaml"
+    local whitelist_config="/tmp/hostmcp-whitelist-$$.yaml"
 
     if [ "$DRY_RUN" = "true" ]; then
         echo -e "  ${BLUE}[DRY-RUN] $(msg "Would create config with limited exec_whitelist" "制限付きexec_whitelist設定を作成")${NC}"
@@ -2055,9 +2055,9 @@ EOF
 
     # Start server
     # サーバーを起動
-    local server_log="/tmp/dkmcp-whitelist-test-$$.log"
+    local server_log="/tmp/hostmcp-whitelist-test-$$.log"
     track_file "$server_log"
-    dkmcp serve --port $test_port --config "$whitelist_config" >"$server_log" 2>&1 &
+    hostmcp serve --port $test_port --config "$whitelist_config" >"$server_log" 2>&1 &
     local server_pid=$!
     track_process $server_pid
 
@@ -2118,24 +2118,24 @@ EOF
     fi
 }
 
-# Variable to hold dkmcp binary path for integration tests
-# 統合テスト用のdkmcpバイナリパス
+# Variable to hold hostmcp binary path for integration tests
+# 統合テスト用のhostmcpバイナリパス
 DKMCP_BIN=""
 
-# Find or build dkmcp binary for integration tests
-# 統合テスト用のdkmcpバイナリを検索またはビルド
-setup_dkmcp_bin() {
-    # First check if dkmcp is in PATH
-    if command -v dkmcp >/dev/null 2>&1; then
-        DKMCP_BIN="dkmcp"
+# Find or build hostmcp binary for integration tests
+# 統合テスト用のhostmcpバイナリを検索またはビルド
+setup_hostmcp_bin() {
+    # First check if hostmcp is in PATH
+    if command -v hostmcp >/dev/null 2>&1; then
+        DKMCP_BIN="hostmcp"
         return 0
     fi
 
     # Check common locations
     local locations=(
-        "$HOME/go/bin/dkmcp"
-        "/usr/local/bin/dkmcp"
-        "$DKMCP_DIR/dkmcp"
+        "$HOME/go/bin/hostmcp"
+        "/usr/local/bin/hostmcp"
+        "$DKMCP_DIR/hostmcp"
     )
 
     for loc in "${locations[@]}"; do
@@ -2147,9 +2147,9 @@ setup_dkmcp_bin() {
 
     # Try to build
     if command -v go >/dev/null 2>&1; then
-        echo "  Building dkmcp binary..."
-        local tmp_bin="/tmp/dkmcp-test-bin-$$"
-        if (cd "$DKMCP_DIR" && go build -o "$tmp_bin" ./cmd/dkmcp 2>/dev/null); then
+        echo "  Building hostmcp binary..."
+        local tmp_bin="/tmp/hostmcp-test-bin-$$"
+        if (cd "$DKMCP_DIR" && go build -o "$tmp_bin" ./cmd/hostmcp 2>/dev/null); then
             DKMCP_BIN="$tmp_bin"
             track_file "$tmp_bin"
             return 0
@@ -2248,7 +2248,7 @@ main() {
     echo "Workspace: $WORKSPACE_DIR"
     echo "Environment: ${SANDBOX_ENV:-unknown}"
     echo "Docker available: $(has_docker && echo 'yes' || echo 'no')"
-    echo "dkmcp available: $(has_dkmcp && echo 'yes' || echo 'no')"
+    echo "hostmcp available: $(has_hostmcp && echo 'yes' || echo 'no')"
     [ "$DRY_RUN" = "true" ] && echo -e "Mode: ${BLUE}DRY-RUN${NC}"
     [ "$AUTO_YES" = "true" ] && echo -e "Auto-confirm: ${YELLOW}YES${NC}"
     echo ""
@@ -2274,7 +2274,7 @@ main() {
         # Confirm dangerous operations
         local ops_desc=""
         [ "$TEST_VOLUME" = "true" ] && ops_desc="Docker volume create/copy/delete tests"
-        [ "$RUN_ALL" = "true" ] && ops_desc="${ops_desc:+$ops_desc, }DockMCP server start/stop"
+        [ "$RUN_ALL" = "true" ] && ops_desc="${ops_desc:+$ops_desc, }HostMCP server start/stop"
 
         if ! confirm_dangerous_operation "$ops_desc"; then
             exit 0
@@ -2283,24 +2283,24 @@ main() {
 
     echo ""
 
-    section "1. Custom DockMCP Configuration / カスタムDockMCP設定"
+    section "1. Custom HostMCP Configuration / カスタムHostMCP設定"
     if [ ! -d "$DKMCP_DIR" ]; then
-        skip "dkmcp not found at $DKMCP_DIR — skipping DockMCP config tests"
+        skip "hostmcp not found at $DKMCP_DIR — skipping HostMCP config tests"
     else
-        test_dkmcp_config_exists
-        test_dkmcp_config_valid_yaml
-        test_dkmcp_config_has_security_modes
-        test_dkmcp_config_allowed_containers
-        test_dkmcp_config_exec_whitelist
+        test_hostmcp_config_exists
+        test_hostmcp_config_valid_yaml
+        test_hostmcp_config_has_security_modes
+        test_hostmcp_config_allowed_containers
+        test_hostmcp_config_exec_whitelist
     fi
 
-    section "2. Multiple DockMCP Instances / 複数DockMCPインスタンス"
+    section "2. Multiple HostMCP Instances / 複数HostMCPインスタンス"
     if [ ! -d "$DKMCP_DIR" ]; then
-        skip "dkmcp not found at $DKMCP_DIR — skipping DockMCP instance tests"
+        skip "hostmcp not found at $DKMCP_DIR — skipping HostMCP instance tests"
     else
-        test_dkmcp_serve_port_flag
-        test_dkmcp_serve_config_flag
-        test_dkmcp_multiple_configs_exist
+        test_hostmcp_serve_port_flag
+        test_hostmcp_serve_config_flag
+        test_hostmcp_multiple_configs_exist
     fi
 
     section "3. Project Name Customization / プロジェクト名カスタマイズ"
@@ -2325,11 +2325,11 @@ main() {
             "/tmp にテスト設定ファイルを作成（実際のプロジェクトは変更しない）" \
             "Low - Only creates temp files, cleaned up automatically" \
             "低 - 一時ファイルのみ作成、自動的にクリーンアップ" \
-            "Delete manually if needed: rm /tmp/test-dkmcp-*.yaml" \
-            "必要なら手動で削除: rm /tmp/test-dkmcp-*.yaml"; then
+            "Delete manually if needed: rm /tmp/test-hostmcp-*.yaml" \
+            "必要なら手動で削除: rm /tmp/test-hostmcp-*.yaml"; then
             section "5. Custom Config File Tests / カスタム設定ファイルテスト"
-            test_create_custom_dkmcp_config
-            test_create_permissive_dkmcp_config
+            test_create_custom_hostmcp_config
+            test_create_permissive_hostmcp_config
         fi
     fi
 
@@ -2384,33 +2384,33 @@ main() {
     # Server integration tests (requires Docker on host)
     if [ "$RUN_ALL" = "true" ]; then
         if confirm_section "9" "Server Integration Tests / サーバー統合テスト" \
-            "Starts DockMCP servers (ports 18080-19093), creates temp configs in /tmp" \
-            "DockMCPサーバー起動（ポート18080-19093）、/tmp に一時設定ファイル作成" \
+            "Starts HostMCP servers (ports 18080-19093), creates temp configs in /tmp" \
+            "HostMCPサーバー起動（ポート18080-19093）、/tmp に一時設定ファイル作成" \
             "Low-Medium - High ports, temp files auto-cleaned on exit" \
             "低〜中 - 高ポート使用、一時ファイルは終了時に自動クリーンアップ" \
             "Test ports only: for p in 18080 18081 18082 19090 19091 19092 19093; do lsof -ti:\$p | xargs kill 2>/dev/null; done" \
             "テストポートのみ停止: for p in 18080 18081 18082 19090 19091 19092 19093; do lsof -ti:\$p | xargs kill 2>/dev/null; done"; then
             section "9. Server Integration Tests / サーバー統合テスト"
 
-            # Setup dkmcp binary for integration tests
-            # 統合テスト用のdkmcpバイナリをセットアップ
-            if ! setup_dkmcp_bin; then
-                echo -e "${YELLOW}[WARN] $(msg "Could not find or build dkmcp binary" "dkmcpバイナリが見つからないかビルドできません")${NC}"
-                echo "$(msg "Run: cd dkmcp && make install" "実行: cd dkmcp && make install")"
+            # Setup hostmcp binary for integration tests
+            # 統合テスト用のhostmcpバイナリをセットアップ
+            if ! setup_hostmcp_bin; then
+                echo -e "${YELLOW}[WARN] $(msg "Could not find or build hostmcp binary" "hostmcpバイナリが見つからないかビルドできません")${NC}"
+                echo "$(msg "Run: cd hostmcp && make install" "実行: cd hostmcp && make install")"
             fi
 
             # 9.1 Basic server tests
             echo -e "${BLUE}--- $(msg "9.1 Basic Server Tests" "9.1 基本サーバーテスト") ---${NC}"
-            test_dkmcp_serve_starts
-            test_dkmcp_multiple_instances
+            test_hostmcp_serve_starts
+            test_hostmcp_multiple_instances
 
             # 9.2 Configuration effectiveness tests
             echo ""
             echo -e "${BLUE}--- $(msg "9.2 Config Effectiveness Tests" "9.2 設定有効性テスト") ---${NC}"
-            test_dkmcp_port_flag_effective
-            test_dkmcp_config_strict_mode
-            test_dkmcp_allowed_containers_effective
-            test_dkmcp_exec_whitelist_effective
+            test_hostmcp_port_flag_effective
+            test_hostmcp_config_strict_mode
+            test_hostmcp_allowed_containers_effective
+            test_hostmcp_exec_whitelist_effective
         fi
     fi
 

@@ -65,7 +65,7 @@ Since this is an AI Sandbox, you can ask your AI assistant to handle most of the
 >
 > Container names: `my-api`, `my-web`. Allowed commands for my-api: `npm test`, `npm run lint`"
 
-The AI will edit docker-compose.yml, create dkmcp.yaml, update AI configuration files, and run validation scripts. You only need to rebuild the DevContainer and start DockMCP yourself.
+The AI will edit docker-compose.yml, create hostmcp.yaml, update AI configuration files, and run validation scripts. You only need to rebuild the DevContainer and start HostMCP yourself.
 
 The sections below describe each step for manual setup.
 
@@ -130,12 +130,12 @@ Detection rules:
 - `/dev/null:/workspace/...` in volumes → secret file
 - `/workspace/...:ro` in tmpfs → secret directory
 
-### DockMCP configuration
+### HostMCP configuration
 
-Copy and edit **`dkmcp/configs/dkmcp.example.yaml`**:
+Copy and edit **`hostmcp/configs/hostmcp.example.yaml`**:
 
 ```bash
-cp dkmcp/configs/dkmcp.example.yaml dkmcp.yaml
+cp hostmcp/configs/hostmcp.example.yaml hostmcp.yaml
 ```
 
 ```yaml
@@ -170,7 +170,7 @@ security:
   exec_whitelist: {}  # No command execution
 ```
 
-For multiple instances and more, see [dkmcp/README.md "Server Startup"](../dkmcp/README.md#running-multiple-instances).
+For multiple instances and more, see [hostmcp/README.md "Server Startup"](../hostmcp/README.md#running-multiple-instances).
 
 ### AI assistant configuration
 
@@ -191,7 +191,7 @@ If subprojects already have `.claude/settings.json`, they are auto-merged at AI 
 
 **CLAUDE.md / GEMINI.md editing guidelines:**
 
-- **Keep**: DockMCP MCP Tools usage, security architecture overview, environment separation (What Runs Where)
+- **Keep**: HostMCP MCP Tools usage, security architecture overview, environment separation (What Runs Where)
 - **Rewrite**: Project structure, Common Tasks examples for your project
 
 ### Plugins for multi-repo setups
@@ -214,7 +214,7 @@ When using Claude Code plugins with multi-repo setups (each project as an indepe
 cat your-api/.env
 # → Empty or "No such file"
 
-# Verify container access via DockMCP
+# Verify container access via HostMCP
 # Ask Claude Code "Show me the container list"
 # Ask Claude Code "Show me your-api logs"
 ```
@@ -223,10 +223,10 @@ cat your-api/.env
 
 - [ ] Configure secret files in `.devcontainer/docker-compose.yml`
 - [ ] Apply same configuration in `cli_sandbox/docker-compose.yml`
-- [ ] Set container names in `dkmcp.yaml`
-- [ ] Set allowed commands in `dkmcp.yaml`
+- [ ] Set container names in `hostmcp.yaml`
+- [ ] Set allowed commands in `hostmcp.yaml`
 - [ ] Edit `CLAUDE.md` / `GEMINI.md` for your project
 - [ ] Add secret paths to `.aiexclude` / `.geminiignore` (if needed)
 - [ ] Rebuild DevContainer
 - [ ] Verify secret files are hidden
-- [ ] Verify log access via DockMCP
+- [ ] Verify log access via HostMCP

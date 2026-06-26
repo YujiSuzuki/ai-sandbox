@@ -1,6 +1,6 @@
-# DockMCP Host Access
+# HostMCP Host Access
 
-DockMCP can extend AI's reach beyond containers to the host OS itself. Three features — **Host Tools**, **Container Lifecycle**, and **Host Commands** — let AI perform operations on the host in a controlled, auditable way.
+HostMCP can extend AI's reach beyond containers to the host OS itself. Three features — **Host Tools**, **Container Lifecycle**, and **Host Commands** — let AI perform operations on the host in a controlled, auditable way.
 
 [<- Back to README](../README.md)
 
@@ -25,7 +25,7 @@ AI Sandbox (container)
   │
   │  MCP / HTTP
   ▼
-DockMCP Server (host OS)
+HostMCP Server (host OS)
   ├── Container access     ← existing (logs, exec, stats, etc.)
   ├── Host Tools           ← NEW: run approved scripts on host
   ├── Container Lifecycle  ← NEW: start/stop/restart containers
@@ -40,8 +40,8 @@ Host tools are enabled by default, while container lifecycle and host commands a
 
 ### What It Does
 
-This feature allows AI to run scripts (`.sh`, `.go`, `.py`, etc.) placed in `.sandbox/host-tools/` through DockMCP.
-Rather than running scripts placed here as is, by approving them through interactive input when starting the DockMCP server, the script will be placed on the host OS, which is inaccessible from containers, and you will be able to perform host-side operations (such as launching a demo container) through DockMCP.
+This feature allows AI to run scripts (`.sh`, `.go`, `.py`, etc.) placed in `.sandbox/host-tools/` through HostMCP.
+Rather than running scripts placed here as is, by approving them through interactive input when starting the HostMCP server, the script will be placed on the host OS, which is inaccessible from containers, and you will be able to perform host-side operations (such as launching a demo container) through HostMCP.
 
 This is a mechanism to prevent AI from arbitrarily modifying source code executed on the host from within a container.
 
@@ -51,17 +51,17 @@ Tools proposed by AI or developers go through a two-stage process:
 
 ```
 1. Place script in .sandbox/host-tools/     (staging — inside workspace)
-2. Run: dkmcp tools sync                    (review & approve on host)
-3. Approved copy goes to ~/.dkmcp/host-tools/<project-id>/
-4. Only approved versions of AI can be run through DockMCP
+2. Run: hostmcp tools sync                    (review & approve on host)
+3. Approved copy goes to ~/.hostmcp/host-tools/<project-id>/
+4. Only approved versions of AI can be run through HostMCP
 ```
 
-Only the approved copy is executed. If the staging version changes, `dkmcp tools sync` detects the difference and prompts for re-approval.
+Only the approved copy is executed. If the staging version changes, `hostmcp tools sync` detects the difference and prompts for re-approval.
 
 ### Directory Layout
 
 ```
-~/.dkmcp/host-tools/
+~/.hostmcp/host-tools/
 ├── _common/                    # Shared across all projects
 │   └── shared-tool.sh
 └── <project-id>/               # Per-project approved tools
@@ -75,11 +75,11 @@ Only the approved copy is executed. If the staging version changes, `dkmcp tools
 ### Configuration
 
 ```yaml
-# dkmcp.yaml
+# hostmcp.yaml
 host_access:
   host_tools:
     enabled: true
-    approved_dir: "~/.dkmcp/host-tools"
+    approved_dir: "~/.hostmcp/host-tools"
     staging_dirs:
       - ".sandbox/host-tools"
     common: true
@@ -111,7 +111,7 @@ Place a script in `.sandbox/host-tools/` with a description header:
 #   my-tool.sh --verbose build
 ```
 
-The header is parsed by DockMCP and shown to AI via `list_host_tools` and `get_host_tool_info`.
+The header is parsed by HostMCP and shown to AI via `list_host_tools` and `get_host_tool_info`.
 
 ---
 
@@ -131,7 +131,7 @@ AI can start, stop, and restart Docker containers using the Docker API directly.
 ### Configuration
 
 ```yaml
-# dkmcp.yaml
+# hostmcp.yaml
 security:
   permissions:
     lifecycle: true  # default: false
@@ -143,9 +143,9 @@ AI uses MCP tools (`restart_container`, `stop_container`, `start_container`) or 
 
 ```bash
 # From AI Sandbox
-dkmcp client restart securenote-api
-dkmcp client stop securenote-api --timeout 30
-dkmcp client start securenote-api
+hostmcp client restart securenote-api
+hostmcp client stop securenote-api --timeout 30
+hostmcp client start securenote-api
 ```
 
 ---
@@ -154,7 +154,7 @@ dkmcp client start securenote-api
 
 ### What It Does
 
-AI can execute whitelisted CLI commands on the host OS through DockMCP. This is useful for operations like checking git status, disk usage, or system info without giving AI full shell access.
+AI can execute whitelisted CLI commands on the host OS through HostMCP. This is useful for operations like checking git status, disk usage, or system info without giving AI full shell access.
 
 ### How It Works
 
@@ -167,7 +167,7 @@ Commands are controlled by three layers:
 ### Configuration
 
 ```yaml
-# dkmcp.yaml
+# hostmcp.yaml
 host_access:
   host_commands:
     enabled: true
@@ -236,33 +236,33 @@ Regardless of whitelist configuration, the following are **always blocked**:
 
 ```bash
 # Review and approve tools from staging directories
-dkmcp tools sync
+hostmcp tools sync
 
 # Show approved tools directory and project info
-dkmcp tools list
+hostmcp tools list
 ```
 
 ### Host Tools Client (run from AI Sandbox)
 
 ```bash
-dkmcp client host-tools list
-dkmcp client host-tools info <tool-name>
-dkmcp client host-tools run <tool-name> [args...]
+hostmcp client host-tools list
+hostmcp client host-tools info <tool-name>
+hostmcp client host-tools run <tool-name> [args...]
 ```
 
 ### Container Lifecycle (run from AI Sandbox)
 
 ```bash
-dkmcp client restart <container> [--timeout <seconds>]
-dkmcp client stop <container> [--timeout <seconds>]
-dkmcp client start <container>
+hostmcp client restart <container> [--timeout <seconds>]
+hostmcp client stop <container> [--timeout <seconds>]
+hostmcp client start <container>
 ```
 
 ### Host Commands (run from AI Sandbox)
 
 ```bash
-dkmcp client host-exec "git status"
-dkmcp client host-exec --dangerously "git pull"
+hostmcp client host-exec "git status"
+hostmcp client host-exec --dangerously "git pull"
 ```
 
 ---
@@ -271,7 +271,7 @@ dkmcp client host-exec --dangerously "git pull"
 
 ### Host Tools
 
-- **Approval required** — Tools must be explicitly approved before execution. The staging directory (inside workspace) is writable by AI, but the approved directory (`~/.dkmcp/host-tools/`) is not.
+- **Approval required** — Tools must be explicitly approved before execution. The staging directory (inside workspace) is writable by AI, but the approved directory (`~/.hostmcp/host-tools/`) is not.
 - **Change detection** — SHA256 hashing detects modifications. Changed tools require re-approval.
 - **Timeout** — Tool execution has a configurable timeout (default: 60s) to prevent runaway scripts.
 - **Extension whitelist** — Only `.sh`, `.go`, `.py` files can be registered as tools.

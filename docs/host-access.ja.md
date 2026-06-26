@@ -1,6 +1,6 @@
-# DockMCP ホストアクセス
+# HostMCP ホストアクセス
 
-DockMCP はコンテナだけでなく、ホスト OS への操作も制御付きで AI に提供できます。**ホストツール**、**コンテナライフサイクル**、**ホストコマンド** の 3 機能があり、いずれも監査可能な形でホスト操作を実行します。
+HostMCP はコンテナだけでなく、ホスト OS への操作も制御付きで AI に提供できます。**ホストツール**、**コンテナライフサイクル**、**ホストコマンド** の 3 機能があり、いずれも監査可能な形でホスト操作を実行します。
 
 [<- README に戻る](../README.ja.md)
 
@@ -25,7 +25,7 @@ AI Sandbox（コンテナ）
   │
   │  MCP / HTTP
   ▼
-DockMCP サーバー（ホスト OS）
+HostMCP サーバー（ホスト OS）
   ├── コンテナアクセス           ← 既存（ログ、exec、統計 等）
   ├── ホストツール               ← 新機能: 承認済みスクリプトをホストで実行
   ├── コンテナライフサイクル     ← 新機能: コンテナの起動/停止/再起動
@@ -40,8 +40,8 @@ DockMCP サーバー（ホスト OS）
 
 ### 概要
 
-`.sandbox/host-tools/` に配置されたスクリプト（`.sh`、`.go`、`.py` 等）を DockMCPを通して AI が実行できる機能です。
-ここに配置されたスクリプトをそのまま実行するのではなく、DockMCPサーバー起動時の対話型の入力で承認する事により、コンテナからアクセスのできないホストOS側に配置され、DockMCPを通じてホスト側の操作（デモコンテナの起動など）を行える様になります。
+`.sandbox/host-tools/` に配置されたスクリプト（`.sh`、`.go`、`.py` 等）を HostMCPを通して AI が実行できる機能です。
+ここに配置されたスクリプトをそのまま実行するのではなく、HostMCPサーバー起動時の対話型の入力で承認する事により、コンテナからアクセスのできないホストOS側に配置され、HostMCPを通じてホスト側の操作（デモコンテナの起動など）を行える様になります。
 
 これは、コンテナ内からホスト上で実行されるソースコードをAIが勝手に修正できない様にするための仕組みです。
 
@@ -52,17 +52,17 @@ DockMCP サーバー（ホスト OS）
 
 ```
 1. .sandbox/host-tools/ にスクリプトを配置     （ステージング — ワークスペース内）
-2. ホスト OS で実行: dkmcp tools sync          （レビュー＆承認）
-3. 承認済みコピーが ~/.dkmcp/host-tools/<project-id>/ に保存
-4. AI は承認済みバージョンのみをDockMCPを通して実行可能
+2. ホスト OS で実行: hostmcp tools sync          （レビュー＆承認）
+3. 承認済みコピーが ~/.hostmcp/host-tools/<project-id>/ に保存
+4. AI は承認済みバージョンのみをHostMCPを通して実行可能
 ```
 
-実行されるのは承認済みのコピーだけです。ステージング側が変更されると `dkmcp tools sync` が差分を検出し、再承認を求めます。
+実行されるのは承認済みのコピーだけです。ステージング側が変更されると `hostmcp tools sync` が差分を検出し、再承認を求めます。
 
 ### ディレクトリ構成
 
 ```
-~/.dkmcp/host-tools/
+~/.hostmcp/host-tools/
 ├── _common/                    # 全プロジェクト共通
 │   └── shared-tool.sh
 └── <project-id>/               # プロジェクト固有の承認済みツール
@@ -76,11 +76,11 @@ DockMCP サーバー（ホスト OS）
 ### 設定
 
 ```yaml
-# dkmcp.yaml
+# hostmcp.yaml
 host_access:
   host_tools:
     enabled: true
-    approved_dir: "~/.dkmcp/host-tools"
+    approved_dir: "~/.hostmcp/host-tools"
     staging_dirs:
       - ".sandbox/host-tools"
     common: true
@@ -112,7 +112,7 @@ host_access:
 #   my-tool.sh --verbose build
 ```
 
-ヘッダーは DockMCP がパースし、`list_host_tools` や `get_host_tool_info` で AI に提供されます。
+ヘッダーは HostMCP がパースし、`list_host_tools` や `get_host_tool_info` で AI に提供されます。
 
 ---
 
@@ -132,7 +132,7 @@ Docker API を直接使って、コンテナの起動・停止・再起動を AI
 ### 設定
 
 ```yaml
-# dkmcp.yaml
+# hostmcp.yaml
 security:
   permissions:
     lifecycle: true  # デフォルト: false
@@ -144,9 +144,9 @@ AI は MCP ツール（`restart_container`、`stop_container`、`start_container
 
 ```bash
 # AI Sandbox から実行
-dkmcp client restart securenote-api
-dkmcp client stop securenote-api --timeout 30
-dkmcp client start securenote-api
+hostmcp client restart securenote-api
+hostmcp client stop securenote-api --timeout 30
+hostmcp client start securenote-api
 ```
 
 ---
@@ -168,7 +168,7 @@ dkmcp client start securenote-api
 ### 設定
 
 ```yaml
-# dkmcp.yaml
+# hostmcp.yaml
 host_access:
   host_commands:
     enabled: true
@@ -237,33 +237,33 @@ host_access:
 
 ```bash
 # ステージングディレクトリからツールをレビュー・承認
-dkmcp tools sync
+hostmcp tools sync
 
 # 承認済みツールのディレクトリとプロジェクト情報を表示
-dkmcp tools list
+hostmcp tools list
 ```
 
 ### ホストツールクライアント（AI Sandbox から実行）
 
 ```bash
-dkmcp client host-tools list
-dkmcp client host-tools info <ツール名>
-dkmcp client host-tools run <ツール名> [引数...]
+hostmcp client host-tools list
+hostmcp client host-tools info <ツール名>
+hostmcp client host-tools run <ツール名> [引数...]
 ```
 
 ### コンテナライフサイクル（AI Sandbox から実行）
 
 ```bash
-dkmcp client restart <コンテナ名> [--timeout <秒>]
-dkmcp client stop <コンテナ名> [--timeout <秒>]
-dkmcp client start <コンテナ名>
+hostmcp client restart <コンテナ名> [--timeout <秒>]
+hostmcp client stop <コンテナ名> [--timeout <秒>]
+hostmcp client start <コンテナ名>
 ```
 
 ### ホストコマンド（AI Sandbox から実行）
 
 ```bash
-dkmcp client host-exec "git status"
-dkmcp client host-exec --dangerously "git pull"
+hostmcp client host-exec "git status"
+hostmcp client host-exec --dangerously "git pull"
 ```
 
 ---
@@ -272,7 +272,7 @@ dkmcp client host-exec --dangerously "git pull"
 
 ### ホストツール
 
-- **承認が必須** — 実行前にかならず承認が必要です。ステージングディレクトリ（ワークスペース内）は AI が書き込めますが、承認済みディレクトリ（`~/.dkmcp/host-tools/`）は書き込めません。
+- **承認が必須** — 実行前にかならず承認が必要です。ステージングディレクトリ（ワークスペース内）は AI が書き込めますが、承認済みディレクトリ（`~/.hostmcp/host-tools/`）は書き込めません。
 - **変更検出** — SHA256 ハッシュで変更を検出します。変更されたツールは再承認が必要です。
 - **タイムアウト** — ツールの実行にはタイムアウトがあり（デフォルト: 60 秒）、暴走スクリプトを防止します。
 - **拡張子の制限** — `.sh`、`.go`、`.py` のみがツールとして登録可能です。

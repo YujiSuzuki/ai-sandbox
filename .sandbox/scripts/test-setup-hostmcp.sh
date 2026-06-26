@@ -1,14 +1,14 @@
 #!/bin/bash
-# test-setup-dkmcp.sh
-# Test script for setup-dkmcp.sh
+# test-setup-hostmcp.sh
+# Test script for setup-hostmcp.sh
 #
-# Usage: ./test-setup-dkmcp.sh
+# Usage: ./test-setup-hostmcp.sh
 #
 # Environment: AI Sandbox (requires /workspace)
 # ---
-# setup-dkmcp.sh のテストスクリプト
+# setup-hostmcp.sh のテストスクリプト
 #
-# 使用方法: ./test-setup-dkmcp.sh
+# 使用方法: ./test-setup-hostmcp.sh
 #
 # 実行環境: AI Sandbox（/workspace が必要）
 
@@ -23,7 +23,7 @@ if [ ! -d "/workspace" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/setup-dkmcp.sh"
+SCRIPT="$SCRIPT_DIR/setup-hostmcp.sh"
 TEST_WORKSPACE=""
 
 # Colors for output
@@ -147,11 +147,11 @@ test_check_registered_but_offline() {
 
     setup
 
-    # Create .mcp.json with dkmcp entry
+    # Create .mcp.json with hostmcp entry
     cat > "$TEST_WORKSPACE/.mcp.json" << 'EOF'
 {
   "mcpServers": {
-    "dkmcp": {
+    "hostmcp": {
       "type": "sse",
       "url": "http://host.docker.internal:18080/sse"
     }
@@ -185,7 +185,7 @@ test_register_fallback_creates_mcp_json() {
     cat > "$TEST_WORKSPACE/.mcp.json.example" << 'EOF'
 {
   "mcpServers": {
-    "dkmcp": {
+    "hostmcp": {
       "type": "sse",
       "url": "http://host.docker.internal:18080/sse"
     }
@@ -198,10 +198,10 @@ EOF
         "$SCRIPT" 2>/dev/null || true
 
     if [ -f "$TEST_WORKSPACE/.mcp.json" ] && \
-       jq -e '.mcpServers.dkmcp' "$TEST_WORKSPACE/.mcp.json" >/dev/null 2>&1; then
-        pass "Fallback creates .mcp.json with dkmcp entry"
+       jq -e '.mcpServers.hostmcp' "$TEST_WORKSPACE/.mcp.json" >/dev/null 2>&1; then
+        pass "Fallback creates .mcp.json with hostmcp entry"
     else
-        fail "Fallback did not create .mcp.json with dkmcp entry"
+        fail "Fallback did not create .mcp.json with hostmcp entry"
     fi
 
     cleanup
@@ -231,7 +231,7 @@ EOF
     WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" PATH="/usr/bin:/bin" \
         "$SCRIPT" 2>/dev/null || true
 
-    if jq -e '.mcpServers.dkmcp' "$TEST_WORKSPACE/.mcp.json" >/dev/null 2>&1 && \
+    if jq -e '.mcpServers.hostmcp' "$TEST_WORKSPACE/.mcp.json" >/dev/null 2>&1 && \
        jq -e '.mcpServers["sandbox-mcp"]' "$TEST_WORKSPACE/.mcp.json" >/dev/null 2>&1; then
         pass "Registration preserves existing entries"
     else
@@ -241,19 +241,19 @@ EOF
     cleanup
 }
 
-# Test 7: --unregister removes dkmcp from .mcp.json
-# テスト7: --unregister が .mcp.json から dkmcp を削除するか
-test_unregister_removes_dkmcp() {
+# Test 7: --unregister removes hostmcp from .mcp.json
+# テスト7: --unregister が .mcp.json から hostmcp を削除するか
+test_unregister_removes_hostmcp() {
     echo ""
-    echo "=== Test: --unregister removes dkmcp from .mcp.json ==="
+    echo "=== Test: --unregister removes hostmcp from .mcp.json ==="
 
     setup
 
-    # Create .mcp.json with both dkmcp and sandbox-mcp
+    # Create .mcp.json with both hostmcp and sandbox-mcp
     cat > "$TEST_WORKSPACE/.mcp.json" << 'EOF'
 {
   "mcpServers": {
-    "dkmcp": {
+    "hostmcp": {
       "type": "sse",
       "url": "http://host.docker.internal:18080/sse"
     },
@@ -268,11 +268,11 @@ EOF
     WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" PATH="/usr/bin:/bin" \
         "$SCRIPT" --unregister 2>/dev/null || true
 
-    if ! jq -e '.mcpServers.dkmcp' "$TEST_WORKSPACE/.mcp.json" >/dev/null 2>&1 && \
+    if ! jq -e '.mcpServers.hostmcp' "$TEST_WORKSPACE/.mcp.json" >/dev/null 2>&1 && \
        jq -e '.mcpServers["sandbox-mcp"]' "$TEST_WORKSPACE/.mcp.json" >/dev/null 2>&1; then
-        pass "--unregister removes only dkmcp, preserves others"
+        pass "--unregister removes only hostmcp, preserves others"
     else
-        fail "--unregister did not correctly remove only dkmcp"
+        fail "--unregister did not correctly remove only hostmcp"
     fi
 
     cleanup
@@ -300,7 +300,7 @@ EOF
 
     if [ -f "$TEST_WORKSPACE/.mcp.json" ]; then
         local url_in_file
-        url_in_file=$(jq -r '.mcpServers.dkmcp.url' "$TEST_WORKSPACE/.mcp.json" 2>/dev/null)
+        url_in_file=$(jq -r '.mcpServers.hostmcp.url' "$TEST_WORKSPACE/.mcp.json" 2>/dev/null)
         if [ "$url_in_file" = "$custom_url" ]; then
             pass "Custom URL is applied correctly"
         else
@@ -367,19 +367,19 @@ test_no_tools_found() {
     cleanup
 }
 
-# Test 11: Detection finds dkmcp in ~/.claude.json user scope
-# テスト11: ~/.claude.json のユーザースコープで dkmcp を検出するか
+# Test 11: Detection finds hostmcp in ~/.claude.json user scope
+# テスト11: ~/.claude.json のユーザースコープで hostmcp を検出するか
 test_detect_claude_user_scope() {
     echo ""
-    echo "=== Test: Detection finds dkmcp in ~/.claude.json user scope ==="
+    echo "=== Test: Detection finds hostmcp in ~/.claude.json user scope ==="
 
     setup
 
-    # Create ~/.claude.json with dkmcp at user scope
+    # Create ~/.claude.json with hostmcp at user scope
     cat > "$TEST_WORKSPACE/.claude.json" << 'EOF'
 {
   "mcpServers": {
-    "dkmcp": {
+    "hostmcp": {
       "type": "sse",
       "url": "http://host.docker.internal:18080/sse"
     }
@@ -393,7 +393,7 @@ EOF
 
     # Should be 2 (registered but offline), not 1 (not registered)
     if [ "$exit_code" -eq 2 ]; then
-        pass "Detection finds dkmcp in ~/.claude.json user scope"
+        pass "Detection finds hostmcp in ~/.claude.json user scope"
     else
         fail "Detection returned $exit_code, expected 2 (registered but offline)"
     fi
@@ -401,15 +401,15 @@ EOF
     cleanup
 }
 
-# Test 12: Detection finds dkmcp in ~/.claude.json project scope
-# テスト12: ~/.claude.json のプロジェクトスコープで dkmcp を検出するか
+# Test 12: Detection finds hostmcp in ~/.claude.json project scope
+# テスト12: ~/.claude.json のプロジェクトスコープで hostmcp を検出するか
 test_detect_claude_project_scope() {
     echo ""
-    echo "=== Test: Detection finds dkmcp in ~/.claude.json project scope ==="
+    echo "=== Test: Detection finds hostmcp in ~/.claude.json project scope ==="
 
     setup
 
-    # Create ~/.claude.json with dkmcp at project scope
+    # Create ~/.claude.json with hostmcp at project scope
     # Note: project key must match WORKSPACE
     local project_key="$TEST_WORKSPACE"
     cat > "$TEST_WORKSPACE/.claude.json" << EOF
@@ -417,7 +417,7 @@ test_detect_claude_project_scope() {
   "projects": {
     "$project_key": {
       "mcpServers": {
-        "dkmcp": {
+        "hostmcp": {
           "type": "sse",
           "url": "http://host.docker.internal:18080/sse"
         }
@@ -432,7 +432,7 @@ EOF
         "$SCRIPT" --check --url "http://localhost:1/sse" 2>/dev/null || exit_code=$?
 
     if [ "$exit_code" -eq 2 ]; then
-        pass "Detection finds dkmcp in ~/.claude.json project scope"
+        pass "Detection finds hostmcp in ~/.claude.json project scope"
     else
         fail "Detection returned $exit_code, expected 2 (registered but offline)"
     fi
@@ -469,29 +469,29 @@ STUB
         "$SCRIPT" 2>/dev/null || true
 
     if [ -f "$TEST_WORKSPACE/.gemini/settings.json" ] && \
-       jq -e '.mcpServers.dkmcp' "$TEST_WORKSPACE/.gemini/settings.json" >/dev/null 2>&1; then
-        pass "Gemini registration creates settings.json with dkmcp entry"
+       jq -e '.mcpServers.hostmcp' "$TEST_WORKSPACE/.gemini/settings.json" >/dev/null 2>&1; then
+        pass "Gemini registration creates settings.json with hostmcp entry"
     else
-        fail "Gemini registration did not create settings.json with dkmcp entry"
+        fail "Gemini registration did not create settings.json with hostmcp entry"
     fi
 
     cleanup
 }
 
-# Test 14: Gemini --unregister removes dkmcp from .gemini/settings.json
-# テスト14: Gemini の --unregister で dkmcp が削除されるか
+# Test 14: Gemini --unregister removes hostmcp from .gemini/settings.json
+# テスト14: Gemini の --unregister で hostmcp が削除されるか
 test_gemini_unregister() {
     echo ""
-    echo "=== Test: Gemini --unregister removes dkmcp ==="
+    echo "=== Test: Gemini --unregister removes hostmcp ==="
 
     setup
 
-    # Create .gemini/settings.json with dkmcp and another entry
+    # Create .gemini/settings.json with hostmcp and another entry
     mkdir -p "$TEST_WORKSPACE/.gemini"
     cat > "$TEST_WORKSPACE/.gemini/settings.json" << 'EOF'
 {
   "mcpServers": {
-    "dkmcp": {
+    "hostmcp": {
       "type": "sse",
       "url": "http://host.docker.internal:18080/sse"
     },
@@ -516,9 +516,9 @@ STUB
     WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" PATH="$stub_dir:/usr/bin:/bin" \
         "$SCRIPT" --unregister 2>/dev/null || true
 
-    if ! jq -e '.mcpServers.dkmcp' "$TEST_WORKSPACE/.gemini/settings.json" >/dev/null 2>&1 && \
+    if ! jq -e '.mcpServers.hostmcp' "$TEST_WORKSPACE/.gemini/settings.json" >/dev/null 2>&1 && \
        jq -e '.mcpServers["other-mcp"]' "$TEST_WORKSPACE/.gemini/settings.json" >/dev/null 2>&1; then
-        pass "--unregister removes dkmcp from Gemini, preserves others"
+        pass "--unregister removes hostmcp from Gemini, preserves others"
     else
         fail "--unregister did not correctly handle Gemini settings"
     fi
@@ -526,20 +526,20 @@ STUB
     cleanup
 }
 
-# Test 15: Detection finds dkmcp in .gemini/settings.json
-# テスト15: .gemini/settings.json で dkmcp を検出するか
+# Test 15: Detection finds hostmcp in .gemini/settings.json
+# テスト15: .gemini/settings.json で hostmcp を検出するか
 test_detect_gemini_registered() {
     echo ""
-    echo "=== Test: Detection finds dkmcp in .gemini/settings.json ==="
+    echo "=== Test: Detection finds hostmcp in .gemini/settings.json ==="
 
     setup
 
-    # Create .gemini/settings.json with dkmcp + gemini stub
+    # Create .gemini/settings.json with hostmcp + gemini stub
     mkdir -p "$TEST_WORKSPACE/.gemini"
     cat > "$TEST_WORKSPACE/.gemini/settings.json" << 'EOF'
 {
   "mcpServers": {
-    "dkmcp": {
+    "hostmcp": {
       "type": "sse",
       "url": "http://host.docker.internal:18080/sse"
     }
@@ -561,7 +561,7 @@ STUB
 
     # Should be 2 (registered but offline), not 1 (not registered)
     if [ "$exit_code" -eq 2 ]; then
-        pass "Detection finds dkmcp in .gemini/settings.json"
+        pass "Detection finds hostmcp in .gemini/settings.json"
     else
         fail "Detection returned $exit_code, expected 2 (registered but offline)"
     fi
@@ -641,7 +641,7 @@ STUB
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  setup-dkmcp.sh Test Suite"
+    echo "  setup-hostmcp.sh Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_runs_and_shows_help
@@ -650,7 +650,7 @@ main() {
     test_check_registered_but_offline
     test_register_fallback_creates_mcp_json
     test_register_preserves_existing_entries
-    test_unregister_removes_dkmcp
+    test_unregister_removes_hostmcp
     test_custom_url
     test_status_output
     test_no_tools_found

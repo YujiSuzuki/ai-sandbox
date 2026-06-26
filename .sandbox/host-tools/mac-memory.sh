@@ -1,7 +1,7 @@
 #!/bin/bash
 # mac-memory.sh
 # macOS のメモリ使用状況を表示する。
-# DockMCP の run_host_tool 経由でコンテナから呼び出す。
+# HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #
 # Usage:
 #   ./mac-memory.sh [options]

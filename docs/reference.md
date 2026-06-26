@@ -221,67 +221,67 @@ Use cases:
 
 ---
 
-## Uninstalling DockMCP
+## Uninstalling HostMCP
 
-If DockMCP is no longer needed, delete the binary from its install location:
+If HostMCP is no longer needed, delete the binary from its install location:
 
 ```bash
-rm ~/go/bin/dkmcp
+rm ~/go/bin/hostmcp
 # or
-rm /usr/local/bin/dkmcp
+rm /usr/local/bin/hostmcp
 ```
 
 ---
 
 ## Troubleshooting
 
-### DockMCP Connection
+### HostMCP Connection
 
-If Claude Code doesn't recognize DockMCP tools:
+If Claude Code doesn't recognize HostMCP tools:
 
-1. **Check VS Code ports panel** - Stop if DockMCP's port (default 18080) is being forwarded
-2. **Verify DockMCP is running** - `curl http://localhost:18080/health` (on host OS)
+1. **Check VS Code ports panel** - Stop if HostMCP's port (default 18080) is being forwarded
+2. **Verify HostMCP is running** - `curl http://localhost:18080/health` (on host OS)
 3. **Try MCP reconnect** - In Claude Code, run `/mcp` and select "Reconnect"
 4. **Fully restart VS Code** (Cmd+Q / Alt+F4) - If Reconnect doesn't help
 
-### Auto-setup with setup-dkmcp.sh
+### Auto-setup with setup-hostmcp.sh
 
-You can use the setup script inside AI Sandbox to check registration status and register DockMCP automatically:
+You can use the setup script inside AI Sandbox to check registration status and register HostMCP automatically:
 
 ```bash
 # Check current status (silent, useful for scripting)
-.sandbox/scripts/setup-dkmcp.sh --check
+.sandbox/scripts/setup-hostmcp.sh --check
 # Exit codes: 0 = connected, 1 = not registered, 2 = registered but offline
 
 # Show human-readable status
-.sandbox/scripts/setup-dkmcp.sh --status
+.sandbox/scripts/setup-hostmcp.sh --status
 
-# Register DockMCP with detected AI tools + verify connectivity
-.sandbox/scripts/setup-dkmcp.sh
+# Register HostMCP with detected AI tools + verify connectivity
+.sandbox/scripts/setup-hostmcp.sh
 
-# Use a custom URL (if DockMCP is on a non-default port)
-.sandbox/scripts/setup-dkmcp.sh --url http://host.docker.internal:9090/sse
+# Use a custom URL (if HostMCP is on a non-default port)
+.sandbox/scripts/setup-hostmcp.sh --url http://host.docker.internal:9090/sse
 
-# Remove DockMCP registration from all AI tools
-.sandbox/scripts/setup-dkmcp.sh --unregister
+# Remove HostMCP registration from all AI tools
+.sandbox/scripts/setup-hostmcp.sh --unregister
 ```
 
-The script automatically detects available AI tools (Claude Code, Gemini CLI) and registers DockMCP as an SSE MCP server. After registration, follow the "Next Steps" shown by the script (e.g., `/mcp` → Reconnect in Claude Code).
+The script automatically detects available AI tools (Claude Code, Gemini CLI) and registers HostMCP as an SSE MCP server. After registration, follow the "Next Steps" shown by the script (e.g., `/mcp` → Reconnect in Claude Code).
 
-### Fallback: Using dkmcp client in AI Sandbox
+### Fallback: Using hostmcp client in AI Sandbox
 
-If the MCP protocol isn't working (Claude Code or Gemini can't connect), you can use `dkmcp client` commands directly in the AI Sandbox as a fallback.
+If the MCP protocol isn't working (Claude Code or Gemini can't connect), you can use `hostmcp client` commands directly in the AI Sandbox as a fallback.
 
 > **Note:** Even when `/mcp` shows "✔ connected", MCP tools may fail with "Client not initialized" error. This may be caused by session management timing issues in VS Code extensions (Claude Code, Gemini Code Assist, etc.). In this case:
 > 1. First try `/mcp` → "Reconnect" (quickest solution)
-> 2. If that doesn't work, AI uses `dkmcp client` commands as fallback
+> 2. If that doesn't work, AI uses `hostmcp client` commands as fallback
 > 3. As a last resort, fully restart VS Code to re-establish the connection
 
 **Setup (first time only):**
 
-Install dkmcp inside AI Sandbox:
+Install hostmcp inside AI Sandbox:
 ```bash
-cd /workspace/dkmcp
+cd /workspace/hostmcp
 make install
 ```
 
@@ -290,18 +290,18 @@ make install
 **Usage:**
 ```bash
 # List containers
-dkmcp client list
+hostmcp client list
 
 # Get logs
-dkmcp client logs securenote-api
+hostmcp client logs securenote-api
 
 # Execute command
-dkmcp client exec securenote-api "npm test"
+hostmcp client exec securenote-api "npm test"
 ```
 
-> **About `--url`:** Defaults to `http://host.docker.internal:18080`. If you changed the server port in `dkmcp.yaml`, specify it explicitly via the `--url` flag or `DOCKMCP_SERVER_URL` environment variable.
+> **About `--url`:** Defaults to `http://host.docker.internal:18080`. If you changed the server port in `hostmcp.yaml`, specify it explicitly via the `--url` flag or `HOSTMCP_SERVER_URL` environment variable.
 > ```bash
-> dkmcp client list --url http://host.docker.internal:9090
+> hostmcp client list --url http://host.docker.internal:9090
 > # or
-> export DOCKMCP_SERVER_URL=http://host.docker.internal:9090
+> export HOSTMCP_SERVER_URL=http://host.docker.internal:9090
 > ```

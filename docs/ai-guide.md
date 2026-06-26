@@ -7,26 +7,26 @@ This file is referenced from [CLAUDE.md](../CLAUDE.md) — read sections on dema
 
 ---
 
-## DockMCP Setup and Troubleshooting
+## HostMCP Setup and Troubleshooting
 
 ### Initial Setup
 
-**Step 1: Start DockMCP on Host OS**
+**Step 1: Start HostMCP on Host OS**
 
 ```bash
 # On Host OS (NOT in AI Sandbox)
-cd dkmcp
+cd hostmcp
 make install  # Builds and installs to $GOPATH/bin
-dkmcp serve --config configs/dkmcp.example.yaml
+hostmcp serve --config configs/hostmcp.example.yaml
 ```
 
-If DockMCP server is restarted, SSE connections drop. Inform user to run `/mcp` → "Reconnect".
+If HostMCP server is restarted, SSE connections drop. Inform user to run `/mcp` → "Reconnect".
 
 **Step 2: Configure MCP in AI Sandbox**
 
 ```bash
 # Inside AI Sandbox
-claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:18080/sse
+claude mcp add --transport sse --scope user hostmcp http://host.docker.internal:18080/sse
 ```
 
 After adding, restart VS Code for it to connect.
@@ -37,63 +37,63 @@ Check if tools like `list_containers`, `get_logs` are available.
 
 ### Troubleshooting
 
-1. **Verify DockMCP is running**: `curl http://localhost:18080/health` (on host OS)
+1. **Verify HostMCP is running**: `curl http://localhost:18080/health` (on host OS)
 2. **Try MCP Reconnect**: `/mcp` → "Reconnect" in Claude Code
 3. **Restart VS Code completely**: Cmd+Q (macOS) / Alt+F4 (Windows/Linux)
 
 If issues persist, verify MCP configuration:
 
 ```bash
-cat ~/.claude.json | jq '.mcpServers.dkmcp'
+cat ~/.claude.json | jq '.mcpServers.hostmcp'
 # Should show: "url": "http://host.docker.internal:18080/sse"
 ```
 
 **"Client not initialized" error:** Even when `/mcp` shows "connected", MCP tools may fail. This is caused by VS Code extension session management timing issues. Try:
 1. `/mcp` → "Reconnect" first
-2. If that fails, use `dkmcp client` fallback (below)
+2. If that fails, use `hostmcp client` fallback (below)
 3. Last resort: restart VS Code completely
 
 ---
 
-## DockMCP Client Fallback
+## HostMCP Client Fallback
 
-When MCP tools are unavailable, use `dkmcp client` commands via Bash:
+When MCP tools are unavailable, use `hostmcp client` commands via Bash:
 
 ```bash
 # List containers
-dkmcp client list
+hostmcp client list
 
 # Get logs
-dkmcp client logs securenote-api
-dkmcp client logs --tail 50 securenote-api
+hostmcp client logs securenote-api
+hostmcp client logs --tail 50 securenote-api
 
 # Execute whitelisted command
-dkmcp client exec securenote-api "npm test"
+hostmcp client exec securenote-api "npm test"
 
 # Host tools
-dkmcp client host-tools list
-dkmcp client host-tools info my-tool.sh
-dkmcp client host-tools run my-tool.sh arg1 arg2
+hostmcp client host-tools list
+hostmcp client host-tools info my-tool.sh
+hostmcp client host-tools run my-tool.sh arg1 arg2
 
 # Container lifecycle (if enabled)
-dkmcp client restart securenote-api
-dkmcp client stop securenote-api
-dkmcp client start securenote-api
-dkmcp client restart securenote-api --timeout 30
+hostmcp client restart securenote-api
+hostmcp client stop securenote-api
+hostmcp client start securenote-api
+hostmcp client restart securenote-api --timeout 30
 
 # Host commands (if enabled)
-dkmcp client host-exec "git status"
-dkmcp client host-exec --dangerously "git pull"
+hostmcp client host-exec "git status"
+hostmcp client host-exec --dangerously "git pull"
 ```
 
 **Custom server URL:**
 ```bash
-dkmcp client list --url http://host.docker.internal:9090
+hostmcp client list --url http://host.docker.internal:9090
 # or
-export DOCKMCP_SERVER_URL=http://host.docker.internal:9090
+export HOSTMCP_SERVER_URL=http://host.docker.internal:9090
 ```
 
-**If `dkmcp` not found:** Tell user to run `cd /workspace/dkmcp && make install`. This works inside AI Sandbox (Go is available). Client commands connect to host via HTTP.
+**If `hostmcp` not found:** Tell user to run `cd /workspace/hostmcp && make install`. This works inside AI Sandbox (Go is available). Client commands connect to host via HTTP.
 
 ---
 
@@ -125,14 +125,14 @@ git log HEAD..origin/main --oneline
 
 2. **Identify affected components**
    - `.sandbox/sandbox-mcp/` → SandboxMCP needs rebuild
-   - `dkmcp/` → DockMCP needs rebuild (user must do on host OS)
+   - `hostmcp/` → HostMCP needs rebuild (user must do on host OS)
    - `.devcontainer/` or `cli_sandbox/` → Container restart required
    - `.sandbox/scripts/` → Scripts updated (may need re-run)
 
 3. **Detect conflicts** — Check if user customized:
    - `.devcontainer/docker-compose.yml`
    - `cli_sandbox/docker-compose.yml`
-   - `dkmcp/configs/dkmcp.example.yaml` (and user's local `dkmcp.yaml`)
+   - `hostmcp/configs/hostmcp.example.yaml` (and user's local `hostmcp.yaml`)
    - `.claude/settings.json`
 
 4. **Explain changes and risks** to user before applying
@@ -145,17 +145,17 @@ git log HEAD..origin/main --oneline
    cd /workspace/.sandbox/sandbox-mcp
    make clean && make register
 
-   # DockMCP: user must rebuild on host OS
-   # cd /workspace/dkmcp && make install
+   # HostMCP: user must rebuild on host OS
+   # cd /workspace/hostmcp && make install
    ```
 
-6. **Verify** — Check SandboxMCP tools, DockMCP connection
+6. **Verify** — Check SandboxMCP tools, HostMCP connection
 
 ### What You CAN/CANNOT Do
 
 - ✅ Read state files, `git fetch`, `git diff`, `git pull`
-- ✅ Rebuild SandboxMCP, build DockMCP client
-- ❌ Rebuild/restart DockMCP server (host OS)
+- ✅ Rebuild SandboxMCP, build HostMCP client
+- ❌ Rebuild/restart HostMCP server (host OS)
 - ❌ Restart DevContainer, run Docker commands
 
 Do not check for updates proactively unless user asks or is experiencing issues.
@@ -172,7 +172,7 @@ Use `AskUserQuestion` to collect:
 1. **Project paths** — Directories in `/workspace/`
 2. **Secret files** — Files with secrets (`.env`, `config/secrets.json`)
 3. **Secret directories** — Directories to hide (`secrets/`, `keys/`)
-4. **Container names** — Docker container names for DockMCP
+4. **Container names** — Docker container names for HostMCP
 5. **Allowed commands** — Commands per container (`npm test`, etc.)
 
 ### Step 2: Configure secret hiding
@@ -185,10 +185,10 @@ tmpfs:
   - /workspace/my-api/secrets:ro
 ```
 
-### Step 4: Configure DockMCP
+### Step 4: Configure HostMCP
 
 ```bash
-cp dkmcp/configs/dkmcp.example.yaml dkmcp.yaml
+cp hostmcp/configs/hostmcp.example.yaml hostmcp.yaml
 ```
 Update `allowed_containers` and `exec_whitelist`.
 
@@ -210,12 +210,12 @@ Update `allowed_containers` and `exec_whitelist`.
 
 ### Step 7: Hand off to user
 
-Tell them to: rebuild DevContainer, start DockMCP on host OS, verify.
+Tell them to: rebuild DevContainer, start HostMCP on host OS, verify.
 
 ### Scope
 
-- ✅ Edit docker-compose, dkmcp.yaml, CLAUDE.md, settings files, run validation
-- ❌ Rebuild DevContainer, start DockMCP, run Docker commands, add user's project files
+- ✅ Edit docker-compose, hostmcp.yaml, CLAUDE.md, settings files, run validation
+- ❌ Rebuild DevContainer, start HostMCP, run Docker commands, add user's project files
 
 ---
 
@@ -297,8 +297,8 @@ Tests must exercise real code paths, not duplicate logic.
 **Bad** (duplicates logic):
 ```go
 func TestClientLogLevel(t *testing.T) {
-    clientName := "dkmcp-go-client"
-    if clientName == "dkmcp-go-client" {
+    clientName := "hostmcp-go-client"
+    if clientName == "hostmcp-go-client" {
         expected := "DEBUG"  // Same logic as code!
     }
 }
@@ -319,7 +319,7 @@ If unsure whether a test is meaningful, ask the user before writing.
 
 ## Host OS Test Scripts
 
-Test scripts on the host OS (e.g., `dkmcp/scripts/`) can cause real side effects. Display before execution:
+Test scripts on the host OS (e.g., `hostmcp/scripts/`) can cause real side effects. Display before execution:
 
 1. **Impact** — Ports, temp files, processes
 2. **Risk** — Level and reasoning
@@ -328,7 +328,7 @@ Test scripts on the host OS (e.g., `dkmcp/scripts/`) can cause real side effects
 Display recovery commands in failure summary.
 
 **Examples:**
-- `dkmcp/scripts/server-log-test.sh` — `show_prerun_info()` / `print_summary()`
+- `hostmcp/scripts/server-log-test.sh` — `show_prerun_info()` / `print_summary()`
 - `.sandbox/scripts/test-advanced-features.sh` — `confirm_section()` per section
 
 ---
@@ -375,8 +375,8 @@ Display recovery commands in failure summary.
 │   ├── claude.sh / gemini.sh / ai_sandbox.sh
 │   └── docker-compose.yml  # ⚠️ Secret hiding configuration
 │
-├── dkmcp/                  # DockMCP MCP Server (Go)
-│   ├── cmd/dkmcp/          # Main entry point
+├── hostmcp/                  # HostMCP MCP Server (Go)
+│   ├── cmd/hostmcp/          # Main entry point
 │   ├── internal/           # Core implementation
 │   └── configs/            # Example configurations
 │
@@ -462,7 +462,7 @@ tmpfs:
 
 AI sees empty files/directories. Real containers access actual secrets.
 
-### DockMCP Security Policy
+### HostMCP Security Policy
 
 ```yaml
 security:

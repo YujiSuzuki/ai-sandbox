@@ -2,25 +2,25 @@
 
 [English README is here](README.md)
 
-このディレクトリのスクリプトは、DockMCP の `run_host_tool` 経由でホスト OS 上で実行されます。
+このディレクトリのスクリプトは、HostMCP の `run_host_tool` 経由でホスト OS 上で実行されます。
 
 ## ⚠️ スクリプトを追加・変更したら必ず実行
 
 ```bash
-dkmcp tools sync
+hostmcp tools sync
 ```
 
-**ホスト OS 上で**上記コマンドを実行しないと、変更が DockMCP に反映されません。
+**ホスト OS 上で**上記コマンドを実行しないと、変更が HostMCP に反映されません。
 
 ### なぜ必要か
 
 このディレクトリはコンテナ内（ステージング）です。
-実際に実行されるのは `~/.dkmcp/host-tools/<project-id>/` にある承認済みコピーです。
+実際に実行されるのは `~/.hostmcp/host-tools/<project-id>/` にある承認済みコピーです。
 
 ```
 1. .sandbox/host-tools/ にスクリプトを置く   ← AI・開発者が編集できる
-2. dkmcp tools sync を実行                  ← ホスト OS で差分を確認・承認
-3. ~/.dkmcp/host-tools/<project-id>/ にコピー ← ここが実際に実行される
+2. hostmcp tools sync を実行                  ← ホスト OS で差分を確認・承認
+3. ~/.hostmcp/host-tools/<project-id>/ にコピー ← ここが実際に実行される
 ```
 
 SHA256 ハッシュで変更を検知するため、**編集のたびに再承認が必要**です。

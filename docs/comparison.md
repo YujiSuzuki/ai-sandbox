@@ -1,6 +1,6 @@
 # Comparison with Existing Solutions
 
-How AI Sandbox + DockMCP compares to other AI security tools, and why they work well together.
+How AI Sandbox + HostMCP compares to other AI security tools, and why they work well together.
 
 [← Back to README](../README.md)
 
@@ -51,7 +51,7 @@ How AI Sandbox + DockMCP compares to other AI security tools, and why they work 
 
 ## What This Project Adds
 
-AI Sandbox + DockMCP fills two specific gaps that the tools above don't fully address:
+AI Sandbox + HostMCP fills two specific gaps that the tools above don't fully address:
 
 ### Gap 1: Filesystem-level secret hiding
 
@@ -70,7 +70,7 @@ To catch misconfigurations, the sandbox runs **startup validation** that checks 
 
 ### Gap 2: Controlled cross-container access
 
-DockMCP acts as a gateway between the AI sandbox and other Docker containers, with security policy enforcement:
+HostMCP acts as a gateway between the AI sandbox and other Docker containers, with security policy enforcement:
 
 - AI can read logs, run whitelisted commands, and inspect containers
 - AI cannot start/stop containers, access blocked paths, or run arbitrary commands
@@ -87,7 +87,7 @@ These tools are **complementary, not competing**. For defense in depth:
 | Execution restriction | Claude Code Sandbox | Prevents malicious command execution |
 | System isolation | Docker AI Sandboxes | Isolates AI in a microVM |
 | Secret hiding | **AI Sandbox** (this project) | Makes secrets absent from AI's filesystem |
-| Cross-container access | **DockMCP** (this project) | Controlled access to other containers |
+| Cross-container access | **HostMCP** (this project) | Controlled access to other containers |
 
 You can use Claude Code's sandbox *inside* the AI Sandbox for maximum protection.
 
@@ -100,7 +100,7 @@ You can use Claude Code's sandbox *inside* the AI Sandbox for maximum protection
 | Execution restriction | OS-level | microVM isolation | Container isolation |
 | File read blocking | Deny rules (application-level) | No mechanism | Volume mounts (filesystem-level) |
 | Multi-project scope | Limited (no parent traversal) | Single workspace | Full workspace with per-file hiding |
-| Cross-container access | Restricted | Isolated | Controlled via DockMCP |
+| Cross-container access | Restricted | Isolated | Controlled via HostMCP |
 | Secret masking in output | No | No | Automatic |
 | Startup validation | No | No | Automatic sync check |
 | Setup complexity | None on macOS; bubblewrap/socat on Linux/WSL2 | Docker Desktop | Docker + docker-compose |

@@ -28,10 +28,10 @@
     "onAutoForward": "ignore"
   },
   // This setting enables direct connection from DevContainer to host (host.docker.internal),
-  // allowing access to the DockMCP server running on the host OS.
+  // allowing access to the HostMCP server running on the host OS.
   // If you need port forwarding for this DevContainer, explicitly configure the ports as shown below.
   // 上記の設定により、DevContainer からホストへの直接接続(host.docker.internal)を可能にして、
-  // ホストOS上の DockMCP サーバーポートへアクセスできる様に自動フォワーディングを無効化していますが、もし
+  // ホストOS上の HostMCP サーバーポートへアクセスできる様に自動フォワーディングを無効化していますが、もし
   // この DevContainer のポート転送が必要な場合、下記の例の様に明示的に転送したいポートを設定してください。
   //
   // Example: Explicitly forward ports 3210 and 3211 from this DevContainer
@@ -57,7 +57,7 @@
         "esbenp.prettier-vscode",
         // Uncomment the following extensions as needed
         // 以下は必要に応じてコメントを外してください
-        // "golang.go",              // Go (for DockMCP development)
+        // "golang.go",              // Go (for HostMCP development)
         // "eamodio.gitlens",        // Git history visualization
 
         // AI Assistant extensions

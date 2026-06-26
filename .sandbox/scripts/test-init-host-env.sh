@@ -640,11 +640,11 @@ test_host_os_file_overwritten() {
     cleanup
 }
 
-# ─── dkmcp helper: create mock bin dir ───────────────────────────────────────
-# Usage: _setup_dkmcp_mocks <fake_gopath_var> <mock_bin_var>
+# ─── hostmcp helper: create mock bin dir ───────────────────────────────────────
+# Usage: _setup_hostmcp_mocks <fake_gopath_var> <mock_bin_var>
 #   Sets named variables to temp dirs and prepends mock_bin to PATH.
-#   fake_go is written to mock_bin/go; callers customise dkmcp and gopath/bin.
-_setup_dkmcp_mocks() {
+#   fake_go is written to mock_bin/go; callers customise hostmcp and gopath/bin.
+_setup_hostmcp_mocks() {
     local _fp_var="$1" _mb_var="$2"
     local _fp _mb
     _fp=$(mktemp -d)
@@ -659,15 +659,15 @@ if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
     echo "$_fp"
 elif [ "\$1" = "install" ]; then
     mkdir -p "$_fp/bin"
-    touch "$_fp/bin/dkmcp"
-    chmod +x "$_fp/bin/dkmcp"
+    touch "$_fp/bin/hostmcp"
+    chmod +x "$_fp/bin/hostmcp"
     exit 0
 fi
 GOEOF
     chmod +x "$_mb/go"
 
-    # Default fake dkmcp (records calls, creates yaml on init)
-    cat > "$_mb/dkmcp" << 'DKMCPEOF'
+    # Default fake hostmcp (records calls, creates yaml on init)
+    cat > "$_mb/hostmcp" << 'DKMCPEOF'
 #!/bin/bash
 if [ "$1" = "init" ]; then
     ws=""
@@ -676,11 +676,11 @@ if [ "$1" = "init" ]; then
         [ "$1" = "--workspace" ] && ws="$2"
         shift
     done
-    [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/dkmcp.yaml"
+    [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/hostmcp.yaml"
 fi
 exit 0
 DKMCPEOF
-    chmod +x "$_mb/dkmcp"
+    chmod +x "$_mb/hostmcp"
 
     export PATH="$_mb:$PATH"
 }
@@ -690,47 +690,47 @@ _cleanup_mocks() {
     rm -rf "$fp" "$mb"
 }
 
-# ─── dkmcp tests ──────────────────────────────────────────────────────────────
+# ─── hostmcp tests ──────────────────────────────────────────────────────────────
 
-# Test 22: dkmcp already installed → skip install prompt, run init
-test_interactive_dkmcp_already_installed() {
+# Test 22: hostmcp already installed → skip install prompt, run init
+test_interactive_hostmcp_already_installed() {
     echo ""
-    echo "=== Test: dkmcp already installed — no install prompt ==="
+    echo "=== Test: hostmcp already installed — no install prompt ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
     # Input: language=1(English), port=default(1)
     local output
     output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
 
-    if echo "$output" | grep -q "dkmcp が見つかりません"; then
-        fail "Install prompt should NOT appear when dkmcp is already installed"
+    if echo "$output" | grep -q "hostmcp が見つかりません"; then
+        fail "Install prompt should NOT appear when hostmcp is already installed"
     else
-        pass "No install prompt when dkmcp already installed"
+        pass "No install prompt when hostmcp already installed"
     fi
 
     _cleanup_mocks "$fp" "$mb"
     cleanup
 }
 
-# Test 23: dkmcp not installed, user accepts → go install called, binary confirmed
-test_interactive_dkmcp_install_accepted() {
+# Test 23: hostmcp not installed, user accepts → go install called, binary confirmed
+test_interactive_hostmcp_install_accepted() {
     echo ""
-    echo "=== Test: dkmcp install accepted → go install executed ==="
+    echo "=== Test: hostmcp install accepted → go install executed ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
+    _setup_hostmcp_mocks fp mb
 
     # Input: language=1, install=1(yes), port=default(1)
     local output
     output=$(echo -e "1\n1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
 
     if echo "$output" | grep -q "インストールが完了"; then
-        pass "dkmcp install completed message shown"
+        pass "hostmcp install completed message shown"
     else
         fail "Expected install completion message, got: $output"
     fi
@@ -739,14 +739,14 @@ test_interactive_dkmcp_install_accepted() {
     cleanup
 }
 
-# Test 24: dkmcp not installed, user declines → init and next steps skipped
-test_interactive_dkmcp_install_declined() {
+# Test 24: hostmcp not installed, user declines → init and next steps skipped
+test_interactive_hostmcp_install_declined() {
     echo ""
-    echo "=== Test: dkmcp install declined → init skipped ==="
+    echo "=== Test: hostmcp install declined → init skipped ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
+    _setup_hostmcp_mocks fp mb
 
     # Input: language=1, install=2(no)
     local output
@@ -769,13 +769,13 @@ test_interactive_dkmcp_install_declined() {
 }
 
 # Test 25: go not found → error shown, init skipped
-test_interactive_dkmcp_no_go() {
+test_interactive_hostmcp_no_go() {
     echo ""
     echo "=== Test: go command not found → error shown ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
+    _setup_hostmcp_mocks fp mb
     rm -f "$mb/go"  # No go in mock bin
 
     # Run with PATH that excludes system go (use only /usr/bin:/bin + mock_bin)
@@ -792,20 +792,20 @@ test_interactive_dkmcp_no_go() {
     cleanup
 }
 
-# Test 26: default port → dkmcp init called without --port
-test_interactive_dkmcp_init_default_port() {
+# Test 26: default port → hostmcp init called without --port
+test_interactive_hostmcp_init_default_port() {
     echo ""
-    echo "=== Test: default port → dkmcp init without --port ==="
+    echo "=== Test: default port → hostmcp init without --port ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
-    # Override dkmcp to log args
-    cat > "$mb/dkmcp" << DEOF
+    # Override hostmcp to log args
+    cat > "$mb/hostmcp" << DEOF
 #!/bin/bash
-echo "\$@" >> "$TEST_PROJECT/dkmcp-calls.log"
+echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
 if [ "\$1" = "init" ]; then
     ws=""
     shift
@@ -813,44 +813,44 @@ if [ "\$1" = "init" ]; then
         [ "\$1" = "--workspace" ] && ws="\$2"
         shift
     done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
 fi
 exit 0
 DEOF
-    chmod +x "$mb/dkmcp"
+    chmod +x "$mb/hostmcp"
 
     # Input: language=1, port=default(1)
     echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
-    if [ -f "$TEST_PROJECT/dkmcp-calls.log" ]; then
+    if [ -f "$TEST_PROJECT/hostmcp-calls.log" ]; then
         local call
-        call=$(cat "$TEST_PROJECT/dkmcp-calls.log")
+        call=$(cat "$TEST_PROJECT/hostmcp-calls.log")
         if echo "$call" | grep -q "\-\-port"; then
-            fail "dkmcp init should NOT include --port for default: $call"
+            fail "hostmcp init should NOT include --port for default: $call"
         else
-            pass "dkmcp init called without --port for default"
+            pass "hostmcp init called without --port for default"
         fi
     else
-        fail "dkmcp was not called"
+        fail "hostmcp was not called"
     fi
 
     _cleanup_mocks "$fp" "$mb"
     cleanup
 }
 
-# Test 27: custom port → dkmcp init called with --port 9999
-test_interactive_dkmcp_init_custom_port() {
+# Test 27: custom port → hostmcp init called with --port 9999
+test_interactive_hostmcp_init_custom_port() {
     echo ""
-    echo "=== Test: custom port 9999 → dkmcp init --port 9999 ==="
+    echo "=== Test: custom port 9999 → hostmcp init --port 9999 ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
-    cat > "$mb/dkmcp" << DEOF
+    cat > "$mb/hostmcp" << DEOF
 #!/bin/bash
-echo "\$@" >> "$TEST_PROJECT/dkmcp-calls.log"
+echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
 if [ "\$1" = "init" ]; then
     ws=""
     shift
@@ -858,43 +858,43 @@ if [ "\$1" = "init" ]; then
         [ "\$1" = "--workspace" ] && ws="\$2"
         shift
     done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
 fi
 exit 0
 DEOF
-    chmod +x "$mb/dkmcp"
+    chmod +x "$mb/hostmcp"
 
     # Input: language=1, port=custom(2), port_number=9999
     echo -e "1\n2\n9999" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
 
-    if [ -f "$TEST_PROJECT/dkmcp-calls.log" ]; then
+    if [ -f "$TEST_PROJECT/hostmcp-calls.log" ]; then
         local call
-        call=$(cat "$TEST_PROJECT/dkmcp-calls.log")
+        call=$(cat "$TEST_PROJECT/hostmcp-calls.log")
         if echo "$call" | grep -q "\-\-port 9999"; then
-            pass "dkmcp init called with --port 9999"
+            pass "hostmcp init called with --port 9999"
         else
             fail "Expected --port 9999 in: $call"
         fi
     else
-        fail "dkmcp was not called"
+        fail "hostmcp was not called"
     fi
 
     _cleanup_mocks "$fp" "$mb"
     cleanup
 }
 
-# Test 28: dkmcp.yaml already exists → init skipped, next steps shown
-test_interactive_dkmcp_init_already_exists() {
+# Test 28: hostmcp.yaml already exists → init skipped, next steps shown
+test_interactive_hostmcp_init_already_exists() {
     echo ""
-    echo "=== Test: dkmcp.yaml exists → init skipped, next steps shown ==="
+    echo "=== Test: hostmcp.yaml exists → init skipped, next steps shown ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
     mkdir -p "$TEST_PROJECT/.sandbox/config"
-    touch "$TEST_PROJECT/.sandbox/config/dkmcp.yaml"
+    touch "$TEST_PROJECT/.sandbox/config/hostmcp.yaml"
 
     local output
     output=$(echo -e "1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
@@ -905,10 +905,10 @@ test_interactive_dkmcp_init_already_exists() {
         fail "Expected existing-yaml message, got: $output"
     fi
 
-    if echo "$output" | grep -q "dkmcp serve"; then
+    if echo "$output" | grep -q "hostmcp serve"; then
         pass "Next steps shown even when yaml exists"
     else
-        fail "Expected next-steps with dkmcp serve, got: $output"
+        fail "Expected next-steps with hostmcp serve, got: $output"
     fi
 
     _cleanup_mocks "$fp" "$mb"
@@ -916,20 +916,20 @@ test_interactive_dkmcp_init_already_exists() {
 }
 
 # Test 29: init success → next steps shown
-test_interactive_dkmcp_next_steps_shown() {
+test_interactive_hostmcp_next_steps_shown() {
     echo ""
     echo "=== Test: init success → next steps shown ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
     local output
     output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
 
-    if echo "$output" | grep -q "dkmcp serve"; then
-        pass "Next steps (dkmcp serve) shown after init success"
+    if echo "$output" | grep -q "hostmcp serve"; then
+        pass "Next steps (hostmcp serve) shown after init success"
     else
         fail "Expected next steps, got: $output"
     fi
@@ -938,21 +938,21 @@ test_interactive_dkmcp_next_steps_shown() {
     cleanup
 }
 
-# Test 30: --silent mode → dkmcp setup entirely skipped
-test_silent_mode_skips_dkmcp_setup() {
+# Test 30: --silent mode → hostmcp setup entirely skipped
+test_silent_mode_skips_hostmcp_setup() {
     echo ""
-    echo "=== Test: --silent mode skips dkmcp setup ==="
+    echo "=== Test: --silent mode skips hostmcp setup ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
+    _setup_hostmcp_mocks fp mb
 
     bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
 
-    if [ -f "$TEST_PROJECT/.sandbox/config/dkmcp.yaml" ]; then
-        fail "dkmcp.yaml should NOT be created in --silent mode"
+    if [ -f "$TEST_PROJECT/.sandbox/config/hostmcp.yaml" ]; then
+        fail "hostmcp.yaml should NOT be created in --silent mode"
     else
-        pass "dkmcp.yaml not created in --silent mode"
+        pass "hostmcp.yaml not created in --silent mode"
     fi
 
     _cleanup_mocks "$fp" "$mb"
@@ -960,13 +960,13 @@ test_silent_mode_skips_dkmcp_setup() {
 }
 
 # Test 31: go install fails → error shown, init skipped
-test_interactive_dkmcp_install_go_install_fails() {
+test_interactive_hostmcp_install_go_install_fails() {
     echo ""
     echo "=== Test: go install fails → error shown, init skipped ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
+    _setup_hostmcp_mocks fp mb
 
     # Override go to fail on install
     cat > "$mb/go" << GOEOF
@@ -1000,13 +1000,13 @@ GOEOF
 }
 
 # Test 32: go install succeeds but binary not found → failure
-test_interactive_dkmcp_install_binary_not_found_after_install() {
+test_interactive_hostmcp_install_binary_not_found_after_install() {
     echo ""
     echo "=== Test: go install ok but binary missing → install failure ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
+    _setup_hostmcp_mocks fp mb
 
     # go install succeeds but does NOT create the binary
     cat > "$mb/go" << GOEOF
@@ -1033,14 +1033,14 @@ GOEOF
 }
 
 # Test 33: invalid port string → validation error
-test_interactive_dkmcp_init_invalid_port_string() {
+test_interactive_hostmcp_init_invalid_port_string() {
     echo ""
     echo "=== Test: invalid port string 'abc' → validation error ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
     # Input: lang=1, port=custom(2), bad=abc, then valid=8080
     local output
@@ -1057,18 +1057,18 @@ test_interactive_dkmcp_init_invalid_port_string() {
 }
 
 # Test 34: out-of-range port → validation error
-test_interactive_dkmcp_init_invalid_port_out_of_range() {
+test_interactive_hostmcp_init_invalid_port_out_of_range() {
     echo ""
     echo "=== Test: out-of-range port 99999 → validation error ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
-    cat > "$mb/dkmcp" << DEOF
+    cat > "$mb/hostmcp" << DEOF
 #!/bin/bash
-echo "\$@" >> "$TEST_PROJECT/dkmcp-calls.log"
+echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
 if [ "\$1" = "init" ]; then
     ws=""
     shift
@@ -1076,11 +1076,11 @@ if [ "\$1" = "init" ]; then
         [ "\$1" = "--workspace" ] && ws="\$2"
         shift
     done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
 fi
 exit 0
 DEOF
-    chmod +x "$mb/dkmcp"
+    chmod +x "$mb/hostmcp"
 
     # bad=99999, then valid=8080
     local output
@@ -1092,13 +1092,13 @@ DEOF
         fail "Expected validation error for 99999, got: $output"
     fi
 
-    if [ -f "$TEST_PROJECT/dkmcp-calls.log" ]; then
+    if [ -f "$TEST_PROJECT/hostmcp-calls.log" ]; then
         local call
-        call=$(cat "$TEST_PROJECT/dkmcp-calls.log")
+        call=$(cat "$TEST_PROJECT/hostmcp-calls.log")
         if echo "$call" | grep -q "\-\-port 99999"; then
-            fail "dkmcp init should NOT be called with invalid port 99999"
+            fail "hostmcp init should NOT be called with invalid port 99999"
         else
-            pass "dkmcp init not called with invalid port"
+            pass "hostmcp init not called with invalid port"
         fi
     fi
 
@@ -1107,18 +1107,18 @@ DEOF
 }
 
 # Test 35: 3 invalid inputs → fallback to default port 18080
-test_interactive_dkmcp_port_retry_fallback() {
+test_interactive_hostmcp_port_retry_fallback() {
     echo ""
     echo "=== Test: 3 invalid inputs → fallback to default port 18080 ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
-    cat > "$mb/dkmcp" << DEOF
+    cat > "$mb/hostmcp" << DEOF
 #!/bin/bash
-echo "\$@" >> "$TEST_PROJECT/dkmcp-calls.log"
+echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
 if [ "\$1" = "init" ]; then
     ws=""
     shift
@@ -1126,11 +1126,11 @@ if [ "\$1" = "init" ]; then
         [ "\$1" = "--workspace" ] && ws="\$2"
         shift
     done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
 fi
 exit 0
 DEOF
-    chmod +x "$mb/dkmcp"
+    chmod +x "$mb/hostmcp"
 
     # 3 invalid ports → fallback
     local output
@@ -1142,16 +1142,16 @@ DEOF
         fail "Expected fallback message, got: $output"
     fi
 
-    if [ -f "$TEST_PROJECT/dkmcp-calls.log" ]; then
+    if [ -f "$TEST_PROJECT/hostmcp-calls.log" ]; then
         local call
-        call=$(cat "$TEST_PROJECT/dkmcp-calls.log")
+        call=$(cat "$TEST_PROJECT/hostmcp-calls.log")
         if echo "$call" | grep -q "\-\-port"; then
-            fail "dkmcp init should NOT have --port on fallback: $call"
+            fail "hostmcp init should NOT have --port on fallback: $call"
         else
-            pass "dkmcp init called without --port on fallback"
+            pass "hostmcp init called without --port on fallback"
         fi
     else
-        fail "dkmcp init was not called after fallback"
+        fail "hostmcp init was not called after fallback"
     fi
 
     _cleanup_mocks "$fp" "$mb"
@@ -1159,13 +1159,13 @@ DEOF
 }
 
 # Test 36: go env GOPATH returns empty → fallback to $HOME/go/bin
-test_interactive_dkmcp_gopath_empty() {
+test_interactive_hostmcp_gopath_empty() {
     echo ""
     echo "=== Test: GOPATH empty → fallback to \$HOME/go/bin ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
+    _setup_hostmcp_mocks fp mb
 
     local fake_home
     fake_home=$(mktemp -d)
@@ -1177,14 +1177,14 @@ if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
     echo ""
 elif [ "\$1" = "install" ]; then
     mkdir -p "$fake_home/go/bin"
-    touch "$fake_home/go/bin/dkmcp"
-    chmod +x "$fake_home/go/bin/dkmcp"
+    touch "$fake_home/go/bin/hostmcp"
+    chmod +x "$fake_home/go/bin/hostmcp"
     exit 0
 fi
 GOEOF
     chmod +x "$mb/go"
 
-    cat > "$mb/dkmcp" << DEOF
+    cat > "$mb/hostmcp" << DEOF
 #!/bin/bash
 if [ "\$1" = "init" ]; then
     ws=""
@@ -1193,11 +1193,11 @@ if [ "\$1" = "init" ]; then
         [ "\$1" = "--workspace" ] && ws="\$2"
         shift
     done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/dkmcp.yaml"
+    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
 fi
 exit 0
 DEOF
-    chmod +x "$mb/dkmcp"
+    chmod +x "$mb/hostmcp"
 
     local output
     output=$(HOME="$fake_home" bash -c "export PATH='$mb:$PATH'; echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'" 2>&1)
@@ -1214,13 +1214,13 @@ DEOF
 }
 
 # Test 37: go env GOPATH exits non-zero → error shown
-test_interactive_dkmcp_gopath_command_fails() {
+test_interactive_hostmcp_gopath_command_fails() {
     echo ""
     echo "=== Test: go env GOPATH fails → error shown ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
+    _setup_hostmcp_mocks fp mb
 
     cat > "$mb/go" << 'GOEOF'
 #!/bin/bash
@@ -1244,14 +1244,14 @@ GOEOF
 }
 
 # Test 38: next steps shows absolute path (PROJECT_ROOT=.)
-test_interactive_dkmcp_next_steps_shows_absolute_path() {
+test_interactive_hostmcp_next_steps_shows_absolute_path() {
     echo ""
     echo "=== Test: next steps shows absolute path ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
     local abs_path
     abs_path="$(cd "$TEST_PROJECT" && pwd)"
@@ -1269,18 +1269,18 @@ test_interactive_dkmcp_next_steps_shows_absolute_path() {
     cleanup
 }
 
-# Test 39: dkmcp init fails → error shown, next steps skipped
-test_interactive_dkmcp_init_fails_skips_next_steps() {
+# Test 39: hostmcp init fails → error shown, next steps skipped
+test_interactive_hostmcp_init_fails_skips_next_steps() {
     echo ""
-    echo "=== Test: dkmcp init fails → error shown, next steps skipped ==="
+    echo "=== Test: hostmcp init fails → error shown, next steps skipped ==="
 
     setup
     local fp mb
-    _setup_dkmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/dkmcp" && chmod +x "$fp/bin/dkmcp"
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
-    # dkmcp init always fails
-    cat > "$mb/dkmcp" << 'DEOF'
+    # hostmcp init always fails
+    cat > "$mb/hostmcp" << 'DEOF'
 #!/bin/bash
 if [ "$1" = "init" ]; then
     echo "init failed" >&2
@@ -1288,18 +1288,18 @@ if [ "$1" = "init" ]; then
 fi
 exit 0
 DEOF
-    chmod +x "$mb/dkmcp"
+    chmod +x "$mb/hostmcp"
 
     local output
     output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
 
     if echo "$output" | grep -q "設定ファイル生成に失敗"; then
-        pass "Error shown when dkmcp init fails"
+        pass "Error shown when hostmcp init fails"
     else
         fail "Expected init failure message, got: $output"
     fi
 
-    if echo "$output" | grep -q "dkmcp serve"; then
+    if echo "$output" | grep -q "hostmcp serve"; then
         fail "Next steps should NOT appear after init failure"
     else
         pass "Next steps not shown after init failure"
@@ -1338,24 +1338,24 @@ main() {
     test_interactive_tz_update_existing
     test_creates_host_os_file
     test_host_os_file_overwritten
-    test_interactive_dkmcp_already_installed
-    test_interactive_dkmcp_install_accepted
-    test_interactive_dkmcp_install_declined
-    test_interactive_dkmcp_no_go
-    test_interactive_dkmcp_init_default_port
-    test_interactive_dkmcp_init_custom_port
-    test_interactive_dkmcp_init_already_exists
-    test_interactive_dkmcp_next_steps_shown
-    test_silent_mode_skips_dkmcp_setup
-    test_interactive_dkmcp_install_go_install_fails
-    test_interactive_dkmcp_install_binary_not_found_after_install
-    test_interactive_dkmcp_init_invalid_port_string
-    test_interactive_dkmcp_init_invalid_port_out_of_range
-    test_interactive_dkmcp_port_retry_fallback
-    test_interactive_dkmcp_gopath_empty
-    test_interactive_dkmcp_gopath_command_fails
-    test_interactive_dkmcp_next_steps_shows_absolute_path
-    test_interactive_dkmcp_init_fails_skips_next_steps
+    test_interactive_hostmcp_already_installed
+    test_interactive_hostmcp_install_accepted
+    test_interactive_hostmcp_install_declined
+    test_interactive_hostmcp_no_go
+    test_interactive_hostmcp_init_default_port
+    test_interactive_hostmcp_init_custom_port
+    test_interactive_hostmcp_init_already_exists
+    test_interactive_hostmcp_next_steps_shown
+    test_silent_mode_skips_hostmcp_setup
+    test_interactive_hostmcp_install_go_install_fails
+    test_interactive_hostmcp_install_binary_not_found_after_install
+    test_interactive_hostmcp_init_invalid_port_string
+    test_interactive_hostmcp_init_invalid_port_out_of_range
+    test_interactive_hostmcp_port_retry_fallback
+    test_interactive_hostmcp_gopath_empty
+    test_interactive_hostmcp_gopath_command_fails
+    test_interactive_hostmcp_next_steps_shows_absolute_path
+    test_interactive_hostmcp_init_fails_skips_next_steps
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

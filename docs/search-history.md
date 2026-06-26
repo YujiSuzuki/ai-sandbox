@@ -11,8 +11,8 @@ Inside the AI Sandbox, just ask your AI — SandboxMCP auto-discovers the tool a
 Search past conversations for specific keywords.
 
 ```
-You: "Do you remember when we talked about DockMCP setup?"
-AI:  Runs search-history with "DockMCP" → summarizes matching conversations
+You: "Do you remember when we talked about HostMCP setup?"
+AI:  Runs search-history with "HostMCP" → summarizes matching conversations
 ```
 
 ### 2. Session Listing
@@ -103,7 +103,7 @@ You can also run the tool directly without asking AI.
 
 ```bash
 # Keyword search
-go run .sandbox/tools/search-history.go "DockMCP"
+go run .sandbox/tools/search-history.go "HostMCP"
 
 # Search only your messages
 go run .sandbox/tools/search-history.go -role user "docker"

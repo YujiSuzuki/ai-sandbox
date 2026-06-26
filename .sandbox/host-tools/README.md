@@ -2,25 +2,25 @@
 
 [日本語版はこちら](README.ja.md)
 
-Scripts in this directory are executed on the host OS via DockMCP's `run_host_tool`.
+Scripts in this directory are executed on the host OS via HostMCP's `run_host_tool`.
 
 ## ⚠️ Run after adding or modifying scripts
 
 ```bash
-dkmcp tools sync
+hostmcp tools sync
 ```
 
-Run this on the **host OS** — changes won't take effect in DockMCP until you do.
+Run this on the **host OS** — changes won't take effect in HostMCP until you do.
 
 ### Why is this needed?
 
 This directory is inside the container (staging area).
-Scripts are only executed from the approved copy at `~/.dkmcp/host-tools/<project-id>/`.
+Scripts are only executed from the approved copy at `~/.hostmcp/host-tools/<project-id>/`.
 
 ```
 1. Place scripts in .sandbox/host-tools/   ← AI and developers can edit here
-2. Run dkmcp tools sync                    ← Review and approve changes on host OS
-3. Approved copy goes to ~/.dkmcp/host-tools/<project-id>/  ← Only this is executed
+2. Run hostmcp tools sync                    ← Review and approve changes on host OS
+3. Approved copy goes to ~/.hostmcp/host-tools/<project-id>/  ← Only this is executed
 ```
 
 Changes are detected via SHA256 hash, so **re-approval is required after every edit**.

@@ -83,7 +83,7 @@ git pull origin main
 
 1. Download the latest ZIP from [the repository](https://github.com/YujiSuzuki/ai-sandbox) (**"Code"** → **"Download ZIP"**)
 2. Compare the new files with your current project and apply relevant changes manually
-3. Focus on infrastructure directories: `.sandbox/`, `dkmcp/`, `.devcontainer/`, `cli_sandbox/`
+3. Focus on infrastructure directories: `.sandbox/`, `hostmcp/`, `.devcontainer/`, `cli_sandbox/`
 
 ### If you created from the GitHub template
 
@@ -142,7 +142,7 @@ Best for: teams that want to stay up-to-date with minimal effort.
 
 ---
 
-The important parts of updates are the infrastructure files: `.sandbox/`, `dkmcp/`, `.devcontainer/`, and `cli_sandbox/`.
+The important parts of updates are the infrastructure files: `.sandbox/`, `hostmcp/`, `.devcontainer/`, and `cli_sandbox/`.
 
 ---
 
@@ -158,11 +158,11 @@ cd .sandbox/sandbox-mcp
 make clean && make register
 ```
 
-### Rebuild DockMCP (if `dkmcp/` changed)
+### Rebuild HostMCP (if `hostmcp/` changed)
 
 ```bash
 # On Host OS (not in AI Sandbox)
-cd dkmcp
+cd hostmcp
 make install
 ```
 
@@ -186,6 +186,6 @@ git diff HEAD~1 --stat
 | Changed directory | Action needed |
 |---|---|
 | `.sandbox/sandbox-mcp/` | Rebuild SandboxMCP |
-| `dkmcp/` | Rebuild DockMCP (host OS) |
+| `hostmcp/` | Rebuild HostMCP (host OS) |
 | `.devcontainer/` | Rebuild DevContainer |
 | `.sandbox/scripts/` | No rebuild needed (used directly) |

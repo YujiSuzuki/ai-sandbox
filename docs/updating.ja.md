@@ -83,7 +83,7 @@ git pull origin main
 
 1. [リポジトリページ](https://github.com/YujiSuzuki/ai-sandbox)から最新の ZIP をダウンロード（**「Code」** → **「Download ZIP」**）
 2. 新しいファイルと現在のプロジェクトを比較して、必要な変更を手動で適用
-3. インフラ部分（`.sandbox/`、`dkmcp/`、`.devcontainer/`、`cli_sandbox/`）を重点的に確認
+3. インフラ部分（`.sandbox/`、`hostmcp/`、`.devcontainer/`、`cli_sandbox/`）を重点的に確認
 
 ### GitHub テンプレートから作成した場合
 
@@ -142,7 +142,7 @@ jobs:
 
 ---
 
-更新で重要なのはインフラ部分（`.sandbox/`、`dkmcp/`、`.devcontainer/`、`cli_sandbox/`）です。
+更新で重要なのはインフラ部分（`.sandbox/`、`hostmcp/`、`.devcontainer/`、`cli_sandbox/`）です。
 
 ---
 
@@ -158,11 +158,11 @@ cd .sandbox/sandbox-mcp
 make clean && make register
 ```
 
-### DockMCP のリビルド（`dkmcp/` が変更された場合）
+### HostMCP のリビルド（`hostmcp/` が変更された場合）
 
 ```bash
 # ホストOS上で実行（AI Sandbox内ではない）
-cd dkmcp
+cd hostmcp
 make install
 ```
 
@@ -186,6 +186,6 @@ git diff HEAD~1 --stat
 | 変更されたディレクトリ | 必要な作業 |
 |---|---|
 | `.sandbox/sandbox-mcp/` | SandboxMCP をリビルド |
-| `dkmcp/` | DockMCP をリビルド（ホストOS） |
+| `hostmcp/` | HostMCP をリビルド（ホストOS） |
 | `.devcontainer/` | DevContainer をリビルド |
 | `.sandbox/scripts/` | リビルド不要（直接使用される） |

@@ -1,4 +1,4 @@
-# AI Sandbox Environment with DockMCP - Context for Gemini Code Assist
+# AI Sandbox Environment with HostMCP - Context for Gemini Code Assist
 
 This document provides essential behavioral rules for Gemini Code Assist. For detailed reference, see [docs/ai-guide.md](docs/ai-guide.md).
 
@@ -56,7 +56,7 @@ Direct users to documentation:
 A secure AI development environment demonstrating:
 1. **Safe AI Usage** — AI coding assistants in isolated Docker containers
 2. **Secret Protection** — Hide sensitive files from AI via volume mounts
-3. **Cross-Container Access** — Interact with other containers via DockMCP
+3. **Cross-Container Access** — Interact with other containers via HostMCP
 4. **Multi-Project Workspaces** — Mobile, API, Web in one workspace
 
 ---
@@ -70,13 +70,13 @@ A secure AI development environment demonstrating:
 - Start/stop containers directly
 - Build Docker images
 
-**These operations MUST be done on the host OS by the user** (or via DockMCP host tools if available).
+**These operations MUST be done on the host OS by the user** (or via HostMCP host tools if available).
 
 ### Can Do
 - Read/edit source code in `/workspace/`
-- Use DockMCP MCP tools to access other containers
-- Use `dkmcp client` commands as fallback when MCP is unavailable
-- Run DockMCP host tools (`.sandbox/host-tools/`) for host OS operations
+- Use HostMCP MCP tools to access other containers
+- Use `hostmcp client` commands as fallback when MCP is unavailable
+- Run HostMCP host tools (`.sandbox/host-tools/`) for host OS operations
 - Install packages (`npm install`)
 - Run linters, formatters
 
@@ -88,7 +88,7 @@ A secure AI development environment demonstrating:
 |------|---------|
 | `.devcontainer/docker-compose.yml` | Secret hiding configuration (requires user approval to modify) |
 | `cli_sandbox/docker-compose.yml` | Same for CLI environment |
-| `dkmcp/configs/dkmcp.example.yaml` | Container access policy |
+| `hostmcp/configs/hostmcp.example.yaml` | Container access policy |
 | `.devcontainer/devcontainer.json` | VS Code DevContainer settings |
 
 ---
@@ -96,22 +96,22 @@ A secure AI development environment demonstrating:
 ## Common Tasks
 
 ### "Start / stop containers"
-Do NOT run `docker-compose` inside AI Sandbox (will fail). Ask user to run on host OS, or use approved host tools via `run_host_tool` if set up with `dkmcp serve --sync`.
+Do NOT run `docker-compose` inside AI Sandbox (will fail). Ask user to run on host OS, or use approved host tools via `run_host_tool` if set up with `hostmcp serve --sync`.
 
 ### "Check the API logs"
-Use DockMCP MCP: `get_logs` (container: `<container-name>`, tail: 100).
+Use HostMCP MCP: `get_logs` (container: `<container-name>`, tail: 100).
 
 ### "Run the tests"
-Use DockMCP MCP: `exec_command` (container: `<container-name>`, command: `npm test`).
+Use HostMCP MCP: `exec_command` (container: `<container-name>`, command: `npm test`).
 
 ### "Read the .env file"
 It will appear empty (hidden by volume mount). Explain: "This file is hidden for security. The API container has access to it, but I don't."
 
 ---
 
-## DockMCP
+## HostMCP
 
-DockMCP runs on the host OS and provides controlled container access via MCP.
+HostMCP runs on the host OS and provides controlled container access via MCP.
 
 ### MCP Tools
 
@@ -136,29 +136,29 @@ DockMCP runs on the host OS and provides controlled container access via MCP.
 | `run_host_tool` | Execute a host tool |
 | `exec_host_command` | Execute whitelisted host command |
 
-### Fallback: dkmcp client
+### Fallback: hostmcp client
 
-If MCP tools are unavailable, use `dkmcp client` commands via Bash. See [docs/ai-guide.md](docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
+If MCP tools are unavailable, use `hostmcp client` commands via Bash. See [docs/ai-guide.md](docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
 
-If `dkmcp` command is not found, tell the user: `cd /workspace/dkmcp && make install`
+If `hostmcp` command is not found, tell the user: `cd /workspace/hostmcp && make install`
 
-### DockMCP not connected
+### HostMCP not connected
 
-If DockMCP MCP tools are not available, proactively check registration and offer setup:
+If HostMCP MCP tools are not available, proactively check registration and offer setup:
 
 ```
-.sandbox/scripts/setup-dkmcp.sh --check   # Silent check (exit: 0=ok, 1=not registered, 2=offline)
-.sandbox/scripts/setup-dkmcp.sh            # Register if needed + verify connectivity
-.sandbox/scripts/setup-dkmcp.sh --status   # Show detailed status
+.sandbox/scripts/setup-hostmcp.sh --check   # Silent check (exit: 0=ok, 1=not registered, 2=offline)
+.sandbox/scripts/setup-hostmcp.sh            # Register if needed + verify connectivity
+.sandbox/scripts/setup-hostmcp.sh --status   # Show detailed status
 ```
 
-If `--check` returns 1 (not registered), offer to run `setup-dkmcp.sh` for the user.
+If `--check` returns 1 (not registered), offer to run `setup-hostmcp.sh` for the user.
 If `--check` returns 2 (registered but offline), troubleshoot in this order:
 1. **Check VS Code Ports panel** — stop forwarding port 18080 if listed (most common cause)
-2. **Verify DockMCP is running on host**: `curl http://localhost:18080/health`
+2. **Verify HostMCP is running on host**: `curl http://localhost:18080/health`
 3. **Restart VS Code completely** (Cmd+Q → reopen)
 
-For DockMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#dockmcp-setup-and-troubleshooting).
+For HostMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#dockmcp-setup-and-troubleshooting).
 
 ---
 
@@ -169,7 +169,7 @@ For DockMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#d
 ├── .sandbox/          # Infrastructure (scripts, tools, sandbox-mcp, host-tools)
 ├── .devcontainer/     # VS Code DevContainer (secret hiding config)
 ├── cli_sandbox/       # CLI environment (backup)
-├── dkmcp/             # DockMCP MCP Server (Go)
+├── hostmcp/             # HostMCP MCP Server (Go)
 └── <your-project>/    # Your application code
 ```
 
@@ -181,8 +181,8 @@ For full structure, see [docs/ai-guide.md](docs/ai-guide.md#project-structure-fu
 
 | Topic | File |
 |-------|------|
-| DockMCP setup & troubleshooting | [docs/ai-guide.md → DockMCP Setup](docs/ai-guide.md#dockmcp-setup-and-troubleshooting) |
-| DockMCP client command reference | [docs/ai-guide.md → Client Fallback](docs/ai-guide.md#dockmcp-client-fallback) |
+| HostMCP setup & troubleshooting | [docs/ai-guide.md → HostMCP Setup](docs/ai-guide.md#dockmcp-setup-and-troubleshooting) |
+| HostMCP client command reference | [docs/ai-guide.md → Client Fallback](docs/ai-guide.md#dockmcp-client-fallback) |
 | Template update procedure | [docs/ai-guide.md → Updating](docs/ai-guide.md#updating-this-template) |
 | Template customization workflow | [docs/ai-guide.md → Customization](docs/ai-guide.md#customization-workflow) |
 | Writing meaningful tests | [docs/ai-guide.md → Tests](docs/ai-guide.md#writing-meaningful-tests) |
@@ -197,10 +197,10 @@ For full structure, see [docs/ai-guide.md](docs/ai-guide.md#project-structure-fu
 
 **Your mission:**
 - Help users develop safely
-- Use DockMCP for cross-container access
+- Use HostMCP for cross-container access
 - Protect secrets (explain when hidden, never bypass)
 
 For more details, see:
 - [README.md](README.md) — User documentation
-- [dkmcp/README.md](dkmcp/README.md) — DockMCP details
+- [hostmcp/README.md](hostmcp/README.md) — HostMCP details
 - [docs/ai-guide.md](docs/ai-guide.md) — AI reference guide

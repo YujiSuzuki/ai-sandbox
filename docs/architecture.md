@@ -1,6 +1,6 @@
 # Architecture Details
 
-Detailed diagrams explaining how AI Sandbox + DockMCP works.
+Detailed diagrams explaining how AI Sandbox + HostMCP works.
 
 [← Back to README](../README.md)
 
@@ -13,7 +13,7 @@ Detailed diagrams explaining how AI Sandbox + DockMCP works.
 │ Host OS                                           │
 │                                                   │
 │  ┌──────────────────────────────────────────────┐ │
-│  │ DockMCP Server                               │ │
+│  │ HostMCP Server                               │ │
 │  │  HTTP/SSE API for AI                         ←─────┐
 │  │  Security policy enforcement                 │ │   │
 │  │  Container access gateway                    │ │   │
@@ -40,11 +40,11 @@ Detailed diagrams explaining how AI Sandbox + DockMCP works.
 <details>
 <summary>Tree format</summary>
 
-**Data flow:** AI (AI Sandbox) → DockMCP (:18080) → Other containers
+**Data flow:** AI (AI Sandbox) → HostMCP (:18080) → Other containers
 
 ```
 Host OS
-├── DockMCP Server (:18080)
+├── HostMCP Server (:18080)
 │   ├── HTTP/SSE API for AI
 │   ├── Security policy enforcement
 │   └── Container access gateway
@@ -85,7 +85,7 @@ Host OS
 **Result:**
 - AI cannot read secret files (security ensured)
 - Apps can read secret files (functionality maintained)
-- AI can still check logs and run tests via DockMCP
+- AI can still check logs and run tests via HostMCP
 
 ---
 
@@ -103,7 +103,7 @@ Host OS
 │
 └── AI Sandbox
     └── /workspace/   ← only this is visible
-        ├── dkmcp/
+        ├── hostmcp/
         ├── <your-project>/
         └── ...
 ```
@@ -142,10 +142,10 @@ tmpfs:
 
 ### 2. Controlled Container Access
 
-DockMCP enforces security policies:
+HostMCP enforces security policies:
 
 ```yaml
-# dkmcp.yaml
+# hostmcp.yaml
 security:
   mode: "moderate"  # strict | moderate | permissive
 
@@ -159,7 +159,7 @@ security:
       - "npm run lint"
 ```
 
-For container file blocking (`blocked_paths`), auto-import from Claude Code / Gemini settings, and more, see [dkmcp/README.md "Configuration Reference"](../dkmcp/README.md#configuration-reference).
+For container file blocking (`blocked_paths`), auto-import from Claude Code / Gemini settings, and more, see [hostmcp/README.md "Configuration Reference"](../hostmcp/README.md#configuration-reference).
 
 **Example — Cross-container debugging:**
 
@@ -169,8 +169,8 @@ For container file blocking (`blocked_paths`), auto-import from Claude Code / Ge
 # Ask Claude Code:
 "Login is failing. Can you check the API logs?"
 
-# Claude gets logs via DockMCP:
-dkmcp.get_logs("securenote-api", { tail: "50" })
+# Claude gets logs via HostMCP:
+hostmcp.get_logs("securenote-api", { tail: "50" })
 
 # Error found in logs:
 "JWT verification failed - invalid secret"
@@ -178,8 +178,8 @@ dkmcp.get_logs("securenote-api", { tail: "50" })
 # Ask Claude Code:
 "Please run the API tests to verify"
 
-# Claude runs tests via DockMCP:
-dkmcp.exec_command("securenote-api", "npm test")
+# Claude runs tests via HostMCP:
+hostmcp.exec_command("securenote-api", "npm test")
 
 # Issue identified and fixed!
 ```
@@ -202,7 +202,7 @@ dkmcp.exec_command("securenote-api", "npm test")
 
 ### 4. Output Masking (Defense in Depth)
 
-Even if secrets appear in logs or command output, DockMCP automatically masks them:
+Even if secrets appear in logs or command output, HostMCP automatically masks them:
 
 ```
 # Raw log output
@@ -212,11 +212,11 @@ DATABASE_URL=postgres://user:secret123@db:5432/app
 DATABASE_URL=[MASKED]db:5432/app
 ```
 
-Detects passwords, API keys, Bearer tokens, database URLs with credentials, and more by default. For configuration details, see [dkmcp/README.md "Output Masking"](../dkmcp/README.md#output-masking).
+Detects passwords, API keys, Bearer tokens, database URLs with credentials, and more by default. For configuration details, see [hostmcp/README.md "Output Masking"](../hostmcp/README.md#output-masking).
 
 ### 5. Why No Docker Socket Access
 
-You might wonder: "Why not just mount the Docker socket (`/var/run/docker.sock`) into the AI Sandbox so AI can access containers directly without DockMCP?"
+You might wonder: "Why not just mount the Docker socket (`/var/run/docker.sock`) into the AI Sandbox so AI can access containers directly without HostMCP?"
 
 This must not be done because **Docker socket access is essentially host administrator privileges**. If AI had the socket, it could:
 
@@ -226,16 +226,16 @@ This must not be done because **Docker socket access is essentially host adminis
 
 In other words, hiding secrets with volume mounts becomes pointless — AI could simply read the real files through Docker commands.
 
-**DockMCP exists to solve this problem:**
+**HostMCP exists to solve this problem:**
 
-| | Direct Docker Socket | Via DockMCP |
+| | Direct Docker Socket | Via HostMCP |
 |---|---|---|
 | Secret files | Readable | **Blocked** |
 | Commands | Unrestricted | **Whitelist only** |
 | Secrets in logs | Visible as-is | **Auto-masked** |
 | Stop/delete containers | Possible | **Not possible** |
 
-DockMCP is a gateway that provides only the operations AI actually needs (log checking, test execution, etc.) in a safe, controlled way.
+HostMCP is a gateway that provides only the operations AI actually needs (log checking, test execution, etc.) in a safe, controlled way.
 
 ---
 
@@ -250,7 +250,7 @@ Example (using [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo))
 
 What AI can do:
 - Read all source code (investigate issues across app and server boundaries)
-- Check any container's logs (via DockMCP)
+- Check any container's logs (via HostMCP)
 - Run tests across projects
 - Debug cross-container issues
 - **Never touch secrets**
@@ -259,7 +259,7 @@ What AI can do:
 
 ## SandboxMCP - In-Container MCP Server
 
-In addition to DockMCP (host-side), **SandboxMCP** runs inside the container.
+In addition to HostMCP (host-side), **SandboxMCP** runs inside the container.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -281,14 +281,14 @@ In addition to DockMCP (host-side), **SandboxMCP** runs inside the container.
 └─────────────────────────────────────────────────────┘
 ```
 
-### DockMCP vs SandboxMCP
+### HostMCP vs SandboxMCP
 
-| | SandboxMCP | DockMCP |
+| | SandboxMCP | HostMCP |
 |---|---|---|
 | Location | Inside container | Host OS |
 | Transport | stdio | SSE (HTTP) |
 | Purpose | Script/tool discovery & execution | Cross-container access |
-| Startup | Auto-started by AI CLI | Manual (`dkmcp serve`) |
+| Startup | Auto-started by AI CLI | Manual (`hostmcp serve`) |
 
 ### 6 MCP Tools
 
@@ -305,7 +305,7 @@ In addition to DockMCP (host-side), **SandboxMCP** runs inside the container.
 
 Some scripts (like `init-host-env.sh`) require host OS access and cannot run inside the container.
 
-> **Note:** `copy-credentials.sh` has been moved to `.sandbox/host-tools/` and can now be executed via DockMCP's `run_host_tool` MCP tool.
+> **Note:** `copy-credentials.sh` has been moved to `.sandbox/host-tools/` and can now be executed via HostMCP's `run_host_tool` MCP tool.
 
 ```
 When AI calls run_script("init-host-env.sh"):

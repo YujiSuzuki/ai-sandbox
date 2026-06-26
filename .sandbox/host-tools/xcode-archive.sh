@@ -3,7 +3,7 @@
 # Xcode アーカイブをホスト OS（macOS）上で実行する。
 # 生成した .xcarchive は Xcode Organizer（Window → Organizer）で開いて
 # 「Distribute App」ボタンから TestFlight / App Store にアップロードできる。
-# DockMCP の run_host_tool 経由でコンテナから呼び出す。
+# HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #
 # Usage:
 #   ./xcode-archive.sh [options]

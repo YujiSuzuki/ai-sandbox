@@ -1,6 +1,6 @@
 # Getting Started Guide
 
-A step-by-step walkthrough from zero to a working AI Sandbox + DockMCP setup.
+A step-by-step walkthrough from zero to a working AI Sandbox + HostMCP setup.
 
 [← Back to README](../README.md)
 
@@ -9,10 +9,10 @@ A step-by-step walkthrough from zero to a working AI Sandbox + DockMCP setup.
 ## Who This Guide Is For
 
 - You're familiar with Docker and VS Code but new to this project
-- You want to understand how AI Sandbox and DockMCP fit together
+- You want to understand how AI Sandbox and HostMCP fit together
 - You want to get things running first, then explore
 
-**Estimated time:** 15–30 minutes (5 minutes without DockMCP)
+**Estimated time:** 15–30 minutes (5 minutes without HostMCP)
 
 ---
 
@@ -23,7 +23,7 @@ Setup has three stages. Go as far as you need.
 ```
 Steps 1–3: Get AI Sandbox running (required)
     ↓
-Steps 4–6: Connect DockMCP (recommended)
+Steps 4–6: Connect HostMCP (recommended)
     ↓
 Steps 7–8: Try the demo apps (optional)
 ```
@@ -31,7 +31,7 @@ Steps 7–8: Try the demo apps (optional)
 | Stage | What You Get |
 |-------|-------------|
 | **Sandbox only** | AI can read/write code. Secret files are hidden |
-| **+ DockMCP** | AI can also check logs and run tests in other containers |
+| **+ HostMCP** | AI can also check logs and run tests in other containers |
 | **+ Demo apps** | Try all features with the included demo |
 
 ---
@@ -46,7 +46,7 @@ Make sure the following are installed.
 | **VS Code** | `code --version` | [Visual Studio Code](https://code.visualstudio.com/) |
 | **Dev Containers extension** | Check in VS Code extensions | [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) |
 
-If you plan to use DockMCP, you'll also need:
+If you plan to use HostMCP, you'll also need:
 
 | Tool | Verify | Install |
 |------|--------|---------|
@@ -90,7 +90,7 @@ cd ai-sandbox
 your-repo/
 ├── .devcontainer/
 ├── .sandbox/
-├── dkmcp/
+├── hostmcp/
 └── README.md
 ```
 
@@ -134,24 +134,24 @@ Secret files configured in `docker-compose.yml` appear empty inside the sandbox 
 
 **At this point, the AI Sandbox is ready to use.** Launch Claude Code or Gemini Code Assist and try reading/writing code.
 
-If you don't need DockMCP (access to other containers), skip ahead to [Next Steps](#next-steps).
+If you don't need HostMCP (access to other containers), skip ahead to [Next Steps](#next-steps).
 
 > [!TIP]
 > **Not using VS Code?** You can also use the CLI Sandbox (`cli_sandbox/`) for terminal-only workflows. Run `./cli_sandbox/claude.sh` for Claude Code or `./cli_sandbox/gemini.sh` for Gemini CLI. See [Reference](reference.md) for details.
 
 ---
 
-## Step 4: Build DockMCP (on Host OS)
+## Step 4: Build HostMCP (on Host OS)
 
 > [!IMPORTANT]
 > From here, work on your **host OS** (outside the DevContainer). Open a separate terminal window — not the VS Code integrated terminal.
 
 ```bash
-cd dkmcp
+cd hostmcp
 make install
 ```
 
-This installs the `dkmcp` command to `~/go/bin/`.
+This installs the `hostmcp` command to `~/go/bin/`.
 
 <details>
 <summary>No Go on your host OS?</summary>
@@ -160,13 +160,13 @@ The AI Sandbox includes a Go environment, so you can cross-compile for your host
 
 **Inside AI Sandbox:**
 ```bash
-cd /workspace/dkmcp
+cd /workspace/hostmcp
 make build-host
 ```
 
 **On host OS:**
 ```bash
-cd <path-to-repo>/dkmcp
+cd <path-to-repo>/hostmcp
 make install-host DEST=~/go/bin        # If Go is installed
 make install-host DEST=/usr/local/bin  # If Go is not installed
 ```
@@ -176,30 +176,30 @@ make install-host DEST=/usr/local/bin  # If Go is not installed
 ### Expected Result
 
 ```bash
-$ dkmcp version
+$ hostmcp version
 x.x.x    # Version shown = OK
 ```
 
 ---
 
-## Step 5: Start the DockMCP Server (on Host OS)
+## Step 5: Start the HostMCP Server (on Host OS)
 
 Still on the host OS:
 
 ```bash
-dkmcp serve --config configs/dkmcp.example.yaml
+hostmcp serve --config configs/hostmcp.example.yaml
 ```
 
-Adding `--sync` enables host tools — scripts in `.sandbox/host-tools/` (for building, starting, and stopping demo apps, etc.) that AI can execute via DockMCP. The first time AI tries to use a host tool, you'll be prompted to approve it.
+Adding `--sync` enables host tools — scripts in `.sandbox/host-tools/` (for building, starting, and stopping demo apps, etc.) that AI can execute via HostMCP. The first time AI tries to use a host tool, you'll be prompted to approve it.
 
 ```bash
-dkmcp serve --config configs/dkmcp.example.yaml --sync
+hostmcp serve --config configs/hostmcp.example.yaml --sync
 ```
 
 ### Expected Result
 
 ```
-DockMCP server started on :18080
+HostMCP server started on :18080
 Security mode: moderate
 Allowed containers: securenote-*, demo-*
 ```
@@ -215,16 +215,16 @@ curl http://localhost:18080/health
 
 ---
 
-## Step 6: Connect from AI Sandbox to DockMCP
+## Step 6: Connect from AI Sandbox to HostMCP
 
 Switch back to the **VS Code DevContainer terminal**:
 
 ```bash
 # For Claude Code
-claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:18080/sse
+claude mcp add --transport sse --scope user hostmcp http://host.docker.internal:18080/sse
 
 # For Gemini CLI
-gemini mcp add --transport sse dkmcp http://host.docker.internal:18080/sse
+gemini mcp add --transport sse hostmcp http://host.docker.internal:18080/sse
 ```
 
 After registering, activate the connection:
@@ -234,10 +234,10 @@ After registering, activate the connection:
 
 ### Expected Result
 
-Running `/mcp` in Claude Code shows `dkmcp` as **connected**:
+Running `/mcp` in Claude Code shows `hostmcp` as **connected**:
 
 ```
-  dkmcp
+  hostmcp
   ✔ connected
   17 tools
 ```
@@ -254,14 +254,14 @@ Try asking the AI:
 ### If It Doesn't Work
 
 - See [Troubleshooting](reference.md#troubleshooting)
-- Verify the DockMCP server is running (Step 5)
+- Verify the HostMCP server is running (Step 5)
 - Check if port 18080 is being forwarded in VS Code's Ports panel — if so, stop it
 
 ---
 
 ## Step 7: Try the Demo Apps (Optional)
 
-To experience DockMCP's full capabilities with a concrete example, use the SecureNote demo from [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo):
+To experience HostMCP's full capabilities with a concrete example, use the SecureNote demo from [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo):
 
 ```bash
 # On host OS — clone alongside your workspace
@@ -289,7 +289,7 @@ In the AI Sandbox, try these prompts with Claude Code (or Gemini):
 
 ```
 "Show me the logs from securenote-api"
-→ Container logs displayed via DockMCP
+→ Container logs displayed via HostMCP
 
 "Run npm test in securenote-api"
 → Test results returned
@@ -302,7 +302,7 @@ In the AI Sandbox, try these prompts with Claude Code (or Gemini):
 → AI runs validation script and reports the hiding status
 ```
 
-### DockMCP Features
+### HostMCP Features
 
 ```
 "Show me detailed info about the securenote-api container"
@@ -340,9 +340,9 @@ With setup complete, continue based on what you want to do.
 - Docker image download and build can take 3–5 minutes
 - Subsequent starts use the cache and are much faster
 
-### Can't connect to DockMCP
+### Can't connect to HostMCP
 
-1. Verify the DockMCP server is running: `curl http://localhost:18080/health`
+1. Verify the HostMCP server is running: `curl http://localhost:18080/health`
 2. Check if port 18080 is being forwarded in VS Code's Ports panel — if so, stop it
 3. Try `/mcp` → "Reconnect"
 4. Restart VS Code completely (`Cmd+Q` → reopen)
@@ -353,4 +353,4 @@ For more details, see [Troubleshooting](reference.md#troubleshooting).
 
 - Run `docker ps` on the host OS to verify containers are running
 - Re-run `docker compose -f docker-compose.demo.yml up -d --build`
-- Check that `allowed_containers` in `dkmcp.example.yaml` includes the container name patterns
+- Check that `allowed_containers` in `hostmcp.example.yaml` includes the container name patterns

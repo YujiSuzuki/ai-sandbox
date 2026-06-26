@@ -149,13 +149,13 @@ show_workflow_guide() {
   同期のズレを対話的に修正:
     .sandbox/scripts/sync-secrets.sh
 
-■ DockMCP（他コンテナとの連携）
+■ HostMCP（他コンテナとの連携）
 
-  ホスト OS で DockMCP サーバーを起動:
-    cd dkmcp && make install && dkmcp serve
+  ホスト OS で HostMCP サーバーを起動:
+    cd hostmcp && make install && hostmcp serve
 
   AI Sandbox 内から接続:
-    .sandbox/scripts/setup-dkmcp.sh
+    .sandbox/scripts/setup-hostmcp.sh
 
   接続後は AI がログ確認・テスト実行などを自動で行います。
 
@@ -191,13 +191,13 @@ GUIDE_JA
   Interactively fix sync issues:
     .sandbox/scripts/sync-secrets.sh
 
-■ DockMCP (Cross-Container Access)
+■ HostMCP (Cross-Container Access)
 
-  Start DockMCP server on host OS:
-    cd dkmcp && make install && dkmcp serve
+  Start HostMCP server on host OS:
+    cd hostmcp && make install && hostmcp serve
 
   Connect from AI Sandbox:
-    .sandbox/scripts/setup-dkmcp.sh
+    .sandbox/scripts/setup-hostmcp.sh
 
   Once connected, AI can check logs, run tests, etc. automatically.
 

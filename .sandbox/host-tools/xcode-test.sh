@@ -1,7 +1,7 @@
 #!/bin/bash
 # xcode-test.sh
 # Xcode テストをホスト OS（macOS）上で実行する。
-# DockMCP の run_host_tool 経由でコンテナから呼び出す。
+# HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #
 # xcresult は常に .sandbox/tmp/<Scheme>-all.xcresult に保存し、
 # テスト完了後に xcresulttool で XCTest + Swift Testing の全結果を表示する。
@@ -25,7 +25,7 @@
 #   ./xcode-test.sh --only "MyFeatureTests/test_something"
 #   ./xcode-test.sh --only "MyAppTests/MyFeatureTests"  # TargetName/ClassName 形式でも可
 #
-# Note: タイムアウトは dkmcp.yaml の host_access.host_tools.timeout で設定する（デフォルト 600 秒）。
+# Note: タイムアウトは hostmcp.yaml の host_access.host_tools.timeout で設定する（デフォルト 600 秒）。
 #   AI（MCP 経由）が run_host_tool を呼び出す際は per-call でのタイムアウト変更不可。
 #
 # ⚠️ --only に指定するのはファイル名ではなく Swift の struct 名（@Suite に対応する型名）。
@@ -38,9 +38,9 @@
 #   推奨: ファイル名と同名の外枠 struct を作り、内部 struct を入れ子にする（.sandbox/host-tools/README.md 参照）
 #
 # コマンドラインからの使用例
-# dkmcp client --timeout 600 --url http://host.docker.internal:8888 host-tools run xcode-test.sh
+# hostmcp client --timeout 600 --url http://host.docker.internal:8888 host-tools run xcode-test.sh
 #   オプションを渡す時
-# dkmcp client --timeout 600 --url http://host.docker.internal:8888 host-tools run xcode-test.sh -- --only MyFeatureTests
+# hostmcp client --timeout 600 --url http://host.docker.internal:8888 host-tools run xcode-test.sh -- --only MyFeatureTests
 
 set -euo pipefail
 
@@ -63,7 +63,7 @@ header()  { echo -e "${BLUE}=== $* ===${NC}"; }
 # ────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# .project (DockMCP sync で自動生成される JSON) からワークスペースパスを取得
+# .project (HostMCP sync で自動生成される JSON) からワークスペースパスを取得
 PROJECT_META="${SCRIPT_DIR}/.project"
 WORKSPACE_DIR=""
 if [ -f "$PROJECT_META" ]; then

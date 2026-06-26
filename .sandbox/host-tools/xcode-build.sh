@@ -1,7 +1,7 @@
 #!/bin/bash
 # xcode-build.sh
 # Xcode ビルドをホスト OS（macOS）上で実行する（テスト不要の構文チェック用）。
-# DockMCP の run_host_tool 経由でコンテナから呼び出す。
+# HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #
 # Usage:
 #   ./xcode-build.sh [options]

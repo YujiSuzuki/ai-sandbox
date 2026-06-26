@@ -12,8 +12,8 @@ SandboxMCP がツールを自動検出し、AI が必要に応じて実行しま
 過去の会話から特定のキーワードを検索します。
 
 ```
-あなた: 「DockMCP の設定について話したの覚えてる？」
-AI:     search-history で "DockMCP" を検索 → 該当する会話を要約して回答
+あなた: 「HostMCP の設定について話したの覚えてる？」
+AI:     search-history で "HostMCP" を検索 → 該当する会話を要約して回答
 ```
 
 ### 2. セッション一覧
@@ -117,7 +117,7 @@ AI に頼まなくても、直接実行できます。
 
 ```bash
 # キーワード検索
-go run .sandbox/tools/search-history.go "DockMCP"
+go run .sandbox/tools/search-history.go "HostMCP"
 
 # 自分の発言だけ検索
 go run .sandbox/tools/search-history.go -role user "docker"

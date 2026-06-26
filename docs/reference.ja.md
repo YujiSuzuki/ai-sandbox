@@ -221,67 +221,67 @@ volumes:
 
 ---
 
-## DockMCPのアンインストール
+## HostMCPのアンインストール
 
-DockMCPが不要になった場合、インストール先に応じてバイナリを削除します：
+HostMCPが不要になった場合、インストール先に応じてバイナリを削除します：
 
 ```bash
-rm ~/go/bin/dkmcp
+rm ~/go/bin/hostmcp
 # または
-rm /usr/local/bin/dkmcp
+rm /usr/local/bin/hostmcp
 ```
 
 ---
 
 ## トラブルシューティング
 
-### DockMCP接続
+### HostMCP接続
 
-Claude CodeがDockMCPツールを認識しない場合：
+Claude CodeがHostMCPツールを認識しない場合：
 
-1. **VS Codeのポートパネルを確認** - DockMCPのポート（デフォルトでは18080）がフォワードされていたら停止
-2. **DockMCPが実行中か確認** - `curl http://localhost:18080/health`（ホストOS上で）
+1. **VS Codeのポートパネルを確認** - HostMCPのポート（デフォルトでは18080）がフォワードされていたら停止
+2. **HostMCPが実行中か確認** - `curl http://localhost:18080/health`（ホストOS上で）
 3. **MCP再接続を試す** - Claude Codeで `/mcp` を実行し、「Reconnect」を選択
 4. **VS Codeを完全に再起動**（Cmd+Q / Alt+F4）- Reconnectで解決しない場合
 
-### setup-dkmcp.sh による自動セットアップ
+### setup-hostmcp.sh による自動セットアップ
 
-AI Sandbox 内でセットアップスクリプトを使うと、DockMCP の登録状態の確認や自動登録ができます：
+AI Sandbox 内でセットアップスクリプトを使うと、HostMCP の登録状態の確認や自動登録ができます：
 
 ```bash
 # 現在の状態を確認（サイレント、スクリプト連携向き）
-.sandbox/scripts/setup-dkmcp.sh --check
+.sandbox/scripts/setup-hostmcp.sh --check
 # 終了コード: 0 = 接続済み, 1 = 未登録, 2 = 登録済みだがオフライン
 
 # 人向けのステータス表示
-.sandbox/scripts/setup-dkmcp.sh --status
+.sandbox/scripts/setup-hostmcp.sh --status
 
-# 検出した AI ツールに DockMCP を登録 + 接続確認
-.sandbox/scripts/setup-dkmcp.sh
+# 検出した AI ツールに HostMCP を登録 + 接続確認
+.sandbox/scripts/setup-hostmcp.sh
 
-# カスタム URL を指定（DockMCP がデフォルト以外のポートの場合）
-.sandbox/scripts/setup-dkmcp.sh --url http://host.docker.internal:9090/sse
+# カスタム URL を指定（HostMCP がデフォルト以外のポートの場合）
+.sandbox/scripts/setup-hostmcp.sh --url http://host.docker.internal:9090/sse
 
-# 全 AI ツールから DockMCP の登録を解除
-.sandbox/scripts/setup-dkmcp.sh --unregister
+# 全 AI ツールから HostMCP の登録を解除
+.sandbox/scripts/setup-hostmcp.sh --unregister
 ```
 
-スクリプトは利用可能な AI ツール（Claude Code, Gemini CLI）を自動検出し、DockMCP を SSE MCP サーバーとして登録します。登録後は、スクリプトが表示する「次のステップ」に従ってください（例：Claude Code で `/mcp` → Reconnect）。
+スクリプトは利用可能な AI ツール（Claude Code, Gemini CLI）を自動検出し、HostMCP を SSE MCP サーバーとして登録します。登録後は、スクリプトが表示する「次のステップ」に従ってください（例：Claude Code で `/mcp` → Reconnect）。
 
-### フォールバック：AI Sandbox内でdkmcp clientを使用
+### フォールバック：AI Sandbox内でhostmcp clientを使用
 
-MCPプロトコルが動作しない場合（Claude CodeやGeminiが接続できない）、フォールバックとしてAI Sandbox内で `dkmcp client` コマンドを直接使用できます。
+MCPプロトコルが動作しない場合（Claude CodeやGeminiが接続できない）、フォールバックとしてAI Sandbox内で `hostmcp client` コマンドを直接使用できます。
 
 > **注意:** `/mcp` で「✔ connected」と表示されていても、MCPツールが「Client not initialized」エラーで失敗することがあります。これはVS Code拡張機能（Claude Code, Gemini Code Assist等）のセッション管理のタイミング問題が原因である可能性があります。この場合：
 > 1. まず `/mcp` → 「Reconnect」を試す（簡単な解決策）
-> 2. それでも解決しない場合、AIは `dkmcp client` コマンドをフォールバックとして使用
+> 2. それでも解決しない場合、AIは `hostmcp client` コマンドをフォールバックとして使用
 > 3. 最終手段として、VS Codeを完全に再起動して接続を再確立
 
 **セットアップ（初回のみ）:**
 
-AI Sandbox内でdkmcpをインストール：
+AI Sandbox内でhostmcpをインストール：
 ```bash
-cd /workspace/dkmcp
+cd /workspace/hostmcp
 make install
 ```
 
@@ -290,18 +290,18 @@ make install
 **使用方法:**
 ```bash
 # コンテナ一覧
-dkmcp client list
+hostmcp client list
 
 # ログ取得
-dkmcp client logs securenote-api
+hostmcp client logs securenote-api
 
 # コマンド実行
-dkmcp client exec securenote-api "npm test"
+hostmcp client exec securenote-api "npm test"
 ```
 
-> **`--url` について:** デフォルトで `http://host.docker.internal:18080` に接続します。`dkmcp.yaml` でサーバーのポートを変更した場合は、`--url` フラグまたは環境変数 `DOCKMCP_SERVER_URL` で明示的に指定してください。
+> **`--url` について:** デフォルトで `http://host.docker.internal:18080` に接続します。`hostmcp.yaml` でサーバーのポートを変更した場合は、`--url` フラグまたは環境変数 `HOSTMCP_SERVER_URL` で明示的に指定してください。
 > ```bash
-> dkmcp client list --url http://host.docker.internal:9090
+> hostmcp client list --url http://host.docker.internal:9090
 > # または
-> export DOCKMCP_SERVER_URL=http://host.docker.internal:9090
+> export HOSTMCP_SERVER_URL=http://host.docker.internal:9090
 > ```

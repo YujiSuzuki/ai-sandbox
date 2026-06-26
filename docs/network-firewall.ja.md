@@ -73,11 +73,11 @@ RUN sudo apt-get update && sudo apt-get install -y iptables ipset curl \
 
 ## 注意事項
 
-### DockMCPとの共存
+### HostMCPとの共存
 
-DockMCPはホストOSへの通信（`host.docker.internal`）を使用します。公式スクリプトはホストネットワークへの通信を許可しているため、通常は問題なく共存できます。
+HostMCPはホストOSへの通信（`host.docker.internal`）を使用します。公式スクリプトはホストネットワークへの通信を許可しているため、通常は問題なく共存できます。
 
-もし接続に問題が出た場合は、ファイアウォールのルールで DockMCP のポート（デフォルト: 18080）へのアクセスが許可されているか確認してください。
+もし接続に問題が出た場合は、ファイアウォールのルールで HostMCP のポート（デフォルト: 18080）へのアクセスが許可されているか確認してください。
 
 ### Claude Code 以外のAIツールを使う場合
 

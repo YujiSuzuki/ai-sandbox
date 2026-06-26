@@ -111,7 +111,7 @@ Verify installation in Claude Code:
  Plugins  Discover   Installed   Marketplaces  (←/→ or tab to cycle)
 
    Local
- ❯ dkmcp MCP · ✔ connected
+ ❯ hostmcp MCP · ✔ connected
 
    User
    code-review Plugin · claude-plugins-official · ✔ enabled
@@ -175,7 +175,7 @@ The command names in the examples below use the built-in commands installed via 
 2. Run `/ais-local-review` and select **your-apps**
    → Review API authentication endpoint
 
-3. Ask Claude Code to check logs via DockMCP
+3. Ask Claude Code to check logs via HostMCP
    → Inspect API container error logs
 
 With this workspace structure, you can comprehensively investigate issues across multiple projects.

@@ -1,4 +1,4 @@
-# AI Sandbox Environment + DockMCP + SandboxMCP
+# AI Sandbox Environment + HostMCP + SandboxMCP
 
 [日本語の README はこちら](README.ja.md)
 
@@ -10,7 +10,7 @@ This template creates a Docker-based development environment where:
 - **Secrets are physically absent** — `.env` files and private keys don't exist in AI's filesystem, not blocked by rules — just not there
 - **Misconfigurations are caught automatically** — Startup validation checks that your deny rules and volume mounts are in sync, warning you before AI sees anything
 - **Code is fully accessible** — AI can read and edit all source code across multiple projects
-- **Other containers are reachable** — With DockMCP, AI can check logs and run tests in other containers safely
+- **Other containers are reachable** — With HostMCP, AI can check logs and run tests in other containers safely
 - **Helper scripts and tools are discoverable** — Via SandboxMCP, AI automatically discovers and runs scripts and tools in `.sandbox/`
 - **AI reaches beyond the sandbox** — Approve host tools once, and AI can run host operations like `docker compose up` on your behalf
 - **Code review and test generation in one command** — Built-in slash commands let AI handle reviews, refactoring, and test generation (Claude Code)
@@ -20,9 +20,9 @@ All you need is **Docker** and **VS Code**. [CLI-only usage is also supported](d
 This project is designed for local development environments and is not intended for production use. See "[Limitations](#limitations)" and "[FAQ](#faq)" for details.
 
 > [!NOTE]
-> **DockMCP** is an optional companion tool that runs on your **host OS** to enable cross-container access from inside the sandbox. It is maintained as a [separate repository](https://github.com/YujiSuzuki/dkmcp) and installed independently — this template works without it if you don't need cross-container access.
+> **HostMCP** is an optional companion tool that runs on your **host OS** to enable cross-container access from inside the sandbox. It is maintained as a [separate repository](https://github.com/YujiSuzuki/hostmcp) and installed independently — this template works without it if you don't need cross-container access.
 >
-> **Using DockMCP standalone with CLI tools (Claude Code, Gemini CLI, etc.) is not recommended.** CLI tools running on the host OS can execute `docker` commands directly, so there is no benefit to routing through DockMCP. However, for apps like **Claude Desktop** that can only access external systems via MCP, DockMCP standalone is useful for container operations. For standalone setup, see [DockMCP README](https://github.com/YujiSuzuki/dkmcp#readme).
+> **Using HostMCP standalone with CLI tools (Claude Code, Gemini CLI, etc.) is not recommended.** CLI tools running on the host OS can execute `docker` commands directly, so there is no benefit to routing through HostMCP. However, for apps like **Claude Desktop** that can only access external systems via MCP, HostMCP standalone is useful for container operations. For standalone setup, see [HostMCP README](https://github.com/YujiSuzuki/hostmcp#readme).
 
 
 ---
@@ -33,7 +33,7 @@ This project is designed for local development environments and is not intended 
 - [Use Cases](#use-cases)
 - [Quick Start](#quick-start)
 - [Commands](#commands)
-- [DockMCP Host Access](#dockmcp-host-access)
+- [HostMCP Host Access](#dockmcp-host-access)
 - [AI Sandbox Tools](#ai-sandbox-tools)
 - [Project Structure](#project-structure)
 - [Security Features](#security-features)
@@ -59,9 +59,9 @@ This project is designed for local development environments and is not intended 
 - [Network Restrictions](docs/network-firewall.md) — How to add firewall to AI Sandbox
 
 ### 📦 Components
-- [DockMCP Documentation](https://github.com/YujiSuzuki/dkmcp#readme) — MCP server details
-- [DockMCP Host Access](docs/host-access.md) — Host tools, container lifecycle, and host command execution
-- [DockMCP Design Philosophy](https://github.com/YujiSuzuki/dkmcp#design-philosophy) — Graduated access model and AI-human responsibility separation
+- [HostMCP Documentation](https://github.com/YujiSuzuki/hostmcp#readme) — MCP server details
+- [HostMCP Host Access](docs/host-access.md) — Host tools, container lifecycle, and host command execution
+- [HostMCP Design Philosophy](https://github.com/YujiSuzuki/hostmcp#design-philosophy) — Graduated access model and AI-human responsibility separation
 - [Plugin Guide](docs/plugins.md) — Claude Code plugins for multi-repo setups
 - [Demo App Guide](https://github.com/YujiSuzuki/ai-sandbox-demo) — Running the SecureNote demo (separate repository)
 - [CLI Sandbox Guide](cli_sandbox/README.md) — Terminal-based sandbox
@@ -76,13 +76,13 @@ This project is designed for local development environments and is not intended 
 
 **Cross-project development** — Investigating issues at the boundary between apps and servers is hard work. This environment combines multiple projects into a single workspace so AI can see the entire system.
 
-**Cross-container access** — Sandboxing prevents access to other containers, but DockMCP solves this. AI can read API container logs and run tests.
+**Cross-container access** — Sandboxing prevents access to other containers, but HostMCP solves this. AI can read API container logs and run tests.
 
 > **How does this compare to existing tools?** Claude Code Sandboxing and Docker AI Sandboxes are valuable — this project complements them by adding filesystem-level secret hiding and controlled cross-container access. See [Comparison with Existing Solutions](docs/comparison.md) for details.
 
 ## Limitations
 
-- **Local development only** — DockMCP has no authentication, so it's designed for local use only
+- **Local development only** — HostMCP has no authentication, so it's designed for local use only
 - **Docker required** — The volume mount approach requires a Docker-compatible runtime (Docker Desktop, OrbStack, etc.)
 - **Only tested on macOS** — It should work on Linux and Windows, but this is unverified
 - **No network restriction by default** — AI can still make outbound HTTP requests. See [Network Restrictions Guide](docs/network-firewall.md) for adding a firewall
@@ -128,19 +128,19 @@ AI understands both and assists with migration.
 |-------|-------------|
 | **Sandbox (VS Code)** | Docker + VS Code + [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) |
 | **Sandbox (CLI only)** | Docker only |
-| **Sandbox + DockMCP** | Either of the above + [DockMCP](https://github.com/YujiSuzuki/dkmcp) (or `go install`) + MCP-compatible AI CLI |
+| **Sandbox + HostMCP** | Either of the above + [HostMCP](https://github.com/YujiSuzuki/hostmcp) (or `go install`) + MCP-compatible AI CLI |
 
 ## How It Works (Overview)
 
 ```
-AI Sandbox (container)  →  DockMCP (host OS)     →  Other containers (API, DB, etc.)
+AI Sandbox (container)  →  HostMCP (host OS)     →  Other containers (API, DB, etc.)
    AI runs here              Relays access            Log checking, test execution
    Secrets are invisible     Enforces security policy
 ```
 
-Since AI runs inside a Docker container Sandbox, secret files become completely inaccessible — as if they don't exist. This doesn't hinder development, because AI can still check logs and run tests in other containers through DockMCP.
+Since AI runs inside a Docker container Sandbox, secret files become completely inaccessible — as if they don't exist. This doesn't hinder development, because AI can still check logs and run tests in other containers through HostMCP.
 
-Separately from DockMCP, **SandboxMCP** runs inside the container and lets AI automatically discover and run scripts and tools in `.sandbox/`. See [AI Sandbox Tools](#ai-sandbox-tools) for details.
+Separately from HostMCP, **SandboxMCP** runs inside the container and lets AI automatically discover and run scripts and tools in `.sandbox/`. See [AI Sandbox Tools](#ai-sandbox-tools) for details.
 
 → For detailed architecture diagrams, see [Architecture Details](docs/architecture.md)
 
@@ -155,7 +155,7 @@ Separately from DockMCP, **SandboxMCP** runs inside the container and lets AI au
 
 ## Option A: Sandbox
 
-If you only need secret hiding (no DockMCP):
+If you only need secret hiding (no HostMCP):
 
 ```bash
 # 1. Open in VS Code
@@ -190,21 +190,21 @@ Open the Command Palette (Cmd+Shift+P) and run `Shell Command: Install 'code' co
 **That's it!** AI can access code in `/workspace`, but `.env` and `secrets/` directories are hidden.
 
 
-## Option B: Sandbox + DockMCP
+## Option B: Sandbox + HostMCP
 
 If you also want AI to check logs and run tests in other containers:
 
-### Step 1: Install and start DockMCP (on host OS)
+### Step 1: Install and start HostMCP (on host OS)
 
 ```bash
-# Install DockMCP (requires Go — see https://go.dev/dl/)
-go install github.com/YujiSuzuki/dkmcp@latest
+# Install HostMCP (requires Go — see https://go.dev/dl/)
+go install github.com/YujiSuzuki/hostmcp@latest
 
 # Get the example config
-curl -L https://raw.githubusercontent.com/YujiSuzuki/dkmcp/main/configs/dkmcp.example.yaml -o dkmcp.yaml
+curl -L https://raw.githubusercontent.com/YujiSuzuki/hostmcp/main/configs/hostmcp.example.yaml -o hostmcp.yaml
 
 # Start the server
-dkmcp serve --config dkmcp.yaml --sync
+hostmcp serve --config hostmcp.yaml --sync
 ```
 
 The `--sync` flag runs the [host tools approval workflow](#host-tools) on startup, so AI can use the bundled demo tools right away. You can omit it if you don't need host tools.
@@ -216,21 +216,21 @@ code .
 # Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container"
 ```
 
-### Step 3: Register DockMCP as an MCP server
+### Step 3: Register HostMCP as an MCP server
 
 In the AI Sandbox shell:
 
 ```bash
 # Claude Code
-claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:18080/sse
+claude mcp add --transport sse --scope user hostmcp http://host.docker.internal:18080/sse
 
 # Gemini CLI
-gemini mcp add --transport sse dkmcp http://host.docker.internal:18080/sse
+gemini mcp add --transport sse hostmcp http://host.docker.internal:18080/sse
 ```
 
 For Claude Code, run `/mcp` → "Reconnect".
 
-> **Important:** If you restart the DockMCP server, reconnection is required again.
+> **Important:** If you restart the HostMCP server, reconnection is required again.
 
 ### Step 4 (Recommended): Custom domain setup
 
@@ -243,7 +243,7 @@ echo "127.0.0.1 securenote.test api.securenote.test" | sudo tee -a /etc/hosts
 
 ### Step 5 (Optional): Try the demo apps
 
-The SecureNote demo (a concrete example of secret hiding and DockMCP in action) is available as a separate repository:
+The SecureNote demo (a concrete example of secret hiding and HostMCP in action) is available as a separate repository:
 
 ```bash
 git clone https://github.com/YujiSuzuki/ai-sandbox-demo
@@ -275,25 +275,25 @@ New versions are checked automatically on startup. When an update is available, 
 
 | Command | Where to Run | Description |
 |---------|-------------|-------------|
-| `dkmcp serve` | Host OS | Start DockMCP server |
-| `dkmcp list` | Host OS | List accessible containers |
-| `dkmcp client list` | AI Sandbox | List containers via HTTP |
-| `dkmcp client logs <container>` | AI Sandbox | Get logs via HTTP |
-| `dkmcp client exec <container> "cmd"` | AI Sandbox | Execute command via HTTP |
+| `hostmcp serve` | Host OS | Start HostMCP server |
+| `hostmcp list` | Host OS | List accessible containers |
+| `hostmcp client list` | AI Sandbox | List containers via HTTP |
+| `hostmcp client logs <container>` | AI Sandbox | Get logs via HTTP |
+| `hostmcp client exec <container> "cmd"` | AI Sandbox | Execute command via HTTP |
 
-> For detailed command options, see [DockMCP README](https://github.com/YujiSuzuki/dkmcp#cli-commands)
+> For detailed command options, see [HostMCP README](https://github.com/YujiSuzuki/hostmcp#cli-commands)
 
-# DockMCP Host Access
+# HostMCP Host Access
 
-DockMCP can also give AI controlled access to the **host OS** itself — not just other containers. Three capabilities are available, all configurable in `dkmcp.yaml`:
+HostMCP can also give AI controlled access to the **host OS** itself — not just other containers. Three capabilities are available, all configurable in `hostmcp.yaml`:
 
 ### Host Tools
 
-AI can discover and run scripts placed in `.sandbox/host-tools/`. New tools go through an **approval workflow** — you review them with `dkmcp tools sync` before they become executable.
+AI can discover and run scripts placed in `.sandbox/host-tools/`. New tools go through an **approval workflow** — you review them with `hostmcp tools sync` before they become executable.
 
 ```
 .sandbox/host-tools/         ← AI proposes tools here (staging)
-~/.dkmcp/host-tools/<id>/    ← Only approved tools run from here
+~/.hostmcp/host-tools/<id>/    ← Only approved tools run from here
 ```
 
 You can place your own scripts in `.sandbox/host-tools/`. Each goes through an **approval workflow** before AI can run it — keeping Docker operations human-reviewed. See [Demo App Guide](https://github.com/YujiSuzuki/ai-sandbox-demo) for an example with `demo-build.sh`, `demo-up.sh`, and `demo-down.sh`.
@@ -303,7 +303,7 @@ You can place your own scripts in `.sandbox/host-tools/`. Each goes through an *
 AI can start, stop, and restart containers using the Docker API directly. This is opt-in (`lifecycle: false` by default) and respects the `allowed_containers` policy.
 
 ```yaml
-# In dkmcp.yaml
+# In hostmcp.yaml
 security:
   permissions:
     lifecycle: true  # Enable start/stop/restart
@@ -314,7 +314,7 @@ security:
 AI can execute whitelisted CLI commands on the host OS (e.g., `git status`, `df -h`). Commands are restricted by base command + argument pattern matching, with deny lists and dangerous mode for sensitive operations.
 
 ```yaml
-# In dkmcp.yaml
+# In hostmcp.yaml
 host_access:
   host_commands:
     enabled: true
@@ -322,7 +322,7 @@ host_access:
       "git": ["status", "diff *", "log --oneline *"]
 ```
 
-> For full configuration details, approval workflow, and security considerations, see [DockMCP Host Access](docs/host-access.md)
+> For full configuration details, approval workflow, and security considerations, see [HostMCP Host Access](docs/host-access.md)
 
 # AI Sandbox Tools
 
@@ -330,11 +330,11 @@ host_access:
 
 The AI Sandbox includes a lightweight MCP server called **SandboxMCP** (stdio). It is automatically built and registered at container startup, enabling AI to discover and run scripts and tools under `.sandbox/`.
 
-| | SandboxMCP | DockMCP |
+| | SandboxMCP | HostMCP |
 |---|-----------|---------|
 | Runs on | Inside the container (stdio) | Host OS (SSE / HTTP) |
 | Purpose | Discover and run scripts/tools | Access other containers |
-| Startup | Automatic (container start) | Manual (`dkmcp serve`) |
+| Startup | Automatic (container start) | Manual (`hostmcp serve`) |
 
 Just ask AI things like "What scripts are available?" or "Search my conversation history" — SandboxMCP routes it to the right tool automatically.
 
@@ -355,7 +355,7 @@ A built-in tool lets you search past Claude Code conversations. Just ask your AI
 |----------|--------------|
 | "What did we work on yesterday?" | Searches yesterday's messages and summarizes them |
 | "Give me a summary of last week" | Looks up sessions day by day and creates an overview |
-| "Did we discuss DockMCP setup?" | Keyword search across past conversations |
+| "Did we discuss HostMCP setup?" | Keyword search across past conversations |
 | "When did we fix that bug?" | Finds the relevant conversation by date and keyword |
 | "Where did this mystery file come from?" | Traces back through past AI session commands to find the cause |
 
@@ -438,7 +438,7 @@ Since scripts can call other languages (Python, Node.js, etc.), you can build to
 
 # Project Structure
 
-`.sandbox/` contains shared infrastructure, `.devcontainer/` and `cli_sandbox/` provide two Sandbox environments. Add your own project directories alongside these. [DockMCP](https://github.com/YujiSuzuki/dkmcp) runs separately on the host OS.
+`.sandbox/` contains shared infrastructure, `.devcontainer/` and `cli_sandbox/` provide two Sandbox environments. Add your own project directories alongside these. [HostMCP](https://github.com/YujiSuzuki/hostmcp) runs separately on the host OS.
 
 <details>
 <summary>View directory tree</summary>
@@ -475,9 +475,9 @@ See [Customization Guide](docs/customization.md) for how to add your own project
 | Feature | What It Does |
 |---------|-------------|
 | **Secret hiding** | Hides `.env` and `secrets/` from AI via Docker mounts. Apps can read them normally |
-| **Container access control** | DockMCP restricts AI's access scope based on security policies |
+| **Container access control** | HostMCP restricts AI's access scope based on security policies |
 | **Sandbox protection** | Non-root user, limited sudo, no access to host OS files |
-| **Output masking** | DockMCP automatically masks passwords and API keys in logs |
+| **Output masking** | HostMCP automatically masks passwords and API keys in logs |
 | **Startup validation** | Automatically checks secret configuration consistency on every startup. Warns if issues are found |
 
 → For details and configuration, see [Architecture Details](docs/architecture.md). For startup validation details, see [Reference](docs/reference.md#startup-validation)
@@ -498,14 +498,14 @@ See [Customization Guide](docs/customization.md) for how to add your own project
 **Q: How is this different from Claude Code's sandboxing or Docker AI Sandboxes?**
 A: They're complementary. Claude Code's sandbox restricts execution; Docker AI Sandboxes provide full VM isolation. This project adds filesystem-level secret hiding and cross-container access. Use them together for defense in depth. See [Comparison with Existing Solutions](docs/comparison.md) for details.
 
-**Q: Do I need to use DockMCP?**
-A: No. It works as a regular sandbox without DockMCP. DockMCP enables cross-container access.
+**Q: Do I need to use HostMCP?**
+A: No. It works as a regular sandbox without HostMCP. HostMCP enables cross-container access.
 
 **Q: Why not just mount the Docker socket so AI can access containers directly?**
-A: Docker socket access is essentially host admin privileges — AI could read secrets from any container, bypassing all hiding. DockMCP exists to provide only the operations AI needs (logs, tests) in a safe, controlled way. See [Architecture Details](docs/architecture.md#5-why-no-docker-socket-access) for details.
+A: Docker socket access is essentially host admin privileges — AI could read secrets from any container, bypassing all hiding. HostMCP exists to provide only the operations AI needs (logs, tests) in a safe, controlled way. See [Architecture Details](docs/architecture.md#5-why-no-docker-socket-access) for details.
 
 **Q: Can AI run `docker-compose up/down`?**
-A: Not directly — but AI can run approved host tools that wrap these commands. Raw `docker-compose` and image builds remain human-only, while host tools provide controlled access through human-reviewed scripts. See [DockMCP Design Philosophy](https://github.com/YujiSuzuki/dkmcp#design-philosophy) for details.
+A: Not directly — but AI can run approved host tools that wrap these commands. Raw `docker-compose` and image builds remain human-only, while host tools provide controlled access through human-reviewed scripts. See [HostMCP Design Philosophy](https://github.com/YujiSuzuki/hostmcp#design-philosophy) for details.
 
 **Q: Can I use a different secret management solution?**
 A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other tools. This project handles development-time protection; use dedicated tools for production.
@@ -523,9 +523,9 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 | [Reference](docs/reference.md) | Environment settings, options, troubleshooting |
 | [Architecture Details](docs/architecture.md) | Security mechanisms and architecture diagrams |
 | [Network Restrictions](docs/network-firewall.md) | How to add firewall to AI Sandbox |
-| [DockMCP Documentation](https://github.com/YujiSuzuki/dkmcp#readme) | MCP server details |
-| [DockMCP Host Access](docs/host-access.md) | Host tools, container lifecycle, and host command execution |
-| [DockMCP Design Philosophy](https://github.com/YujiSuzuki/dkmcp#design-philosophy) | Graduated access model and AI-human responsibility separation |
+| [HostMCP Documentation](https://github.com/YujiSuzuki/hostmcp#readme) | MCP server details |
+| [HostMCP Host Access](docs/host-access.md) | Host tools, container lifecycle, and host command execution |
+| [HostMCP Design Philosophy](https://github.com/YujiSuzuki/hostmcp#design-philosophy) | Graduated access model and AI-human responsibility separation |
 | [Plugin Guide](docs/plugins.md) | Claude Code plugins for multi-repo setups |
 | [Demo App Guide](https://github.com/YujiSuzuki/ai-sandbox-demo) | Running the SecureNote demo (separate repository) |
 | [CLI Sandbox Guide](cli_sandbox/README.md) | Terminal-based sandbox |

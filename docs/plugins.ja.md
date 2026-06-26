@@ -111,7 +111,7 @@ node@671e8b3485a2:/workspace$
  Plugins  Discover   Installed   Marketplaces  (←/→ or tab to cycle)
 
    Local
- ❯ dkmcp MCP · ✔ connected
+ ❯ hostmcp MCP · ✔ connected
 
    User
    code-review Plugin · claude-plugins-official · ✔ enabled
@@ -177,7 +177,7 @@ $ claude  --allow-dangerously-skip-permissions
 2. `/ais-local-review` を実行し、**your-apps** を選択
    → API の認証エンドポイントをレビュー
 
-3. Claude Code に DockMCP でログを確認してもらう
+3. Claude Code に HostMCP でログを確認してもらう
    → API コンテナのエラーログを確認
 
 このワークスペース構成だからこそ、複数プロジェクト間の問題を総合的に調査できます。

@@ -14,7 +14,7 @@
 #   - cli_sandbox/_common.sh (CLI sandbox startup) — with --silent
 #   - .devcontainer/devcontainer.json initializeCommand (DevContainer startup) — with --silent
 #
-# Writes host OS info to .sandbox/.host-os for cross-build support (used by dkmcp/Makefile build-host)
+# Writes host OS info to .sandbox/.host-os for cross-build support (used by hostmcp/Makefile build-host)
 # ---
 # ホスト側の初期化: テンプレートからenvファイル作成、ホストOS情報の書き出し
 #
@@ -102,21 +102,21 @@ select_timezone_for_japanese() {
     esac
 }
 
-# SIGINT handler for dkmcp setup / dkmcp セットアップ中の SIGINT ハンドラー
-_dkmcp_sigint_handler() {
+# SIGINT handler for hostmcp setup / hostmcp セットアップ中の SIGINT ハンドラー
+_hostmcp_sigint_handler() {
     echo ""
     echo "インストールをキャンセルしました。"
     _DKMCP_CANCELLED=true
 }
 
-# dkmcp install check / dkmcp インストール確認
-setup_dkmcp_install() {
-    trap '_dkmcp_sigint_handler' INT
+# hostmcp install check / hostmcp インストール確認
+setup_hostmcp_install() {
+    trap '_hostmcp_sigint_handler' INT
 
     if ! command -v go > /dev/null 2>&1; then
         echo ""
         echo "エラー: go コマンドが見つかりません。"
-        echo "dkmcp をインストールするには Go が必要です。"
+        echo "hostmcp をインストールするには Go が必要です。"
         echo "https://go.dev/doc/install を参照してインストールしてください。"
         return 0
     fi
@@ -132,14 +132,14 @@ setup_dkmcp_install() {
     fi
     local gopath_bin="$gopath_raw/bin"
 
-    if [ -f "$gopath_bin/dkmcp" ]; then
+    if [ -f "$gopath_bin/hostmcp" ]; then
         DKMCP_AVAILABLE=true
         return 0
     fi
 
     echo ""
-    echo "dkmcp が見つかりません。インストールしますか？"
-    echo "  1) はい (go install github.com/YujiSuzuki/dkmcp@latest を実行)"
+    echo "hostmcp が見つかりません。インストールしますか？"
+    echo "  1) はい (go install github.com/YujiSuzuki/hostmcp@latest を実行)"
     echo "  2) いいえ"
     echo ""
     read -r -p "1 または 2 を入力 [1]: " install_choice || true
@@ -150,50 +150,50 @@ setup_dkmcp_install() {
             local display_path
             display_path="$(cd "$PROJECT_ROOT" 2>/dev/null && pwd)" || display_path="/path/to/your-workspace"
             echo ""
-            echo "DockMCP のセットアップをスキップしました。"
+            echo "HostMCP のセットアップをスキップしました。"
             echo "後からセットアップするには以下を実行してください:"
-            echo "  go install github.com/YujiSuzuki/dkmcp@latest"
-            echo "  dkmcp init --workspace $display_path"
-            echo "  dkmcp serve --workspace $display_path"
+            echo "  go install github.com/YujiSuzuki/hostmcp@latest"
+            echo "  hostmcp init --workspace $display_path"
+            echo "  hostmcp serve --workspace $display_path"
             return 0
             ;;
         *)
-            echo "インストール中... (go install github.com/YujiSuzuki/dkmcp@latest)"
-            if ! go install github.com/YujiSuzuki/dkmcp@latest 2>&1; then
+            echo "インストール中... (go install github.com/YujiSuzuki/hostmcp@latest)"
+            if ! go install github.com/YujiSuzuki/hostmcp@latest 2>&1; then
                 if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
-                echo "エラー: dkmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/dkmcp@latest"
+                echo "エラー: hostmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/hostmcp@latest"
                 return 0
             fi
             if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
-            if [ ! -f "$gopath_bin/dkmcp" ]; then
-                echo "エラー: dkmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/dkmcp@latest"
+            if [ ! -f "$gopath_bin/hostmcp" ]; then
+                echo "エラー: hostmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/hostmcp@latest"
                 return 0
             fi
-            echo "dkmcp のインストールが完了しました。"
+            echo "hostmcp のインストールが完了しました。"
             DKMCP_AVAILABLE=true
             ;;
     esac
 }
 
-# dkmcp init (port selection + execution) / ポート確認・dkmcp init 実行
-setup_dkmcp_init() {
+# hostmcp init (port selection + execution) / ポート確認・hostmcp init 実行
+setup_hostmcp_init() {
     if [ "$DKMCP_AVAILABLE" != true ]; then return 0; fi
 
     local abs_project_root
     if ! abs_project_root="$(cd "$PROJECT_ROOT" && pwd)"; then
         echo ""
-        echo "エラー: プロジェクトルートのパスを解決できません。dkmcp セットアップをスキップします。"
+        echo "エラー: プロジェクトルートのパスを解決できません。hostmcp セットアップをスキップします。"
         return 0
     fi
 
-    if [ -f "$abs_project_root/.sandbox/config/dkmcp.yaml" ]; then
+    if [ -f "$abs_project_root/.sandbox/config/hostmcp.yaml" ]; then
         DKMCP_INIT_SUCCESS=skipped
-        show_dkmcp_next_steps "$abs_project_root"
+        show_hostmcp_next_steps "$abs_project_root"
         return 0
     fi
 
     echo ""
-    echo "DockMCP の設定ファイルを生成します。"
+    echo "HostMCP の設定ファイルを生成します。"
     echo "ポートはデフォルト（18080）でよいですか？"
     echo "  1) はい (default)"
     echo "  2) いいえ（カスタムポートを指定）"
@@ -242,32 +242,32 @@ setup_dkmcp_init() {
 
     local init_exit=0
     if [ -n "$port" ]; then
-        dkmcp init --workspace "$abs_project_root" --port "$port" 2>&1 || init_exit=$?
+        hostmcp init --workspace "$abs_project_root" --port "$port" 2>&1 || init_exit=$?
     else
-        dkmcp init --workspace "$abs_project_root" 2>&1 || init_exit=$?
+        hostmcp init --workspace "$abs_project_root" 2>&1 || init_exit=$?
     fi
 
     if [ $init_exit -ne 0 ]; then
         echo ""
-        echo "エラー: DockMCP の設定ファイル生成に失敗しました。"
+        echo "エラー: HostMCP の設定ファイル生成に失敗しました。"
         echo "不完全な設定ファイルが残っている場合は手動で削除してください:"
-        echo "  rm .sandbox/config/dkmcp.yaml"
+        echo "  rm .sandbox/config/hostmcp.yaml"
         echo "その後、再度 init-host-env.sh を実行してください。"
         return 0
     fi
 
     DKMCP_INIT_SUCCESS=true
-    show_dkmcp_next_steps "$abs_project_root"
+    show_hostmcp_next_steps "$abs_project_root"
 }
 
-# Show next steps after dkmcp setup / dkmcp セットアップ後の次ステップ案内
-show_dkmcp_next_steps() {
+# Show next steps after hostmcp setup / hostmcp セットアップ後の次ステップ案内
+show_hostmcp_next_steps() {
     local workspace_path="$1"
 
     local message
     case "$DKMCP_INIT_SUCCESS" in
-        true)    message="DockMCP のセットアップが完了しました。" ;;
-        skipped) message="DockMCP の設定ファイルは既に存在します。" ;;
+        true)    message="HostMCP のセットアップが完了しました。" ;;
+        skipped) message="HostMCP の設定ファイルは既に存在します。" ;;
         *)       return 0 ;;
     esac
 
@@ -276,7 +276,7 @@ show_dkmcp_next_steps() {
     echo "$message"
     echo ""
     echo "起動するには以下のコマンドを実行してください:"
-    echo "  dkmcp serve --workspace '$workspace_path'"
+    echo "  hostmcp serve --workspace '$workspace_path'"
     echo "----------------------------------------"
     echo ""
 }
@@ -325,8 +325,8 @@ apply_timezone_setting() {
 # 対話モードの場合、言語選択を行う
 if [ "$INTERACTIVE" = true ]; then
     select_language
-    setup_dkmcp_install
-    setup_dkmcp_init
+    setup_hostmcp_install
+    setup_hostmcp_init
     trap - INT
 fi
 
@@ -395,8 +395,8 @@ if [ "$created" -gt 0 ]; then
     echo ""
 fi
 
-# Write host OS info for cross-build (used by dkmcp/Makefile build-host)
-# クロスビルド用にホストOS情報を書き出し（dkmcp/Makefile build-host で使用）
+# Write host OS info for cross-build (used by hostmcp/Makefile build-host)
+# クロスビルド用にホストOS情報を書き出し（hostmcp/Makefile build-host で使用）
 HOST_OS_FILE="$PROJECT_ROOT/.sandbox/.host-os"
 mkdir -p "$(dirname "$HOST_OS_FILE")"
 uname -s | tr '[:upper:]' '[:lower:]' > "$HOST_OS_FILE"

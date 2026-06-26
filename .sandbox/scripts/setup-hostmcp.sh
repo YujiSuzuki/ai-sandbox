@@ -1,43 +1,43 @@
 #!/bin/bash
-# setup-dkmcp.sh
+# setup-hostmcp.sh
 # ⚠️ This script is for use inside the container (sandbox) only. It does not work on the host OS.
-# Register DockMCP as an MCP server for AI tools (Claude Code, Gemini CLI)
+# Register HostMCP as an MCP server for AI tools (Claude Code, Gemini CLI)
 #
-# Detects available AI tools and registers DockMCP as an SSE MCP server.
+# Detects available AI tools and registers HostMCP as an SSE MCP server.
 # Also checks registration status and connectivity. Designed for AI-driven setup:
 # AI can run --check to detect missing registration, then offer to register.
 #
 # Usage:
-#   .sandbox/scripts/setup-dkmcp.sh [options]
+#   .sandbox/scripts/setup-hostmcp.sh [options]
 #
 # Options:
 #   --check       Silent check (exit code: 0=connected, 1=not registered, 2=registered but offline)
 #   --status      Human-readable status report
-#   --url <url>   Custom DockMCP URL (default: http://host.docker.internal:18080/sse)
-#   --unregister  Remove DockMCP from all detected AI tools
+#   --url <url>   Custom HostMCP URL (default: http://host.docker.internal:18080/sse)
+#   --unregister  Remove HostMCP from all detected AI tools
 #   --help, -h    Show this help
 #
 # Examples:
-#   .sandbox/scripts/setup-dkmcp.sh              # Register if needed + verify connectivity
-#   .sandbox/scripts/setup-dkmcp.sh --check      # Silent check (for AI/startup detection)
-#   .sandbox/scripts/setup-dkmcp.sh --status     # Show detailed status
-#   .sandbox/scripts/setup-dkmcp.sh --unregister # Remove DockMCP registration
+#   .sandbox/scripts/setup-hostmcp.sh              # Register if needed + verify connectivity
+#   .sandbox/scripts/setup-hostmcp.sh --check      # Silent check (for AI/startup detection)
+#   .sandbox/scripts/setup-hostmcp.sh --status     # Show detailed status
+#   .sandbox/scripts/setup-hostmcp.sh --unregister # Remove HostMCP registration
 # ---
 # ⚠️ このスクリプトはコンテナ（サンドボックス）内専用です。ホスト OS では動作しません。
-# DockMCP を AI ツール（Claude Code, Gemini CLI）に MCP サーバーとして登録
+# HostMCP を AI ツール（Claude Code, Gemini CLI）に MCP サーバーとして登録
 #
-# 利用可能な AI ツールを検出し、DockMCP を SSE MCP サーバーとして登録します。
+# 利用可能な AI ツールを検出し、HostMCP を SSE MCP サーバーとして登録します。
 # 登録状態と接続性のチェックも可能で、AI による自動セットアップに活用できます。
 # AI が --check で未登録を検出し、「登録しましょうか？」と提案する想定です。
 #
 # 使用法:
-#   .sandbox/scripts/setup-dkmcp.sh [options]
+#   .sandbox/scripts/setup-hostmcp.sh [options]
 #
 # オプション:
 #   --check       サイレントチェック（終了コード: 0=接続済, 1=未登録, 2=登録済だがオフライン）
 #   --status      人向けのステータスレポート
-#   --url <url>   カスタム DockMCP URL（デフォルト: http://host.docker.internal:18080/sse）
-#   --unregister  全 AI ツールから DockMCP を削除
+#   --url <url>   カスタム HostMCP URL（デフォルト: http://host.docker.internal:18080/sse）
+#   --unregister  全 AI ツールから HostMCP を削除
 #   --help, -h    ヘルプ表示
 
 set -euo pipefail
@@ -61,7 +61,7 @@ die()   { err "$1"; exit 1; }
 # ─── Language detection / 言語検出 ─────────────────────────────
 
 if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
-    MSG_TITLE="🔗 DockMCP セットアップ"
+    MSG_TITLE="🔗 HostMCP セットアップ"
     MSG_REGISTERED="登録済み"
     MSG_NOT_REGISTERED="未登録"
     MSG_CLI_NOT_FOUND="CLI 未インストール"
@@ -71,21 +71,21 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_REGISTERED_FALLBACK="登録完了（.mcp.json 直接編集）"
     MSG_REGISTER_FAILED="登録に失敗しました"
     MSG_CONNECTIVITY="接続状態"
-    MSG_SERVER_RUNNING="DockMCP サーバー稼働中"
-    MSG_SERVER_NOT_RUNNING="DockMCP サーバーに接続できません"
-    MSG_START_HINT="ホスト OS で DockMCP を起動してください:"
+    MSG_SERVER_RUNNING="HostMCP サーバー稼働中"
+    MSG_SERVER_NOT_RUNNING="HostMCP サーバーに接続できません"
+    MSG_START_HINT="ホスト OS で HostMCP を起動してください:"
     MSG_NEXT_STEPS="次のステップ"
     MSG_CLAUDE_RECONNECT="Claude Code: /mcp → Reconnect を実行"
     MSG_GEMINI_RESTART="Gemini CLI: セッションを再起動"
     MSG_NO_AI_TOOLS="AI ツールが見つかりません（claude / gemini どちらも未インストール）"
-    MSG_UNREGISTER_TITLE="🔗 DockMCP 登録解除"
+    MSG_UNREGISTER_TITLE="🔗 HostMCP 登録解除"
     MSG_UNREGISTERED="削除済み"
     MSG_NOT_FOUND="未登録のためスキップ"
     MSG_HELP_USAGE="使用法"
     MSG_HELP_OPTIONS="オプション"
     MSG_HELP_EXAMPLES="例"
 else
-    MSG_TITLE="🔗 DockMCP Setup"
+    MSG_TITLE="🔗 HostMCP Setup"
     MSG_REGISTERED="Registered"
     MSG_NOT_REGISTERED="Not registered"
     MSG_CLI_NOT_FOUND="CLI not installed"
@@ -95,14 +95,14 @@ else
     MSG_REGISTERED_FALLBACK="Registered via .mcp.json (fallback)"
     MSG_REGISTER_FAILED="Registration failed"
     MSG_CONNECTIVITY="Connectivity"
-    MSG_SERVER_RUNNING="DockMCP server is running"
-    MSG_SERVER_NOT_RUNNING="DockMCP server is not reachable"
-    MSG_START_HINT="Start DockMCP on host OS:"
+    MSG_SERVER_RUNNING="HostMCP server is running"
+    MSG_SERVER_NOT_RUNNING="HostMCP server is not reachable"
+    MSG_START_HINT="Start HostMCP on host OS:"
     MSG_NEXT_STEPS="Next Steps"
     MSG_CLAUDE_RECONNECT="Claude Code: Run /mcp -> Reconnect"
     MSG_GEMINI_RESTART="Gemini CLI: Restart the session"
     MSG_NO_AI_TOOLS="No AI tools found (neither claude nor gemini)"
-    MSG_UNREGISTER_TITLE="🔗 DockMCP Unregister"
+    MSG_UNREGISTER_TITLE="🔗 HostMCP Unregister"
     MSG_UNREGISTERED="Removed"
     MSG_NOT_FOUND="Not registered, skipping"
     MSG_HELP_USAGE="Usage"
@@ -114,27 +114,27 @@ fi
 
 WORKSPACE="${WORKSPACE:-/workspace}"
 DEFAULT_URL="http://host.docker.internal:18080/sse"
-DKMCP_NAME="dkmcp"
+DKMCP_NAME="hostmcp"
 
 # ─── Help / ヘルプ ─────────────────────────────────────────────
 
 show_help() {
     echo ""
     echo "$MSG_HELP_USAGE:"
-    echo "  .sandbox/scripts/setup-dkmcp.sh [options]"
+    echo "  .sandbox/scripts/setup-hostmcp.sh [options]"
     echo ""
     echo "$MSG_HELP_OPTIONS:"
     echo "  --check       Silent check (exit: 0=connected, 1=not registered, 2=offline)"
     echo "  --status      Human-readable status report"
-    echo "  --url <url>   Custom DockMCP URL (default: $DEFAULT_URL)"
-    echo "  --unregister  Remove DockMCP from all AI tools"
+    echo "  --url <url>   Custom HostMCP URL (default: $DEFAULT_URL)"
+    echo "  --unregister  Remove HostMCP from all AI tools"
     echo "  --help, -h    Show this help"
     echo ""
     echo "$MSG_HELP_EXAMPLES:"
-    echo "  .sandbox/scripts/setup-dkmcp.sh              # Register + verify"
-    echo "  .sandbox/scripts/setup-dkmcp.sh --check      # Silent check"
-    echo "  .sandbox/scripts/setup-dkmcp.sh --status     # Show status"
-    echo "  .sandbox/scripts/setup-dkmcp.sh --unregister # Remove registration"
+    echo "  .sandbox/scripts/setup-hostmcp.sh              # Register + verify"
+    echo "  .sandbox/scripts/setup-hostmcp.sh --check      # Silent check"
+    echo "  .sandbox/scripts/setup-hostmcp.sh --status     # Show status"
+    echo "  .sandbox/scripts/setup-hostmcp.sh --unregister # Remove registration"
     echo ""
     exit 0
 }
@@ -392,7 +392,7 @@ mode_status() {
         warn "$MSG_SERVER_NOT_RUNNING ($DKMCP_URL)"
         echo ""
         info "$MSG_START_HINT"
-        echo -e "  ${CYAN}cd dkmcp && make install && dkmcp serve${NC}"
+        echo -e "  ${CYAN}cd hostmcp && make install && hostmcp serve${NC}"
     fi
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -468,7 +468,7 @@ mode_default() {
         warn "$MSG_SERVER_NOT_RUNNING"
         echo ""
         info "$MSG_START_HINT"
-        echo -e "  ${CYAN}cd dkmcp && make install && dkmcp serve${NC}"
+        echo -e "  ${CYAN}cd hostmcp && make install && hostmcp serve${NC}"
     fi
 
     # Post-registration guidance
