@@ -32,7 +32,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_SYNC_CHECK_FAILED="⚠️  秘匿同期チェックに失敗しましたが、続行します..."
     MSG_REGISTERING="📦 SandboxMCP 登録"
     MSG_FETCHING="  📥 sandbox-mcp を取得中..."
-    MSG_FETCH_FAILED="⚠️  sandbox-mcp の取得に失敗しましたが、続行します..."
+    MSG_ALREADY_INSTALLED="  ✅ sandbox-mcp は既にインストール済みです（更新: go install github.com/YujiSuzuki/sandbox-mcp@latest）"
     MSG_REGISTER_FAILED="⚠️  SandboxMCP 登録に失敗しましたが、続行します..."
     MSG_REGISTER_OK="  ✅ 登録済み"
     MSG_REGISTER_SKIP="  ⚠️  登録失敗（既に登録済み？）"
@@ -49,7 +49,7 @@ else
     MSG_SYNC_CHECK_FAILED="⚠️  Secret sync check failed, but continuing..."
     MSG_REGISTERING="📦 Registering SandboxMCP"
     MSG_FETCHING="  📥 Fetching sandbox-mcp..."
-    MSG_FETCH_FAILED="⚠️  Failed to fetch sandbox-mcp, but continuing..."
+    MSG_ALREADY_INSTALLED="  ✅ sandbox-mcp already installed (to update: go install github.com/YujiSuzuki/sandbox-mcp@latest)"
     MSG_REGISTER_FAILED="⚠️  SandboxMCP registration failed, but continuing..."
     MSG_REGISTER_OK="  ✅ registered"
     MSG_REGISTER_SKIP="  ⚠️  registration failed (already registered?)"
@@ -119,8 +119,19 @@ if command -v go >/dev/null 2>&1; then
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "$MSG_REGISTERING"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "$MSG_FETCHING"
-    go install github.com/YujiSuzuki/sandbox-mcp@latest && {
+    sandbox_mcp_ready=false
+    if ! command -v sandbox-mcp >/dev/null 2>&1; then
+        echo "$MSG_FETCHING"
+        if go install github.com/YujiSuzuki/sandbox-mcp@latest; then
+            sandbox_mcp_ready=true
+        else
+            echo "$MSG_REGISTER_FAILED"
+        fi
+    else
+        echo "$MSG_ALREADY_INSTALLED"
+        sandbox_mcp_ready=true
+    fi
+    if [ "$sandbox_mcp_ready" = "true" ]; then
         if command -v claude >/dev/null 2>&1; then
             claude mcp add sandbox-mcp sandbox-mcp \
                 && echo "  [Claude] $MSG_REGISTER_OK" \
@@ -131,15 +142,13 @@ if command -v go >/dev/null 2>&1; then
                 && echo "  [Gemini] $MSG_REGISTER_OK" \
                 || echo "  [Gemini] $MSG_REGISTER_SKIP"
         fi
-    } || {
-        echo "$MSG_REGISTER_FAILED"
-    }
+    fi
 else
     echo ""
     echo "$MSG_NO_GO"
 fi
 
-# 7. Register DockMCP if not registered, or show one-liner status
+# 8. Register DockMCP if not registered, or show one-liner status
 # DockMCP 登録（未登録なら登録、登録済みなら1行サマリー）
 dkmcp_check=0
 "$WORKSPACE/.sandbox/scripts/setup-dkmcp.sh" --check 2>/dev/null || dkmcp_check=$?

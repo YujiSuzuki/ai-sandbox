@@ -2,7 +2,7 @@
 # test-startup-dkmcp.sh
 # Test DockMCP auto-registration logic in startup.sh
 #
-# Tests the step 7 behavior:
+# Tests the step 8 behavior:
 #   - Registered + connected: one-liner summary
 #   - Registered but offline: one-liner warning
 #   - Not registered: full registration output
@@ -15,7 +15,7 @@
 # ---
 # startup.sh の DockMCP 自動登録ロジックのテスト
 #
-# ステップ7の動作をテスト:
+# ステップ8の動作をテスト:
 #   - 登録済み＋接続OK: 1行サマリー
 #   - 登録済みだがオフライン: 1行警告
 #   - 未登録: フル登録出力
@@ -47,11 +47,11 @@ fail() { echo -e "${RED}❌ $1${NC}"; TESTS_FAILED=$((TESTS_FAILED + 1)); }
 TEST_DIR=""
 
 setup() {
+    unset WORKSPACE
     TEST_DIR=$(mktemp -d)
 
     # Create stub scripts directory mirroring .sandbox/scripts/
     mkdir -p "$TEST_DIR/workspace/.sandbox/scripts"
-    mkdir -p "$TEST_DIR/workspace/.sandbox/sandbox-mcp"
 
     # Create no-op stubs for steps 1-5 (not under test)
     for script in merge-claude-settings.sh compare-secret-config.sh \
@@ -69,7 +69,7 @@ STUB
 # Stub: no-op common functions
 STUB
 
-    # Create stub bin directory for go/claude/gemini (step 7 SandboxMCP, not under test)
+    # Create stub bin directory for go/claude/gemini (default stubs; overridden in SandboxMCP-specific tests)
     mkdir -p "$TEST_DIR/bin"
     cat > "$TEST_DIR/bin/go" << 'STUB'
 #!/bin/bash
@@ -162,6 +162,48 @@ STUB
 
     cleanup
 }
+
+# Test: When sandbox-mcp is already installed, skip go install and show already-installed message
+test_sandboxmcp_skip_when_already_installed() {
+    echo ""
+    echo "=== Test: Skip go install when sandbox-mcp already installed ==="
+
+    setup
+    create_dkmcp_stub 0
+
+    # Add sandbox-mcp stub to PATH so command -v sandbox-mcp succeeds
+    cat > "$TEST_DIR/bin/sandbox-mcp" << 'STUB'
+#!/bin/bash
+exit 0
+STUB
+    chmod +x "$TEST_DIR/bin/sandbox-mcp"
+
+    # Make go stub fail if called (should be skipped)
+    cat > "$TEST_DIR/bin/go" << 'STUB'
+#!/bin/bash
+echo "UNEXPECTED: go install was called"
+exit 1
+STUB
+    chmod +x "$TEST_DIR/bin/go"
+
+    local output
+    output=$(bash "$TEST_DIR/workspace/.sandbox/scripts/startup.sh" 2>&1)
+
+    if echo "$output" | grep -q "UNEXPECTED: go install was called"; then
+        fail "Should skip go install when sandbox-mcp is already installed"
+    else
+        pass "Skips go install when sandbox-mcp is already installed"
+    fi
+
+    if echo "$output" | grep -q "already installed\|既にインストール済み"; then
+        pass "Shows already-installed message"
+    else
+        fail "Should show already-installed message"
+    fi
+
+    cleanup
+}
+
 
 # Test 1: When --check returns 0 (registered + connected), shows one-liner with "connected"
 test_oneliner_when_registered_and_connected() {
@@ -297,6 +339,7 @@ main() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_sandboxmcp_registration_output
+    test_sandboxmcp_skip_when_already_installed
     test_oneliner_when_registered_and_connected
     test_oneliner_when_registered_but_offline
     test_full_output_when_not_registered
