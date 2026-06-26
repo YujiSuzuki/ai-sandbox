@@ -2284,16 +2284,24 @@ main() {
     echo ""
 
     section "1. Custom DockMCP Configuration / カスタムDockMCP設定"
-    test_dkmcp_config_exists
-    test_dkmcp_config_valid_yaml
-    test_dkmcp_config_has_security_modes
-    test_dkmcp_config_allowed_containers
-    test_dkmcp_config_exec_whitelist
+    if [ ! -d "$DKMCP_DIR" ]; then
+        skip "dkmcp not found at $DKMCP_DIR — skipping DockMCP config tests"
+    else
+        test_dkmcp_config_exists
+        test_dkmcp_config_valid_yaml
+        test_dkmcp_config_has_security_modes
+        test_dkmcp_config_allowed_containers
+        test_dkmcp_config_exec_whitelist
+    fi
 
     section "2. Multiple DockMCP Instances / 複数DockMCPインスタンス"
-    test_dkmcp_serve_port_flag
-    test_dkmcp_serve_config_flag
-    test_dkmcp_multiple_configs_exist
+    if [ ! -d "$DKMCP_DIR" ]; then
+        skip "dkmcp not found at $DKMCP_DIR — skipping DockMCP instance tests"
+    else
+        test_dkmcp_serve_port_flag
+        test_dkmcp_serve_config_flag
+        test_dkmcp_multiple_configs_exist
+    fi
 
     section "3. Project Name Customization / プロジェクト名カスタマイズ"
     test_devcontainer_env_example_exists

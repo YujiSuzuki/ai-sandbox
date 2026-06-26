@@ -285,10 +285,15 @@ main() {
     # Fetch latest release
     # 最新リリースを取得
     local latest_version
-    latest_version=$(fetch_latest_release "$TEMPLATE_REPO") || {
-        debug_log "Fetch failed → exit"
-        exit 0
-    }
+    if [ -n "${MOCK_LATEST_VERSION:-}" ]; then
+        latest_version="$MOCK_LATEST_VERSION"
+        debug_log "MOCK_LATEST_VERSION set → skip API call, use '$latest_version'"
+    else
+        latest_version=$(fetch_latest_release "$TEMPLATE_REPO") || {
+            debug_log "Fetch failed → exit"
+            exit 0
+        }
+    fi
 
     # No release found
     if [ -z "$latest_version" ]; then

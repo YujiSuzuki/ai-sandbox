@@ -468,7 +468,7 @@ EOF
 
     # Test 1: 初回実行 → stdout に通知が出ない（記録のみ）
     local stdout_output
-    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" "$script") 2>/dev/null ) || true
+    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>/dev/null ) || true
     if [ -z "$stdout_output" ]; then
         pass "First run produces no notification on stdout"
     else
@@ -494,7 +494,7 @@ EOF
     # Test 4: Debug で "First run" が出る
     rm -f "$mock_state"
     local stderr_output
-    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" DEBUG_UPDATE_CHECK=1 "$script") 2>&1 1>/dev/null ) || true
+    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" DEBUG_UPDATE_CHECK=1 MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>&1 1>/dev/null ) || true
     if echo "$stderr_output" | grep -q "First run"; then
         pass "Debug output shows 'First run' on first execution"
     else
@@ -523,11 +523,11 @@ EOF
     # 初回実行（バージョン記録）
     local mock_state="$TEST_TMP_DIR/state"
     rm -f "$mock_state"
-    (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" "$script") >/dev/null 2>&1 || true
+    (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$script") >/dev/null 2>&1 || true
 
     # 2回目実行（同バージョン → 通知なし）
     local stdout_output
-    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" "$script") 2>/dev/null ) || true
+    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>/dev/null ) || true
     if [ -z "$stdout_output" ]; then
         pass "Second run with same version produces no notification"
     else
@@ -536,7 +536,7 @@ EOF
 
     # Debug で "Same version" が出ることを確認
     local stderr_output
-    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" DEBUG_UPDATE_CHECK=1 "$script") 2>&1 1>/dev/null ) || true
+    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" DEBUG_UPDATE_CHECK=1 MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>&1 1>/dev/null ) || true
     if echo "$stderr_output" | grep -q "Same version"; then
         pass "Debug output shows 'Same version' on second run"
     else

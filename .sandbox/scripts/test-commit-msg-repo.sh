@@ -45,7 +45,7 @@ make_temp_repo() {
 
 cleanup() {
     for d in "${TEMP_REPOS[@]:-}"; do
-        [[ -d "$d" ]] && rm -rf "$d"
+        [[ -d "$d" ]] && rm -rf "$d" || true
     done
 }
 trap cleanup EXIT
@@ -103,6 +103,8 @@ echo "Test 5: --repo with --msg-file commits to target repo"
 REPO=$(make_temp_repo)
 # Generate draft first
 "$SCRIPT" --repo "$REPO" > /dev/null 2>&1 || true
+# Replace placeholders so commit-msg.sh accepts the draft
+sed -i 's/<変更内容を記述>/test change/g; s/<変更の詳細を記述>/details/g; s/<describe change>/test change/g' "$REPO/CommitMsg-draft.md"
 # Commit using the draft (pipe "y" for confirmation)
 echo "y" | "$SCRIPT" --repo "$REPO" --msg-file "$REPO/CommitMsg-draft.md" > /dev/null 2>&1 || true
 COMMIT_COUNT=$(git -C "$REPO" log --oneline | wc -l | tr -d ' ')
