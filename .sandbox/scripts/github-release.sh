@@ -314,12 +314,17 @@ fi
 
 # Find previous tag / 直前のタグを取得
 PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+FIRST_RELEASE=false
 if [[ -z "$PREV_TAG" ]]; then
-    die "$MSG_NO_PREV_TAG"
+    FIRST_RELEASE=true
 fi
 
 ok "$MSG_PREFLIGHT"
-echo -e "  ${DIM}Branch: $BRANCH | Previous: $PREV_TAG | Target: $VERSION${NC}"
+if [[ "$FIRST_RELEASE" == true ]]; then
+    echo -e "  ${DIM}Branch: $BRANCH | Previous: (none — first release) | Target: $VERSION${NC}"
+else
+    echo -e "  ${DIM}Branch: $BRANCH | Previous: $PREV_TAG | Target: $VERSION${NC}"
+fi
 echo ""
 
 # ─── Generate release notes / リリースノート生成 ────────────────
@@ -346,7 +351,11 @@ generate_notes() {
             *)
                 other+=("$entry") ;;
         esac
-    done < <(git log "${PREV_TAG}..HEAD" --oneline --no-merges)
+    done < <(if [[ "$FIRST_RELEASE" == true ]]; then
+        git log HEAD --oneline --no-merges
+    else
+        git log "${PREV_TAG}..HEAD" --oneline --no-merges
+    fi)
 
     echo "## What's Changed"
     echo ""
@@ -382,11 +391,15 @@ generate_notes() {
         # Convert SSH or HTTPS URL to web URL / SSH・HTTPS の URL を Web URL に変換
         local web_url
         web_url=$(echo "$remote_url" | sed -E 's|git@github\.com:|https://github.com/|;s|\.git$||')
-        echo "**Full Changelog**: ${web_url}/compare/${PREV_TAG}...${VERSION}"
+        if [[ "$FIRST_RELEASE" == true ]]; then
+            echo "**Full Changelog**: ${web_url}/commits/${VERSION}"
+        else
+            echo "**Full Changelog**: ${web_url}/compare/${PREV_TAG}...${VERSION}"
+        fi
     fi
 }
 
-if [[ -z "$(git log "${PREV_TAG}..HEAD" --oneline --no-merges)" ]]; then
+if [[ "$FIRST_RELEASE" == false ]] && [[ -z "$(git log "${PREV_TAG}..HEAD" --oneline --no-merges)" ]]; then
     # shellcheck disable=SC2059
     die "$(printf "$MSG_NO_COMMITS" "$PREV_TAG")"
 fi
