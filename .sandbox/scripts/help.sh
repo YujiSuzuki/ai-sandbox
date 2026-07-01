@@ -40,15 +40,12 @@ show_script_list() {
         msg_host="Run on host OS"
     fi
 
-    # Scripts that must run on host OS
-    local host_only="init-host-env.sh"
     # Scripts that must run in container
     local container_only="sync-secrets.sh validate-secrets.sh sync-compose-secrets.sh"
 
     get_env_icon() {
         local s="$1"
-        if [[ " $host_only " == *" $s "* ]]; then echo "🖥️"
-        elif [[ " $container_only " == *" $s "* ]]; then echo "🐳"
+        if [[ " $container_only " == *" $s "* ]]; then echo "🐳"
         else echo "  "; fi
     }
 
@@ -87,7 +84,7 @@ show_script_list() {
     echo ""
     echo "$msg_title"
     echo ""
-    echo "  🐳 = $msg_container    🖥️  = $msg_host"
+    echo "  🐳 = $msg_container"
     echo ""
     echo "━━━ $msg_utility ━━━"
     echo ""

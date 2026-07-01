@@ -301,29 +301,6 @@ In addition to HostMCP (host-side), **SandboxMCP** runs inside the container.
 | `get_tool_info` | Get tool details | "How do I use search-history?" |
 | `run_tool` | Execute a tool | "Search my conversation history for 'MCP'" |
 
-### Host-Only Script Handling
-
-Some scripts (like `init-host-env.sh`) require host OS access and cannot run inside the container.
-
-> **Note:** `copy-credentials.sh` has been moved to `.sandbox/host-tools/` and can now be executed via HostMCP's `run_host_tool` MCP tool.
-
-```
-When AI calls run_script("init-host-env.sh"):
-
-┌────────────────────────────────────────────────────────────┐
-│ ❌ This script (init-host-env.sh) must be run              │
-│    on the host OS, not inside the AI Sandbox.              │
-│                                                            │
-│ To run it on your host machine:                            │
-│   .sandbox/scripts/init-host-env.sh                        │
-│                                                            │
-│ I cannot execute host-only scripts because the AI Sandbox  │
-│ does not have Docker socket access.                        │
-└────────────────────────────────────────────────────────────┘
-```
-
-**Result:** Clear guidance instead of a confusing error
-
 ### Auto-Registration
 
 SandboxMCP automatically builds and registers on container startup:
@@ -430,11 +407,10 @@ If a `Usage:` line appears before the `# ---` separator, it will be displayed by
 
 **Environment classification:**
 
-Scripts are classified into three execution environments. Attempting to run a host-only script via `run_script` returns an error with guidance on how to run it on the host OS.
+Scripts are classified into two execution environments.
 
 | Environment | Scripts |
 |---|---|
-| `host` (host only) | `init-host-env.sh` |
 | `container` (container only) | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh` |
 | `any` (either) | All others |
 

@@ -7,16 +7,16 @@
 # Usage: ./test-init-host-env.sh
 # 使用方法: ./test-init-host-env.sh
 #
-# Environment: AI Sandbox (requires /workspace)
-# 実行環境: AI Sandbox（/workspace が必要）
+# Environment: Host OS (must NOT run inside AI Sandbox)
+# 実行環境: ホスト OS（AI Sandbox 内では実行しないこと）
 
 set -e
 
-# Verify running in AI Sandbox
-# AI Sandbox 内での実行を確認
-if [ ! -d "/workspace" ]; then
-    echo "Error: This test is designed to run inside AI Sandbox"
-    echo "エラー: このテストは AI Sandbox 内での実行を想定しています"
+# Verify running on host OS (not inside AI Sandbox)
+# ホスト OS 上での実行を確認（AI Sandbox 内ではない）
+if [ -d "/workspace" ]; then
+    echo "Error: This test must be run on the host OS, not inside AI Sandbox"
+    echo "エラー: このテストはホスト OS 上で実行する必要があります（AI Sandbox 内では実行できません）"
     exit 1
 fi
 

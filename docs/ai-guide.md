@@ -352,9 +352,10 @@ Display recovery commands in failure summary.
 │   │   ├── sync-secrets.sh           # 🐳 Interactive secret sync tool
 │   │   ├── sync-compose-secrets.sh   # 🐳 Sync between DevContainer/CLI compose
 │   │   ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
-│   │   ├── init-host-env.sh          # Host-side init: env files + host OS info
 │   │   ├── run-all-tests.sh          # Run all test scripts
 │   │   └── test-*.sh                 # Test scripts
+│   ├── host-setup/            # 🖥️ Host initialization scripts (manual execution only)
+│   │   └── init-host-env.sh          # Host-side init: env files + host OS info
 │   ├── host-tools/            # 🖥️ Host-only tool scripts
 │   │   ├── copy-credentials.sh       # Export/Import home directory
 │   │   ├── mac-memory.sh             # macOS memory usage check

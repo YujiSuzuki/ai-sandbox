@@ -147,7 +147,7 @@ Separately from HostMCP, **SandboxMCP** runs inside the container and lets AI au
 > [!TIP]
 > **💡 To use Japanese locale:** Before opening DevContainer (or cli_sandbox), run on the host OS:
 > ```bash
-> .sandbox/scripts/init-host-env.sh
+> .sandbox/host-setup/init-host-env.sh
 > ```
 > Select `2) 日本語` to switch terminal output to Japanese.
 > (Can also be run from inside the container)

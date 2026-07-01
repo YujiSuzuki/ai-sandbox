@@ -89,7 +89,7 @@ cd ai-sandbox
 DevContainer を開く前に、ホスト OS 上で以下を実行しておくと、コンテナ内のターミナル出力が日本語になります。
 
 ```bash
-.sandbox/scripts/init-host-env.sh
+.sandbox/host-setup/init-host-env.sh
 # → 言語選択で「2) 日本語」を選ぶ
 ```
 
