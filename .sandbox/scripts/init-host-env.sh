@@ -293,6 +293,8 @@ show_hostmcp_next_steps() {
         *)       return 0 ;;
     esac
 
+    echo ""
+    echo ""
     echo "========================================"
     msg "$message_en" "$message_ja"
     echo "----------------------------------------"

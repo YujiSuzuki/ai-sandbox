@@ -61,12 +61,17 @@
         // "eamodio.gitlens",        // Git history visualization
 
         // AI Assistant extensions
-        // Comment out to disable if not needed
+        // Uncomment extensions you want to enable.
+        // Having multiple AI assistants active simultaneously increases the attack surface
+        // for prompt injection (each can read and act on workspace content independently).
+        //
         // AIアシスタント拡張機能
-        // 拡張機能版が不要な場合はコメントアウトして無効にしてください
-        "anthropic.claude-code",        // Claude Code
+        // 使用する拡張機能のコメントを外して有効にしてください。
+        // 複数のAIアシスタントを同時に有効にすると、プロンプトインジェクションの
+        // 攻撃対象領域が広がります（それぞれが独立してワークスペースを読み取り操作できるため）。
+        "anthropic.claude-code",          // Claude Code (enabled by default)
         // "googlecloudtools.cloudcode",   // Google Cloud Code
-        "Google.geminicodeassist"       // Gemini Code Assist
+        // "Google.geminicodeassist"       // Gemini Code Assist (disabled by default — see comment above)
       ],
       "settings": {
         // Use bash as default terminal (change to "zsh" if preferred)
