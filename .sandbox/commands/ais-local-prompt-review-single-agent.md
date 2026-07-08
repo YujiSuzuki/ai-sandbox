@@ -1,11 +1,13 @@
 ---
-description: Review AI command/prompt files for quality and consistency (works even without a Git repository)
-description-ja: AIコマンド／プロンプトファイルの品質・一貫性をレビュー（Git リポジトリがなくても動作）
+description: "[A/B VARIANT for comparison against ais-local-prompt-review.md] Review AI command/prompt files for quality and consistency using a single-agent Step 4 instead of 4–5 parallel agents (works even without a Git repository)"
+description-ja: "[比較検証用バリアント: ais-local-prompt-review.md と比較する] AIコマンド／プロンプトファイルの品質・一貫性をレビュー。Step4を4〜5並列エージェントではなく単一エージェントで実行する（Git リポジトリがなくても動作）"
 argument-hint: [project-path] [change summary]
 allowed-tools: [Read, Bash(git -C:*), Bash(find:*), Bash(test:*), Task, AskUserQuestion, TodoWrite]
 ---
 
-# Local Prompt Review
+# Local Prompt Review (Single-Agent Variant)
+
+> **This is an experimental variant of `ais-local-prompt-review.md`, created only for A/B comparison.** Steps 1–3 and 7 are identical to the original. Step 4 is the substantive change — one Sonnet agent runs the full combined checklist instead of 4 (Non-Git mode) or 5 (Git mode) parallel agents — and Steps 5–6 have matching, but not word-for-word identical, wording (agent-number references such as "Agent #3"/"Agent #5" are replaced with category names, since there is only one agent). Run both commands on the same change set (same diff, same siblings, same CLAUDE.md, same change summary) and compare the final reports along two axes: (1) whether recall drops for Consistency and Regression findings, and (2) resilience — this variant has a single point of failure (the agent call is retried once on failure, but if both attempts fail, it yields zero findings for every category), whereas the original degrades gracefully when one of several agents fails.
 
 Reviews AI command/prompt files (.md) for quality, consistency, and effectiveness. If a Git repository exists, it reviews the diff between branches; otherwise, it reviews the specified files/directories. Focuses on prompt design, agent orchestration, instruction clarity, and cross-command consistency.
 
@@ -124,21 +126,25 @@ First, determine whether a change summary is already available:
 
 5. Record two counts for use in the Step 7 report: the number of files collected as review targets in Step 3.1/3.2 (Git mode: changed files; Non-Git mode: specified files), and the number of additional sibling files collected in Step 3.3 for consistency checking only. The total shown in Step 7 is simply the sum of these two counts.
 
-### Step 4: Parallel Prompt Review Execution
+### Step 4: Single-Agent Prompt Review Execution
 
-**For Git mode**: Launch 5 parallel Sonnet agents
-**For Non-Git mode**: Launch 4 parallel Sonnet agents (skip Agent #5)
+**[Variant for A/B comparison]** Launch a single Sonnet agent (not parallel) that performs all checks below in one pass. This variant exists to test whether a single agent with the full combined checklist can match the recall of the original parallel design (5 agents in Git mode, 4 in Non-Git mode) at lower token/orchestration cost — at the cost of becoming a single point of failure (see note at the top of this file).
 
-If an agent fails or returns no response, continue with the results from the remaining agents.
+If the agent fails or returns no response, retry once. If it still fails, skip Steps 5–6 and, in place of the Step 7 "no issues found" report, output a short notice that the review could not be completed because the review agent failed twice — do not output "No issues found", since nothing was actually checked.
 
-Pass the following to each agent:
+Pass the following to the agent — this is the union of everything the 4-or-5-agent version would have distributed across its agents, so the single agent is not information-starved relative to it:
 - Review target file contents (Git mode: diff + full text of changed files, Non-Git mode: full files)
 - Change summary (from Step 2)
 - Related CLAUDE.md contents
+- ALL sibling command files in the directories containing review target files (always included, since the single agent must cover the cross-command consistency and orchestration-comparison checks that previously required siblings)
+- **Git mode only**: for each changed command/prompt file, the output of the following, retrieved by the orchestrator beforehand (not by the agent) and passed in as text, and retained for reuse in Steps 5 and 6:
+  ```bash
+  git -C <project-path> log -p --follow --max-count=20 -- <file>
+  ```
 
-Additionally, pass ALL sibling command files in the directories containing review target files to **Agent #2** (needed for the scoring/threshold cross-command comparison), **Agent #3** (needed for cross-command consistency checking), and **Agent #5** (needed to check whether a fix already applied to siblings was not applied to the changed file). Agents #1 and #4 do not need siblings for any of their checks, so omit them for those agents to keep context focused and reduce token usage.
+Give the agent the following combined checklist, grouped by category. Instruct the agent explicitly: *"For each finding, assign exactly one Category below. If a finding could fit more than one category, choose the single best fit and do not report it again under another category — do not produce duplicate findings for the same underlying issue."* This substitutes for the role-separation that agent boundaries previously provided.
 
-**Agent #1: Instruction Clarity & Completeness**
+**Category: Clarity** (Instruction Clarity & Completeness)
 - Ambiguous or vague instructions that an AI could misinterpret
 - Missing steps or gaps in the execution flow
 - Unclear preconditions or assumptions
@@ -151,17 +157,17 @@ Additionally, pass ALL sibling command files in the directories containing revie
 - `argument-hint` in YAML front matter does not match how `$ARGUMENTS` is actually parsed in the Arguments/Step 1-2 sections (e.g., hint implies an argument that is never read, or parsing logic supports an argument the hint doesn't mention)
 - `$ARGUMENTS` handling: missing fallback when `$ARGUMENTS` is empty, or multi-word argument parsing not addressed
 
-**Agent #2: Agent Orchestration & Design**
+**Category: Orchestration** (Agent Orchestration & Design)
 
-Focus on the *structure* of the multi-agent setup — who checks what and how they're wired together. Do not evaluate whether the resulting review would be effective or noisy; that judgment belongs to Agent #4.
+Focus on the *structure* of any multi-agent setup described in the reviewed file — who checks what and how they're wired together. Do not evaluate whether the resulting review would be effective or noisy; that belongs under Effectiveness below.
 
 - Agent role overlap (two or more agents whose stated focus areas would flag the same underlying condition)
 - Inappropriate agent model selection (Sonnet vs Haiku for the task complexity). Guidance: Haiku is appropriate for classification/scoring tasks with clear criteria. Sonnet is appropriate for judgment-heavy analysis, nuanced reasoning, or tasks requiring broad context. Flag only when the mismatch is clear and unjustified.
 - Missing or unclear information passed to agents (an agent is asked to check something but isn't given the file/context needed to check it)
-- Agent output format inconsistencies (agents in the same Step 4 don't share a common issue schema, breaking downstream scoring/validation)
+- Agent output format inconsistencies (agents in the same step don't share a common issue schema, breaking downstream scoring/validation)
 - Scoring/threshold *values* that are numerically inconsistent with sibling commands performing comparable severity judgments (e.g., this command validates at >=75 while a sibling with an equivalent risk profile validates at >=50, with no stated rationale)
 
-**Agent #3: Cross-Command Consistency**
+**Category: Consistency** (Cross-Command Consistency)
 - Inconsistent YAML front matter structure (description, argument-hint, allowed-tools)
 - Inconsistent step numbering or naming across commands in shared infrastructure steps (Steps 1-3, Step 5-7, YAML front matter, scoring criteria). Domain-specific steps (Step 4 agent definitions, report sections) may intentionally differ.
 - Shared infrastructure steps (project selection, git detection, scoring, validation) that differ unnecessarily between commands
@@ -171,41 +177,31 @@ Focus on the *structure* of the multi-agent setup — who checks what and how th
 - Missing fields that exist in sibling commands (e.g., description-ja)
 - `description-ja` (or other translated fields) present but not equivalent in meaning to the paired `description` field — not a literal-translation check, but flag if the Japanese version omits a capability, scope limitation, or condition ("works even without a Git repository") stated in the English version, or vice versa
 
-**Agent #4: Effectiveness & False Positive Risk**
+**Category: Effectiveness** (Effectiveness & False Positive Risk)
 
-Focus on whether the review, as designed, would actually produce a good signal-to-noise ratio in practice — not on how the agents are organized (that's Agent #2's job).
+Focus on whether the review, as designed, would actually produce a good signal-to-noise ratio in practice — not on how any sub-agents are organized (that's covered under Orchestration above).
 
-- False positive examples that would cause the validation agent to incorrectly reject real findings: e.g., an entry so broadly worded that it covers shared infrastructure drift (which Agent #3 legitimately flags)
-- Agent focus areas described only as meta-categories with no concrete, observable check conditions — an agent receiving these will produce either empty output or low-signal noise
+- False positive examples that would cause the validation agent to incorrectly reject real findings: e.g., an entry so broadly worded that it covers shared infrastructure drift (which the Consistency category legitimately flags)
+- Agent/checklist focus areas described only as meta-categories with no concrete, observable check conditions — a reviewer given only these will produce either empty output or low-signal noise
 - Focus items that target something an LLM cannot statically detect: e.g., "runtime performance of the reviewed prompt", "whether the prompt actually works end-to-end"
-- Coverage gaps specific to *this command's stated purpose* that fall outside Agent #2's structural lens — e.g., the command claims to check "Git/Non-Git mode consistency" but no agent's focus area actually names that check
+- Coverage gaps specific to *this command's stated purpose* that fall outside the Orchestration lens — e.g., the command claims to check "Git/Non-Git mode consistency" but no checklist item actually names that check
 - Review focus that duplicates what external tooling already enforces (e.g., required YAML front matter fields validated by a schema linter outside this prompt)
-- Confidence-scoring language (Step 5 criteria wording, not the numeric thresholds — see Agent #2) that is vague enough to produce inconsistent scores for similar issues
+- Confidence-scoring language (Step 5 criteria wording, not the numeric thresholds — see Orchestration) that is vague enough to produce inconsistent scores for similar issues
 
-**Agent #5: Prompt Regression Detection** (Git mode only)
+**Category: Regression** (Prompt Regression Detection, Git mode only)
 
-Before launching Agent #5, run the following yourself (in the main orchestrator, not inside the sub-agent) for each changed command/prompt file, and retain the raw output — it is reused as-is in Steps 5 and 6, since sub-agents do not share context with later steps:
-```bash
-git -C <project-path> log -p --follow --max-count=20 -- <file>
-```
+**Non-Git mode**: omit this category entirely — do not ask the agent to attempt it, and do not include it in the report, since no git history is available to support any finding.
 
-Pass to this agent:
-- List of changed files (from Step 3, one path per line)
-- Project path (for `git -C` option)
-- The `git log -p --follow --max-count=20` output retrieved above, for each changed file
-
-Using the supplied git history, check for:
+**Git mode**: using the supplied `git log -p --follow --max-count=20` history for each changed file, check for:
 - Previously fixed instruction defects being reintroduced (e.g., a step that was clarified in a past commit is now ambiguous again)
 - Instructions that were added, then removed, then re-added in a different form — suggesting unresolved design churn
 - Consistency issues that were corrected in siblings but not applied to the changed file
 
-Note: this may surface the same underlying inconsistency that Agent #3 also flags from a current-state comparison. When both agents report the same file/section, keep Agent #5's version only if it adds historical context (e.g., naming the commit where siblings were fixed); otherwise treat it as a duplicate of the Agent #3 finding in Step 5 scoring.
+Note: this may surface the same underlying issue as a Consistency finding from a current-state comparison. Per the de-duplication instruction above, report it once — under Regression only if it adds historical context (e.g., naming the commit where siblings were fixed); otherwise report it once under Consistency.
 
-Agent #5 findings use the `Regression` category (see report format below).
-
-Each agent reports issues in the following format:
+The agent reports issues in the following format:
 ```
-- ID: <agent-prefix>-<sequential-number> (e.g. A1-1, A1-2, … for Agent #1; A2-1, A2-2, … for Agent #2; etc.)
+- ID: S-<sequential-number> (e.g. S-1, S-2, … across all categories, single sequence)
 - File: <file-path>
 - Section: <step or section name>
 - Issue: <description>
@@ -219,10 +215,10 @@ Each agent reports issues in the following format:
 Collect ALL issues from Step 4 and pass them to a **single Haiku agent** for batch scoring.
 
 Provide the agent with:
-- The full list of issues from all agents
+- The full list of issues from the single agent
 - The review target code (diff or full files)
-- ALL sibling command files in the same directory (required to verify Agent #3 cross-command consistency findings, and Agent #5 sibling-fix findings)
-- For Regression (Agent #5) findings: the `git log -p --follow --max-count=20` output for the relevant file(s), retrieved by the orchestrator before launching Agent #5 in Step 4 (required to score claims about reintroduced defects or historical churn)
+- ALL sibling command files in the same directory (required to verify Consistency findings, and Regression sibling-fix findings)
+- For Regression findings: the `git log -p --follow --max-count=20` output for the relevant file(s), retrieved by the orchestrator before launching Step 4 (required to score claims about reintroduced defects or historical churn)
 - The scoring criteria below
 
 Scoring criteria (pass these criteria directly to the agent):
@@ -232,7 +228,7 @@ Scoring criteria (pass these criteria directly to the agent):
 - **75**: Quite confident. Verified issue that will likely cause incorrect behavior, inconsistency, or false positives/negatives in review results
 - **100**: Absolutely confident. Clear defect (conflicting instructions, missing critical step, broken reference) that will definitely cause failure
 
-The agent returns a confidence score for each issue in the format `<ID>: <score>` (one per line, e.g. `A1-1: 75`), using the issue IDs assigned in Step 4.
+The agent returns a confidence score for each issue in the format `<ID>: <score>` (one per line, e.g. `S-1: 75`), using the issue IDs assigned in Step 4.
 
 If the scoring agent does not return a score for a given issue, treat it as a score of 0 (fail safe — an unscored issue should not pass the >= 75 threshold applied in Step 6).
 
@@ -246,8 +242,8 @@ For each issue that scored >= 75 in Step 5, launch a **single Sonnet agent** to 
 
 The validation agent receives:
 - The filtered list of issues (those scoring >= 75)
-- The relevant source code for each issue (for Agent #3 consistency findings and Agent #5 sibling-fix findings, this includes ALL sibling command files in the same directory)
-- For Regression (Agent #5) findings: the same orchestrator-retrieved `git log -p --follow --max-count=20` output used in Step 5, so the cited historical commits can actually be re-checked
+- The relevant source code for each issue (for Consistency findings and Regression sibling-fix findings, this includes ALL sibling command files in the same directory)
+- For Regression findings: the same orchestrator-retrieved `git log -p --follow --max-count=20` output used in Step 5, so the cited historical commits can actually be re-checked
 - The original agent's reasoning (the Reasoning field from each issue)
 - The full text of the False Positive Examples section from this command
 

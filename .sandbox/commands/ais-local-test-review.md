@@ -18,8 +18,8 @@ Detect the user's language from their previous messages in the conversation. Out
 User-specified arguments: $ARGUMENTS
 
 Argument interpretation:
-- 1st argument: Project path (interactive selection if omitted)
-- 2nd argument onwards: Change summary (asked via AskUserQuestion in Step 3 if omitted)
+- 1st argument: Project path (absolute or relative) or a single file path — the first whitespace-delimited token in `$ARGUMENTS`, if it looks like a path (starts with `/`, `./`, `../`, or contains `/`) and actually exists on disk. If no such token exists, or it doesn't exist on disk, treat the entire `$ARGUMENTS` string as the change summary and ask the user what to review.
+- 2nd argument onwards: Everything after the 1st argument (change summary); asked via AskUserQuestion in Step 3 if omitted
 
 ## Execution Steps
 
@@ -27,17 +27,25 @@ Follow these steps precisely:
 
 ### Step 1: Project Selection and Git Detection
 
-1. Search for projects under `/workspace` (both Git repositories and regular directories):
+1. Search for projects under `/workspace` (both Git repositories and regular directories). Use `find` only to locate paths — never with mutating flags such as `-delete` or `-exec` — and derive directory names yourself from the returned paths rather than piping through other utilities:
    ```bash
-   # Search for Git repositories
-   find /workspace -name ".git" -type d -maxdepth 3 2>/dev/null | sed 's/\/.git$//'
+   # Search for Git repositories (maxdepth 3: .git can sit a level or two below a monorepo root)
+   find /workspace -name ".git" -type d -maxdepth 3 2>/dev/null
    # Also search for main project directories (those with package.json, go.mod, Cargo.toml, etc.)
-   find /workspace -maxdepth 2 -type f \( -name "package.json" -o -name "go.mod" -o -name "Cargo.toml" -o -name "pyproject.toml" -o -name "Makefile" \) 2>/dev/null | xargs -I {} dirname {}
+   # (maxdepth 2: marker files are expected at the project root or one level below it)
+   find /workspace -maxdepth 2 -type f \( -name "package.json" -o -name "go.mod" -o -name "Cargo.toml" -o -name "pyproject.toml" -o -name "Makefile" \) 2>/dev/null
    ```
+   For the first command, strip the trailing `/.git` from each result yourself to get the project directory. For the second command, take the containing directory of each matched file yourself. Do not rely on `sed`, `xargs`, or `dirname` for this — they are not declared in `allowed-tools`.
 
-2. If `$ARGUMENTS` is empty, use the AskUserQuestion tool to let the user select a project to review from the found projects
+2. Take the first whitespace-delimited token of `$ARGUMENTS`. If it looks like a path (starts with `/`, `./`, `../`, or contains `/`), verify it exists on disk:
+   ```bash
+   test -e <candidate-token> && echo "VALID_PATH" || echo "NOT_A_PATH"
+   ```
+   If it exists, use it as `<project-path>`.
 
-3. Check if the selected project directory has `.git` and determine **Git mode** or **Non-Git mode**:
+3. If no valid project path was found in step 2 (empty `$ARGUMENTS`, no path-like token, or the token doesn't exist on disk), deduplicate the combined list from the two `find` commands in step 1 by directory path (a project may match both the `.git` search and the marker-file search), then use the AskUserQuestion tool to let the user select a project to review from the found projects. If no projects are found, ask the user to enter the project path manually.
+
+4. Check if the selected project directory has `.git` and determine **Git mode** or **Non-Git mode**:
    ```bash
    test -d <project-path>/.git && echo "GIT_MODE" || echo "NON_GIT_MODE"
    ```
@@ -60,8 +68,9 @@ Follow these steps precisely:
 
 1. Find test files within the project:
    ```bash
-   find <project-path> -type f \( -name "*_test.go" -o -name "*.test.js" -o -name "*.test.ts" -o -name "*.test.jsx" -o -name "*.test.tsx" -o -name "*.spec.js" -o -name "*.spec.ts" -o -name "test_*.py" -o -name "*_test.py" -o -name "*Test.java" -o -name "*_test.rs" \) 2>/dev/null | head -50
+   find <project-path> -type f \( -name "*_test.go" -o -name "*.test.js" -o -name "*.test.ts" -o -name "*.test.jsx" -o -name "*.test.tsx" -o -name "*.spec.js" -o -name "*.spec.ts" -o -name "test_*.py" -o -name "*_test.py" -o -name "*Test.java" -o -name "*_test.rs" \) 2>/dev/null
    ```
+   If the result has more than 50 entries, use only the first 50 for the purpose of the selection prompt below (do not pipe through `head` — it is not declared in `allowed-tools`).
 
 2. Use the AskUserQuestion tool to confirm:
    - **Review target**: Path(s) to test files or directories to review (can be multiple)
@@ -69,9 +78,11 @@ Follow these steps precisely:
 
 ### Step 3: Change Summary Input
 
-If the 2nd argument onwards is provided, use it as the change summary and skip AskUserQuestion.
+If a valid project path was found in Step 1 (the 1st argument), use the 2nd argument onwards as the change summary if provided, and skip AskUserQuestion.
 
-Only if the 2nd argument is not provided, use the AskUserQuestion tool to get:
+If no valid project path was found in Step 1 (the entire `$ARGUMENTS` string was treated as the change summary), use that string directly as the change summary and skip AskUserQuestion.
+
+Only if no change summary text is available in either case, use the AskUserQuestion tool to get:
 - **Change summary**: A brief explanation of what the tests cover or the review focus
   - Examples: "Authentication tests", "API endpoint tests", "Data validation tests"
   - For Non-Git mode: "Test suite quality audit", "Test coverage review", etc.
@@ -117,6 +128,8 @@ Only if the 2nd argument is not provided, use the AskUserQuestion tool to get:
 
 **For Git mode**: Launch 5 parallel Sonnet agents
 **For Non-Git mode**: Launch 4 parallel Sonnet agents (skip Agent #5)
+
+If an agent fails or returns no response, continue with the results from the remaining agents.
 
 Pass the following to each agent:
 - Test file contents (Git mode: diff + full test files, Non-Git mode: full test files)

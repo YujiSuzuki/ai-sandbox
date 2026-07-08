@@ -21,7 +21,7 @@ Detect the user's language from their previous messages in the conversation. Out
 User-specified arguments: $ARGUMENTS
 
 Argument interpretation:
-- 1st argument: Path to a spec/design doc file or directory containing spec docs (interactive selection if omitted)
+- 1st argument: Path to a spec/design doc file or directory — the first whitespace-delimited token in `$ARGUMENTS`, if it looks like a path (starts with `/`, `./`, `../`, or contains `/`) and actually exists on disk. If no such token exists, or it doesn't exist on disk, treat the entire `$ARGUMENTS` string as context and ask the user for the doc path/directory.
 - 2nd argument onwards: Optional context (e.g., "Phase 3 plan for new feature", "payment flow spec")
 
 ## Execution Steps
@@ -31,12 +31,16 @@ Follow these steps precisely.
 ### Step 1: Locate Spec Documents
 
 1. Determine the review target from $ARGUMENTS:
-   - If a file path is given, use that file directly
-   - If a directory path is given, find all spec/design docs within:
+   - Take the first whitespace-delimited token of `$ARGUMENTS`. If it looks like a path (starts with `/`, `./`, `../`, or contains `/`), verify it exists on disk:
+     ```bash
+     test -e <candidate-token> && echo "VALID_PATH" || echo "NOT_A_PATH"
+     ```
+   - If it exists and is a file, use that file directly
+   - If it exists and is a directory, find all spec/design docs within:
      ```bash
      find <dir-path> -type f \( -name "*.md" -o -name "*.rst" -o -name "*.txt" \) -not -path "*/.git/*" -not -path "*/node_modules/*" 2>/dev/null
      ```
-   - If $ARGUMENTS is empty, search for spec/design doc directories under `/workspace`:
+   - If no such token exists, or the token doesn't exist on disk, search for spec/design doc directories under `/workspace`:
      ```bash
      find /workspace -maxdepth 3 -type d \( -name "docs*" -o -name "design*" -o -name "spec*" \) -not -path "*/.git/*" -not -path "*/node_modules/*" 2>/dev/null
      ```
@@ -66,9 +70,11 @@ Follow these steps precisely.
 
 ### Step 2: Context Input
 
-If the 2nd argument is provided, use it as context and skip AskUserQuestion.
+If a valid doc path was found in Step 1 (the 1st argument) and the 2nd argument onwards is provided, use it as context and skip AskUserQuestion.
 
-Only if omitted, use AskUserQuestion to ask:
+If no valid doc path was found in Step 1 (the entire `$ARGUMENTS` string was treated as context), use that string directly as context and skip AskUserQuestion.
+
+Only if no context text is available in either case, use AskUserQuestion to ask:
 - **Context**: What is this spec about? Any background the reviewer should know?
   - Examples: "Phase 3 of new feature", "onboarding flow redesign spec"
 
