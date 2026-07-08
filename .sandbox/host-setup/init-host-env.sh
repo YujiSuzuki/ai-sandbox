@@ -204,15 +204,57 @@ _download_hostmcp_binary() {
     case ":$original_path:" in
         *":$install_dir:"*) ;;
         *)
-            echo ""
-            msg "Note: Add $install_dir to your PATH to use hostmcp:" \
-                "注意: hostmcp を使い続けるには $install_dir を PATH に追加してください:"
-            echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
-            msg "Add this line to ~/.zshrc or ~/.bashrc." \
-                "上記を ~/.zshrc または ~/.bashrc に追記してください。"
+            _offer_path_append "$install_dir"
             ;;
     esac
     return 0
+}
+
+# Offer to append PATH export to the user's shell rc file / シェル設定ファイルへの PATH 追記を提案
+_offer_path_append() {
+    local install_dir="$1"
+    local rc_file rc_label export_line
+
+    case "${SHELL:-}" in
+        */zsh) rc_file="$HOME/.zshrc"; rc_label="~/.zshrc" ;;
+        */bash) rc_file="$HOME/.bashrc"; rc_label="~/.bashrc" ;;
+        *) rc_file=""; rc_label="~/.zshrc or ~/.bashrc" ;;
+    esac
+    export_line="export PATH=\"$install_dir:\$PATH\""
+
+    echo ""
+    msg "Note: $install_dir is not in your PATH." \
+        "注意: $install_dir が PATH に含まれていません。"
+    echo "  $export_line"
+
+    if [ -z "$rc_file" ]; then
+        msg "Add this line to your shell's rc file (e.g. ~/.zshrc or ~/.bashrc)." \
+            "上記を、お使いのシェルの設定ファイル（例: ~/.zshrc や ~/.bashrc）に追記してください。"
+        return 0
+    fi
+
+    local _prompt _append_choice
+    _prompt=$(msg "Add this line to $rc_label now? [y/N]: " "上記を今すぐ $rc_label に追記しますか？ [y/N]: ")
+    read -r -p "$_prompt" _append_choice || true
+    if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+
+    if [[ "$_append_choice" =~ ^[Yy] ]]; then
+        if [ -f "$rc_file" ] && grep -qF "$install_dir" "$rc_file" 2>/dev/null; then
+            msg "$rc_label already references $install_dir. Skipped." \
+                "$rc_label には既に $install_dir の記述があります。スキップしました。"
+        else
+            {
+                echo ""
+                echo "# Added by ai-sandbox init-host-env.sh for hostmcp"
+                echo "$export_line"
+            } >> "$rc_file"
+            msg "Added to $rc_label. Run 'source $rc_label' or restart your terminal to apply." \
+                "$rc_label に追記しました。'source $rc_label' を実行するかターミナルを再起動して反映してください。"
+        fi
+    else
+        msg "Skipped. Add this line to $rc_label manually if needed." \
+            "スキップしました。必要であれば上記を $rc_label に手動で追記してください。"
+    fi
 }
 
 # hostmcp install check / hostmcp インストール確認

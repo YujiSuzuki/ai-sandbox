@@ -38,6 +38,7 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `xcode-archive.sh` | Xcode archive (for TestFlight / App Store submission) | macOS only |
 | `copy-credentials.sh` | Copy credentials | Cross-platform |
 | `mac-memory.sh` | macOS memory usage report | macOS only |
+| `run-init-host-env-tests.sh` | Run `.sandbox/host-setup/test-init-host-env.sh` | Cross-platform |
 
 ---
 

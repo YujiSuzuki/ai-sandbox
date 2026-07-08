@@ -36,7 +36,10 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_REGISTER_FAILED="⚠️  SandboxMCP 登録に失敗しましたが、続行します..."
     MSG_REGISTER_OK="  ✅ 登録済み"
     MSG_REGISTER_SKIP="  ⚠️  登録失敗（既に登録済み？）"
-    MSG_NO_GO="⚠️  Go がインストールされていないため、SandboxMCP 登録をスキップします"
+    MSG_NO_GO="⚠️  Go が見つかりません。GitHub Releases からビルド済みバイナリを試します"
+    MSG_DOWNLOADING="  📥 sandbox-mcp のビルド済みバイナリをダウンロード中..."
+    MSG_DOWNLOAD_OK="  ✅ sandbox-mcp をインストールしました:"
+    MSG_DOWNLOAD_FAILED="  ⚠️  ダウンロードに失敗しました。手動でインストールしてください: go install github.com/YujiSuzuki/sandbox-mcp@latest"
     MSG_DKMCP_REGISTER_FAILED="⚠️  HostMCP 登録に失敗しましたが、続行します..."
     MSG_DKMCP_CONNECTED="🔗 HostMCP: ✅ registered, 接続OK"
     MSG_DKMCP_OFFLINE="🔗 HostMCP: ⚠️ registered, 接続不可（ホスト OS で hostmcp serve を起動してください）"
@@ -53,12 +56,58 @@ else
     MSG_REGISTER_FAILED="⚠️  SandboxMCP registration failed, but continuing..."
     MSG_REGISTER_OK="  ✅ registered"
     MSG_REGISTER_SKIP="  ⚠️  registration failed (already registered?)"
-    MSG_NO_GO="⚠️  Go not installed, skipping SandboxMCP registration"
+    MSG_NO_GO="⚠️  Go not found, trying prebuilt binary from GitHub Releases instead"
+    MSG_DOWNLOADING="  📥 Downloading sandbox-mcp prebuilt binary..."
+    MSG_DOWNLOAD_OK="  ✅ sandbox-mcp installed to:"
+    MSG_DOWNLOAD_FAILED="  ⚠️  Download failed. Install manually: go install github.com/YujiSuzuki/sandbox-mcp@latest"
     MSG_DKMCP_REGISTER_FAILED="⚠️  HostMCP registration failed, but continuing..."
     MSG_DKMCP_CONNECTED="🔗 HostMCP: ✅ registered, connected"
     MSG_DKMCP_OFFLINE="🔗 HostMCP: ⚠️ registered, server not reachable (run 'hostmcp serve' on host OS)"
     MSG_COMPLETE="✅ Startup complete"
 fi
+
+# Download prebuilt sandbox-mcp binary from GitHub Releases (used when Go is unavailable)
+# GitHub Releases からビルド済み sandbox-mcp バイナリをダウンロード（Go がない場合に使用）
+_install_sandbox_mcp_binary() {
+    local os arch filename install_dir install_path url
+
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*) os="windows" ;;
+        *) os=$(uname -s | tr '[:upper:]' '[:lower:]') ;;
+    esac
+    arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+    filename="sandbox-mcp_${os}_${arch}"
+    [ "$os" = "windows" ] && filename="${filename}.exe"
+
+    install_dir="$HOME/.local/bin"
+    install_path="$install_dir/sandbox-mcp"
+
+    echo "$MSG_DOWNLOADING"
+    mkdir -p "$install_dir"
+
+    url="https://github.com/YujiSuzuki/sandbox-mcp/releases/latest/download/${filename}"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$url" -o "$install_path" 2>&1 || { rm -f "$install_path"; echo "$MSG_DOWNLOAD_FAILED"; return 1; }
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q "$url" -O "$install_path" 2>&1 || { rm -f "$install_path"; echo "$MSG_DOWNLOAD_FAILED"; return 1; }
+    else
+        echo "$MSG_DOWNLOAD_FAILED"
+        return 1
+    fi
+
+    if [ ! -s "$install_path" ]; then
+        rm -f "$install_path"
+        echo "$MSG_DOWNLOAD_FAILED"
+        return 1
+    fi
+
+    chmod +x "$install_path"
+    echo "$MSG_DOWNLOAD_OK $install_path"
+
+    # Make discoverable for the rest of this script / このスクリプト内で使えるようにする
+    export PATH="$install_dir:$PATH"
+    return 0
+}
 
 # Run startup scripts in order
 # 起動スクリプトを順番に実行
@@ -112,40 +161,40 @@ if [ "$NO_SPONSOR" = "false" ]; then
     "$WORKSPACE/.sandbox/scripts/show-sponsor.sh" || true
 fi
 
-# 7. Register SandboxMCP (if Go is available)
-# SandboxMCP 登録（Go がある場合）
-if command -v go >/dev/null 2>&1; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "$MSG_REGISTERING"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    sandbox_mcp_ready=false
-    if ! command -v sandbox-mcp >/dev/null 2>&1; then
-        echo "$MSG_FETCHING"
-        if go install github.com/YujiSuzuki/sandbox-mcp@latest; then
-            sandbox_mcp_ready=true
-        else
-            echo "$MSG_REGISTER_FAILED"
-        fi
-    else
-        echo "$MSG_ALREADY_INSTALLED"
+# 7. Register SandboxMCP (via Go if available, otherwise a prebuilt binary download)
+# SandboxMCP 登録（Go があれば go install、なければビルド済みバイナリをダウンロード）
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "$MSG_REGISTERING"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+sandbox_mcp_ready=false
+if command -v sandbox-mcp >/dev/null 2>&1; then
+    echo "$MSG_ALREADY_INSTALLED"
+    sandbox_mcp_ready=true
+elif command -v go >/dev/null 2>&1; then
+    echo "$MSG_FETCHING"
+    if go install github.com/YujiSuzuki/sandbox-mcp@latest; then
         sandbox_mcp_ready=true
-    fi
-    if [ "$sandbox_mcp_ready" = "true" ]; then
-        if command -v claude >/dev/null 2>&1; then
-            claude mcp add sandbox-mcp sandbox-mcp \
-                && echo "  [Claude] $MSG_REGISTER_OK" \
-                || echo "  [Claude] $MSG_REGISTER_SKIP"
-        fi
-        if command -v gemini >/dev/null 2>&1; then
-            gemini mcp add sandbox-mcp sandbox-mcp \
-                && echo "  [Gemini] $MSG_REGISTER_OK" \
-                || echo "  [Gemini] $MSG_REGISTER_SKIP"
-        fi
+    else
+        echo "$MSG_REGISTER_FAILED"
     fi
 else
-    echo ""
     echo "$MSG_NO_GO"
+    if _install_sandbox_mcp_binary; then
+        sandbox_mcp_ready=true
+    fi
+fi
+if [ "$sandbox_mcp_ready" = "true" ]; then
+    if command -v claude >/dev/null 2>&1; then
+        claude mcp add sandbox-mcp sandbox-mcp \
+            && echo "  [Claude] $MSG_REGISTER_OK" \
+            || echo "  [Claude] $MSG_REGISTER_SKIP"
+    fi
+    if command -v gemini >/dev/null 2>&1; then
+        gemini mcp add sandbox-mcp sandbox-mcp \
+            && echo "  [Gemini] $MSG_REGISTER_OK" \
+            || echo "  [Gemini] $MSG_REGISTER_SKIP"
+    fi
 fi
 
 # 8. Register HostMCP if not registered, or show one-liner status

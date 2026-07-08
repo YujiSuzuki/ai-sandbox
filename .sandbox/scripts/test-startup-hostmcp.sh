@@ -1,8 +1,13 @@
 #!/bin/bash
 # test-startup-hostmcp.sh
-# Test HostMCP auto-registration logic in startup.sh
+# Test HostMCP and SandboxMCP auto-registration logic in startup.sh
 #
-# Tests the step 8 behavior:
+# Tests the step 7 (SandboxMCP) behavior:
+#   - Already installed: skip go install
+#   - Go available: go install
+#   - Go unavailable: download prebuilt binary from GitHub Releases (success/failure)
+#
+# Tests the step 8 (HostMCP) behavior:
 #   - Registered + connected: one-liner summary
 #   - Registered but offline: one-liner warning
 #   - Not registered: full registration output
@@ -13,9 +18,14 @@
 #
 # Environment: AI Sandbox (requires /workspace)
 # ---
-# startup.sh の HostMCP 自動登録ロジックのテスト
+# startup.sh の HostMCP / SandboxMCP 自動登録ロジックのテスト
 #
-# ステップ8の動作をテスト:
+# ステップ7（SandboxMCP）の動作をテスト:
+#   - インストール済み: go install をスキップ
+#   - Go がある: go install
+#   - Go がない: GitHub Releases からビルド済みバイナリをダウンロード（成功/失敗）
+#
+# ステップ8（HostMCP）の動作をテスト:
 #   - 登録済み＋接続OK: 1行サマリー
 #   - 登録済みだがオフライン: 1行警告
 #   - 未登録: フル登録出力
@@ -205,6 +215,116 @@ STUB
 }
 
 
+# Helper: remove the default go stub and add a mock curl for binary-download tests
+# デフォルトの go スタブを削除し、バイナリダウンロードテスト用のモック curl を追加
+_setup_sandboxmcp_binary_download_mocks() {
+    local _mb_var="$1"
+    local _mb
+    _mb=$(mktemp -d)
+    eval "$_mb_var='$_mb'"
+
+    rm -f "$TEST_DIR/bin/go"
+
+    # Fake curl: writes a stub file to the -o target path
+    cat > "$_mb/curl" << 'CURLEOF'
+#!/bin/bash
+out=""
+prev=""
+for arg in "$@"; do
+    [ "$prev" = "-o" ] && out="$arg"
+    prev="$arg"
+done
+if [ -n "$out" ]; then
+    mkdir -p "$(dirname "$out")"
+    printf '#!/bin/bash\nexit 0\n' > "$out"
+fi
+exit 0
+CURLEOF
+    chmod +x "$_mb/curl"
+}
+
+# Test: no go, curl succeeds → binary downloaded and registration proceeds
+test_sandboxmcp_no_go_binary_download_success() {
+    echo ""
+    echo "=== Test: no go, curl succeeds → binary downloaded, registration proceeds ==="
+
+    setup
+    create_hostmcp_stub 0
+    local mb fake_home
+    _setup_sandboxmcp_binary_download_mocks mb
+    fake_home=$(mktemp -d)
+
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:$TEST_DIR/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+        bash '$TEST_DIR/workspace/.sandbox/scripts/startup.sh'
+    " 2>&1)
+
+    if echo "$output" | grep -q "Go not found\|Go が見つかりません"; then
+        pass "Shows Go-not-found message"
+    else
+        fail "Expected Go-not-found message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "installed to\|インストールしました"; then
+        pass "Shows binary install success message"
+    else
+        fail "Expected install success message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "\[Claude\].*registered\|\[Claude\].*登録済み"; then
+        pass "Registration proceeds after successful binary download"
+    else
+        fail "Expected registration to proceed, got: $output"
+    fi
+
+    rm -rf "$mb" "$fake_home"
+    cleanup
+}
+
+# Test: no go, curl fails → download failure message, registration skipped
+test_sandboxmcp_no_go_binary_download_failure() {
+    echo ""
+    echo "=== Test: no go, curl fails → download failure, registration skipped ==="
+
+    setup
+    create_hostmcp_stub 0
+    local mb fake_home
+    _setup_sandboxmcp_binary_download_mocks mb
+    fake_home=$(mktemp -d)
+
+    # Override curl to fail
+    printf '#!/bin/bash\nexit 1\n' > "$mb/curl"
+    chmod +x "$mb/curl"
+
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:$TEST_DIR/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+        bash '$TEST_DIR/workspace/.sandbox/scripts/startup.sh'
+    " 2>&1)
+
+    if echo "$output" | grep -q "Download failed\|ダウンロードに失敗"; then
+        pass "Shows download failure message"
+    else
+        fail "Expected download failure message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "\[Claude\]"; then
+        fail "Registration should NOT proceed after failed binary download"
+    else
+        pass "Registration skipped after failed binary download"
+    fi
+
+    if echo "$output" | grep -qi "complete\|完了"; then
+        pass "Startup still completes after binary download failure"
+    else
+        fail "Startup did not complete after binary download failure"
+    fi
+
+    rm -rf "$mb" "$fake_home"
+    cleanup
+}
+
 # Test 1: When --check returns 0 (registered + connected), shows one-liner with "connected"
 test_oneliner_when_registered_and_connected() {
     echo ""
@@ -340,6 +460,8 @@ main() {
 
     test_sandboxmcp_registration_output
     test_sandboxmcp_skip_when_already_installed
+    test_sandboxmcp_no_go_binary_download_success
+    test_sandboxmcp_no_go_binary_download_failure
     test_oneliner_when_registered_and_connected
     test_oneliner_when_registered_but_offline
     test_full_output_when_not_registered
