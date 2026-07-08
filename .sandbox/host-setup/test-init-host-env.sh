@@ -768,27 +768,34 @@ test_interactive_hostmcp_install_declined() {
     cleanup
 }
 
-# Test 25: go not found → error shown, init skipped
+# Test 25: go not found → binary download option shown
 test_interactive_hostmcp_no_go() {
     echo ""
-    echo "=== Test: go command not found → error shown ==="
+    echo "=== Test: go not found → binary download option shown ==="
 
     setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    rm -f "$mb/go"  # No go in mock bin
+    local mb fake_home
+    mb=$(mktemp -d)
+    fake_home=$(mktemp -d)
 
-    # Run with PATH that excludes system go (use only /usr/bin:/bin + mock_bin)
+    # Fake curl (decline install so download isn't attempted)
+    printf '#!/bin/bash\nexit 0\n' > "$mb/curl"
+    chmod +x "$mb/curl"
+
+    # Input: lang=1(English), install=2(decline)
     local output
-    output=$(echo -e "1" | PATH="$mb:/usr/bin:/bin:/usr/sbin:/sbin" bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
 
-    if echo "$output" | grep -q "go コマンドが見つかりません"; then
-        pass "Error shown when go is not found"
+    if echo "$output" | grep -q "GitHub Releases からバイナリをダウンロード"; then
+        pass "Binary download option shown when go is not found"
     else
-        fail "Expected go-not-found error, got: $output"
+        fail "Expected binary download option, got: $output"
     fi
 
-    _cleanup_mocks "$fp" "$mb"
+    rm -rf "$mb" "$fake_home"
     cleanup
 }
 
@@ -1213,15 +1220,16 @@ DEOF
     cleanup
 }
 
-# Test 37: go env GOPATH exits non-zero → error shown
+# Test 37: go env GOPATH exits non-zero → silent fallback to $HOME/go/bin, normal flow
 test_interactive_hostmcp_gopath_command_fails() {
     echo ""
-    echo "=== Test: go env GOPATH fails → error shown ==="
+    echo "=== Test: go env GOPATH fails → silent fallback, normal flow ==="
 
     setup
     local fp mb
     _setup_hostmcp_mocks fp mb
 
+    # go returns exit 1 for GOPATH (hostmcp is still discoverable via PATH from mock bin)
     cat > "$mb/go" << 'GOEOF'
 #!/bin/bash
 if [ "$1" = "env" ] && [ "$2" = "GOPATH" ]; then
@@ -1234,9 +1242,16 @@ GOEOF
     output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
 
     if echo "$output" | grep -q "GOPATH が取得できません"; then
-        pass "Error shown when go env GOPATH fails"
+        fail "GOPATH error should not be shown (silent fallback expected)"
     else
-        fail "Expected GOPATH error, got: $output"
+        pass "No GOPATH error shown (silent fallback works)"
+    fi
+
+    # hostmcp is in PATH (mock bin), so normal flow should proceed
+    if echo "$output" | grep -q "hostmcp serve\|セットアップが完了\|設定ファイルは既に存在"; then
+        pass "Normal flow proceeds despite GOPATH failure"
+    else
+        fail "Expected normal flow to proceed, got: $output"
     fi
 
     _cleanup_mocks "$fp" "$mb"
@@ -1309,6 +1324,251 @@ DEOF
     cleanup
 }
 
+# ─── binary download helper ────────────────────────────────────────────────────
+# Set up mocks for binary download scenario: no go, fake curl that writes a hostmcp stub
+_setup_binary_download_mocks() {
+    local _home_var="$1" _mb_var="$2"
+    local _home _mb
+    _home=$(mktemp -d)
+    _mb=$(mktemp -d)
+    eval "$_home_var='$_home'"
+    eval "$_mb_var='$_mb'"
+
+    # Fake curl: handles both version fetch (-o /dev/null) and binary download (-o <path>)
+    cat > "$_mb/curl" << 'CURLEOF'
+#!/bin/bash
+out_file=""
+prev=""
+for arg in "$@"; do
+    [ "$prev" = "-o" ] && out_file="$arg"
+    prev="$arg"
+done
+if [ "$out_file" = "/dev/null" ]; then
+    printf 'https://github.com/YujiSuzuki/hostmcp/releases/tag/v0.0.1'
+    exit 0
+fi
+if [ -n "$out_file" ]; then
+    mkdir -p "$(dirname "$out_file")"
+    printf '#!/bin/bash\nif [ "$1" = "init" ]; then ws=""; shift; while [ $# -gt 0 ]; do [ "$1" = "--workspace" ] && ws="$2"; shift; done; [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/hostmcp.yaml"; fi\nexit 0\n' > "$out_file"
+fi
+exit 0
+CURLEOF
+    chmod +x "$_mb/curl"
+}
+
+_cleanup_binary_download_mocks() {
+    local home="$1" mb="$2"
+    rm -rf "$home" "$mb"
+}
+
+# ─── binary download tests ──────────────────────────────────────────────────────
+
+# Test 40: no go, binary download declined → skip message with GitHub URL
+test_interactive_hostmcp_binary_download_declined() {
+    echo ""
+    echo "=== Test: no go, binary download declined → skip with GitHub URL ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Input: lang=1(English), install=2(decline)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "セットアップをスキップしました\|HostMCP のセットアップをスキップ"; then
+        pass "Skip message shown when binary download declined"
+    else
+        fail "Expected skip message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "releases/latest\|YujiSuzuki/hostmcp"; then
+        pass "GitHub Releases URL shown in skip message"
+    else
+        fail "Expected GitHub URL in skip message, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 41: no go, binary download accepted, curl succeeds → install + next steps
+test_interactive_hostmcp_binary_download_success() {
+    echo ""
+    echo "=== Test: no go, binary download accepted, curl succeeds → install ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Input: lang=1, install=1(yes), port=default(1)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "インストールしました"; then
+        pass "Binary install success message shown"
+    else
+        fail "Expected install success message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "hostmcp serve"; then
+        pass "Next steps shown after binary install success"
+    else
+        fail "Expected next steps (hostmcp serve), got: $output"
+    fi
+
+    if echo "$output" | grep -q "v0.0.1"; then
+        pass "Version number shown in install prompt"
+    else
+        fail "Expected version number (v0.0.1) in output, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 42: no go, binary download accepted, curl fails → download error shown
+test_interactive_hostmcp_binary_download_curl_fails() {
+    echo ""
+    echo "=== Test: no go, curl returns error → download failure message ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Override curl to fail
+    printf '#!/bin/bash\nexit 1\n' > "$mb/curl"
+    chmod +x "$mb/curl"
+
+    # Input: lang=1, install=1(yes)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "ダウンロードに失敗"; then
+        pass "Download failure error shown when curl returns non-zero"
+    else
+        fail "Expected download failure message, got: $output"
+    fi
+
+    if echo "$output" | grep -q "hostmcp serve"; then
+        fail "Next steps should NOT appear after download failure"
+    else
+        pass "Next steps not shown after download failure"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 43: no go, no curl, no wget → error shown
+test_interactive_hostmcp_no_curl_no_wget() {
+    echo ""
+    echo "=== Test: no go, no curl, no wget → error shown ==="
+
+    setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    mb=$(mktemp -d)
+
+    # Input: lang=1, install=1(yes) — no curl/wget in PATH
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    # Either "no curl/wget" error or "download failed" (if system curl is in /usr/bin)
+    if echo "$output" | grep -qE "curl も wget も見つかりません|ダウンロードに失敗"; then
+        pass "Error shown when curl/wget unavailable"
+    else
+        fail "Expected curl/wget error or download failure, got: $output"
+    fi
+
+    rm -rf "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 44: version shown in install prompt when fetch succeeds
+test_interactive_hostmcp_version_shown_in_prompt() {
+    echo ""
+    echo "=== Test: version fetch succeeds → version shown in install prompt ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Input: lang=1(English), install=2(decline) — just to see the prompt text
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "v0.0.1"; then
+        pass "Version number shown in install prompt"
+    else
+        fail "Expected version number (v0.0.1) in prompt, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 45: version fetch fails → installs anyway using latest URL
+test_interactive_hostmcp_version_fetch_fails_installs_anyway() {
+    echo ""
+    echo "=== Test: version fetch fails → installs anyway (latest fallback) ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Override curl: fail for version fetch (-o /dev/null), succeed for binary download
+    cat > "$mb/curl" << 'CURLEOF'
+#!/bin/bash
+out_file=""
+prev=""
+for arg in "$@"; do
+    [ "$prev" = "-o" ] && out_file="$arg"
+    prev="$arg"
+done
+if [ "$out_file" = "/dev/null" ]; then
+    exit 1
+fi
+if [ -n "$out_file" ]; then
+    mkdir -p "$(dirname "$out_file")"
+    printf '#!/bin/bash\nif [ "$1" = "init" ]; then ws=""; shift; while [ $# -gt 0 ]; do [ "$1" = "--workspace" ] && ws="$2"; shift; done; [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/hostmcp.yaml"; fi\nexit 0\n' > "$out_file"
+fi
+exit 0
+CURLEOF
+    chmod +x "$mb/curl"
+
+    # Input: lang=1, install=1(yes), port=default(1)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "インストールしました"; then
+        pass "Install succeeds even when version fetch fails"
+    else
+        fail "Expected install success despite version fetch failure, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -1356,6 +1616,12 @@ main() {
     test_interactive_hostmcp_gopath_command_fails
     test_interactive_hostmcp_next_steps_shows_absolute_path
     test_interactive_hostmcp_init_fails_skips_next_steps
+    test_interactive_hostmcp_binary_download_declined
+    test_interactive_hostmcp_binary_download_success
+    test_interactive_hostmcp_binary_download_curl_fails
+    test_interactive_hostmcp_no_curl_no_wget
+    test_interactive_hostmcp_version_shown_in_prompt
+    test_interactive_hostmcp_version_fetch_fails_installs_anyway
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

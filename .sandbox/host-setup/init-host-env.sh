@@ -122,37 +122,138 @@ _hostmcp_sigint_handler() {
     _DKMCP_CANCELLED=true
 }
 
+# Fetch latest hostmcp version tag from GitHub Releases
+_fetch_hostmcp_version() {
+    local version_url version=""
+    if command -v curl > /dev/null 2>&1; then
+        version_url=$(curl -fsSL -o /dev/null -w '%{url_effective}' \
+            "https://github.com/YujiSuzuki/hostmcp/releases/latest" 2>/dev/null) || true
+        version=$(printf '%s' "$version_url" | sed 's|.*/tag/||' | tr -d '[:space:]')
+    elif command -v wget > /dev/null 2>&1; then
+        version=$(wget --server-response --spider -q \
+            "https://github.com/YujiSuzuki/hostmcp/releases/latest" 2>&1 \
+            | grep -i 'location:' | tail -1 \
+            | sed 's|.*/tag/||' | tr -d '[:space:]') || true
+    fi
+    case "$version" in
+        v*.*.*) printf '%s' "$version" ;;
+        *)      ;;
+    esac
+}
+
+# Download hostmcp binary from GitHub Releases / GitHub Releases からバイナリをダウンロード
+_download_hostmcp_binary() {
+    local version="${1:-}"
+    local os arch filename install_dir install_path url download_ok
+
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*) os="windows" ;;
+        *) os=$(uname -s | tr '[:upper:]' '[:lower:]') ;;
+    esac
+    arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+    filename="hostmcp_${os}_${arch}"
+    [ "$os" = "windows" ] && filename="${filename}.exe"
+
+    if [ -n "$version" ]; then
+        url="https://github.com/YujiSuzuki/hostmcp/releases/download/${version}/${filename}"
+    else
+        url="https://github.com/YujiSuzuki/hostmcp/releases/latest/download/${filename}"
+    fi
+    install_dir="$HOME/.local/bin"
+    install_path="$install_dir/hostmcp"
+
+    msg "Downloading hostmcp ($filename) from GitHub Releases..." \
+        "GitHub Releases から hostmcp ($filename) をダウンロード中..."
+
+    mkdir -p "$install_dir"
+
+    download_ok=false
+    if command -v curl > /dev/null 2>&1; then
+        curl -fsSL "$url" -o "$install_path" 2>&1 && download_ok=true
+    elif command -v wget > /dev/null 2>&1; then
+        wget -q "$url" -O "$install_path" 2>&1 && download_ok=true
+    else
+        msg "Error: Neither curl nor wget found." "エラー: curl も wget も見つかりません。"
+        msg "Please download manually from: https://github.com/YujiSuzuki/hostmcp/releases/latest" \
+            "手動でダウンロードしてください: https://github.com/YujiSuzuki/hostmcp/releases/latest"
+        return 1
+    fi
+
+    if [ "$_DKMCP_CANCELLED" = true ]; then
+        rm -f "$install_path"
+        return 1
+    fi
+
+    if [ "$download_ok" != true ] || [ ! -s "$install_path" ]; then
+        rm -f "$install_path"
+        msg "Error: Download failed. Binary for ${os}/${arch} may not exist in the latest release." \
+            "エラー: ダウンロードに失敗しました。${os}/${arch} 向けバイナリが最新リリースに存在しない可能性があります。"
+        msg "Install Go and run: go install github.com/YujiSuzuki/hostmcp@latest" \
+            "Go をインストールして実行してください: go install github.com/YujiSuzuki/hostmcp@latest"
+        return 1
+    fi
+
+    chmod +x "$install_path"
+    msg "hostmcp installed to: $install_path" "hostmcp をインストールしました: $install_path"
+
+    # Make discoverable for the rest of this script / このスクリプト内で hostmcp を使えるようにする
+    local original_path="$PATH"
+    export PATH="$install_dir:$PATH"
+
+    # Warn if not in PATH permanently / PATH への永続追加が必要な場合は案内
+    case ":$original_path:" in
+        *":$install_dir:"*) ;;
+        *)
+            echo ""
+            msg "Note: Add $install_dir to your PATH to use hostmcp:" \
+                "注意: hostmcp を使い続けるには $install_dir を PATH に追加してください:"
+            echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+            msg "Add this line to ~/.zshrc or ~/.bashrc." \
+                "上記を ~/.zshrc または ~/.bashrc に追記してください。"
+            ;;
+    esac
+    return 0
+}
+
 # hostmcp install check / hostmcp インストール確認
 setup_hostmcp_install() {
     trap '_hostmcp_sigint_handler' INT
 
-    if ! command -v go > /dev/null 2>&1; then
-        echo ""
-        msg "Error: go command not found." "エラー: go コマンドが見つかりません。"
-        msg "Go is required to install hostmcp." "hostmcp をインストールするには Go が必要です。"
-        msg "Please install Go from https://go.dev/doc/install" "https://go.dev/doc/install を参照してインストールしてください。"
-        return 0
+    # Determine GOPATH bin dir if Go is available / Go が使える場合に GOPATH/bin を取得
+    local gopath_bin=""
+    if command -v go > /dev/null 2>&1; then
+        local gopath_raw
+        if gopath_raw=$(go env GOPATH 2>/dev/null) && [ -n "$gopath_raw" ]; then
+            gopath_bin="$gopath_raw/bin"
+        else
+            gopath_bin="$HOME/go/bin"
+        fi
     fi
 
-    local gopath_raw
-    if ! gopath_raw=$(go env GOPATH 2>/dev/null); then
-        echo ""
-        msg "Could not get GOPATH. Check \`go env GOPATH\`." "GOPATH が取得できません。\`go env GOPATH\` を確認してください。"
-        return 0
-    fi
-    if [ -z "$gopath_raw" ]; then
-        gopath_raw="$HOME/go"
-    fi
-    local gopath_bin="$gopath_raw/bin"
-
-    if [ -f "$gopath_bin/hostmcp" ]; then
+    # Already installed? / インストール済みチェック
+    if { [ -n "$gopath_bin" ] && [ -f "$gopath_bin/hostmcp" ]; } || command -v hostmcp > /dev/null 2>&1; then
         DKMCP_AVAILABLE=true
         return 0
     fi
 
+    local hostmcp_version=""
+    if ! command -v go > /dev/null 2>&1; then
+        hostmcp_version=$(_fetch_hostmcp_version)
+        if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+    fi
+
     echo ""
     msg "hostmcp not found. Install it?" "hostmcp が見つかりません。インストールしますか？"
-    msg "  1) Yes (run go install github.com/YujiSuzuki/hostmcp@latest)" "  1) はい (go install github.com/YujiSuzuki/hostmcp@latest を実行)"
+    if command -v go > /dev/null 2>&1; then
+        msg "  1) Yes (go install github.com/YujiSuzuki/hostmcp@latest)" \
+            "  1) はい (go install github.com/YujiSuzuki/hostmcp@latest を実行)"
+    elif [ -n "$hostmcp_version" ]; then
+        msg "  1) Yes (download hostmcp $hostmcp_version from GitHub Releases)" \
+            "  1) はい (GitHub Releases から hostmcp $hostmcp_version をダウンロード)"
+    else
+        msg "  1) Yes (download binary from GitHub Releases)" \
+            "  1) はい (GitHub Releases からバイナリをダウンロード)"
+    fi
     msg "  2) No" "  2) いいえ"
     echo ""
     local _prompt
@@ -167,27 +268,38 @@ setup_hostmcp_install() {
             echo ""
             msg "Skipped HostMCP setup." "HostMCP のセットアップをスキップしました。"
             msg "To set up later, run:" "後からセットアップするには以下を実行してください:"
-            echo "  go install github.com/YujiSuzuki/hostmcp@latest"
+            if command -v go > /dev/null 2>&1; then
+                echo "  go install github.com/YujiSuzuki/hostmcp@latest"
+            else
+                echo "  # Download from: https://github.com/YujiSuzuki/hostmcp/releases/latest"
+            fi
             echo "  hostmcp init --workspace $display_path"
             echo "  hostmcp serve --workspace $display_path"
             return 0
             ;;
         *)
-            msg "Installing... (go install github.com/YujiSuzuki/hostmcp@latest)" "インストール中... (go install github.com/YujiSuzuki/hostmcp@latest)"
-            if ! go install github.com/YujiSuzuki/hostmcp@latest 2>&1; then
+            if command -v go > /dev/null 2>&1; then
+                msg "Installing... (go install github.com/YujiSuzuki/hostmcp@latest)" \
+                    "インストール中... (go install github.com/YujiSuzuki/hostmcp@latest)"
+                if ! go install github.com/YujiSuzuki/hostmcp@latest 2>&1; then
+                    if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+                    msg "Error: Failed to install hostmcp. To install manually: go install github.com/YujiSuzuki/hostmcp@latest" \
+                        "エラー: hostmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/hostmcp@latest"
+                    return 0
+                fi
                 if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
-                msg "Error: Failed to install hostmcp. To install manually: go install github.com/YujiSuzuki/hostmcp@latest" \
-                    "エラー: hostmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/hostmcp@latest"
-                return 0
+                if [ ! -f "$gopath_bin/hostmcp" ]; then
+                    msg "Error: Failed to install hostmcp. To install manually: go install github.com/YujiSuzuki/hostmcp@latest" \
+                        "エラー: hostmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/hostmcp@latest"
+                    return 0
+                fi
+                msg "hostmcp installation complete." "hostmcp のインストールが完了しました。"
+                DKMCP_AVAILABLE=true
+            else
+                if _download_hostmcp_binary "$hostmcp_version"; then
+                    DKMCP_AVAILABLE=true
+                fi
             fi
-            if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
-            if [ ! -f "$gopath_bin/hostmcp" ]; then
-                msg "Error: Failed to install hostmcp. To install manually: go install github.com/YujiSuzuki/hostmcp@latest" \
-                    "エラー: hostmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/hostmcp@latest"
-                return 0
-            fi
-            msg "hostmcp installation complete." "hostmcp のインストールが完了しました。"
-            DKMCP_AVAILABLE=true
             ;;
     esac
 }
