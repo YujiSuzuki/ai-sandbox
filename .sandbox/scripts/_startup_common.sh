@@ -275,6 +275,223 @@ cleanup_backups() {
 }
 
 # ============================================================
+# Update Check Helpers / 更新チェックヘルパー
+# ============================================================
+# Shared by check-upstream-updates.sh and check-sandbox-mcp-updates.sh.
+# Callers set $STATE_FILE and $CHECK_CHANNEL before invoking these.
+# check-upstream-updates.sh と check-sandbox-mcp-updates.sh で共有。
+# 呼び出し側は事前に $STATE_FILE と $CHECK_CHANNEL を設定すること。
+
+# Read timestamp from state file
+# 状態ファイルからタイムスタンプを読み取り
+read_state_timestamp() {
+    if [ -f "$STATE_FILE" ]; then
+        cut -d: -f1 "$STATE_FILE" 2>/dev/null || echo "0"
+    else
+        echo "0"
+    fi
+}
+
+# Read last notified version from state file
+# 状態ファイルから前回通知バージョンを読み取り
+get_last_notified_version() {
+    if [ -f "$STATE_FILE" ]; then
+        cut -d: -f2- "$STATE_FILE" 2>/dev/null || echo ""
+    else
+        echo ""
+    fi
+}
+
+# Check if this is the first run (no state file)
+# 初回実行かどうか（状態ファイルがない）
+is_first_run() {
+    [ ! -f "$STATE_FILE" ]
+}
+
+# Check if enough time has passed since last check
+# 前回のチェックから十分な時間が経過したか確認
+should_check() {
+    local interval_hours="${CHECK_INTERVAL_HOURS:-24}"
+
+    # Validate: must be a non-negative integer, fallback to 24 if invalid
+    # バリデーション: 非負整数でなければ24にフォールバック
+    if ! [[ "$interval_hours" =~ ^[0-9]+$ ]]; then
+        interval_hours=24
+    fi
+
+    # 0 means check every time
+    # 0 は毎回チェック
+    if [ "$interval_hours" -eq 0 ]; then
+        debug_log "Interval: 0 (always check)"
+        return 0
+    fi
+
+    local interval_seconds=$((interval_hours * 3600))
+    local last_check
+    last_check=$(read_state_timestamp)
+
+    if [ "$last_check" != "0" ]; then
+        local now
+        now=$(date +%s)
+        local elapsed=$((now - last_check))
+
+        if [ $elapsed -lt $interval_seconds ]; then
+            debug_log "Interval: ${elapsed}s elapsed < ${interval_seconds}s required → skip"
+            return 1
+        fi
+        debug_log "Interval: ${elapsed}s elapsed >= ${interval_seconds}s required → check"
+    else
+        debug_log "Interval: no state file → first check"
+    fi
+
+    return 0
+}
+
+# Update state file with timestamp and version
+# 状態ファイルをタイムスタンプとバージョンで更新
+update_state() {
+    local version="${1:-}"
+    local state_dir
+    state_dir=$(dirname "$STATE_FILE")
+    mkdir -p "$state_dir" 2>/dev/null || true
+    echo "$(date +%s):${version}" > "$STATE_FILE" 2>/dev/null || true
+}
+
+# Build GitHub API URL based on channel setting
+# チャンネル設定に応じた GitHub API URL を構築
+build_api_url() {
+    local repo="$1"
+    local channel="${CHECK_CHANNEL:-all}"
+
+    case "$channel" in
+        stable)
+            # Official releases only (non-prerelease, non-draft)
+            # 正式リリースのみ（プレリリース・ドラフト除外）
+            echo "https://api.github.com/repos/${repo}/releases/latest"
+            ;;
+        *)
+            # All releases including pre-releases (default)
+            # プレリリースを含む全リリース（デフォルト）
+            echo "https://api.github.com/repos/${repo}/releases?per_page=1"
+            ;;
+    esac
+}
+
+# Extract tag_name from API response JSON
+# APIレスポンスJSONからtag_nameを抽出
+extract_tag_from_json() {
+    local json_file="$1"
+    local channel="${CHECK_CHANNEL:-all}"
+
+    # /releases?per_page=1 returns an array, /releases/latest returns an object
+    # /releases?per_page=1 は配列、/releases/latest はオブジェクトを返す
+    local jq_expr
+    if [ "$channel" = "stable" ]; then
+        jq_expr='.tag_name // empty'
+    else
+        jq_expr='.[0].tag_name // empty'
+    fi
+
+    if command -v jq &>/dev/null; then
+        jq -r "$jq_expr" "$json_file" 2>/dev/null
+    else
+        # Fallback: grep for first tag_name (works for both array and object)
+        # フォールバック: 最初の tag_name を grep（配列・オブジェクト両対応）
+        grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' "$json_file" 2>/dev/null | \
+            sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | head -1
+    fi
+}
+
+# Fetch latest release from GitHub API
+# GitHub API から最新リリースを取得
+fetch_latest_release() {
+    local repo="$1"
+    local api_url
+    api_url=$(build_api_url "$repo")
+    local tmp_file
+    tmp_file=$(mktemp)
+
+    # Fetch with timeout, capture HTTP status
+    # タイムアウト付きで取得、HTTPステータスをキャプチャ
+    local http_code
+    http_code=$(curl -s \
+        --connect-timeout 1 \
+        --max-time 3 \
+        -w "%{http_code}" \
+        -o "$tmp_file" \
+        "$api_url" 2>/dev/null) || http_code="000"
+
+    debug_log "API: $api_url → HTTP $http_code"
+
+    # Check HTTP status
+    case "$http_code" in
+        200)
+            # Success - extract tag_name
+            # 成功 - tag_name を抽出
+            local tag
+            tag=$(extract_tag_from_json "$tmp_file")
+            debug_log "API: tag_name=$tag"
+            echo "$tag"
+            rm -f "$tmp_file" 2>/dev/null
+            return 0
+            ;;
+        *)
+            # 404: No releases, 403: Rate limit, others: Network error
+            # All cases: skip silently
+            debug_log "API: failed (HTTP $http_code) → skip"
+            rm -f "$tmp_file" 2>/dev/null
+            return 1
+            ;;
+    esac
+}
+
+# Download prebuilt sandbox-mcp binary from GitHub Releases (used when Go is unavailable)
+# Callers set $MSG_DOWNLOADING, $MSG_DOWNLOAD_OK, $MSG_DOWNLOAD_FAILED before invoking (same
+# convention as $STATE_FILE / $CHECK_CHANNEL above).
+# GitHub Releases からビルド済み sandbox-mcp バイナリをダウンロード（Go がない場合に使用）
+# 呼び出し側は事前に $MSG_DOWNLOADING 等を設定すること（上記 $STATE_FILE 等と同じ規約）。
+install_sandbox_mcp_binary() {
+    local os arch filename install_dir install_path url
+
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*) os="windows" ;;
+        *) os=$(uname -s | tr '[:upper:]' '[:lower:]') ;;
+    esac
+    arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+    filename="sandbox-mcp_${os}_${arch}"
+    [ "$os" = "windows" ] && filename="${filename}.exe"
+
+    install_dir="$HOME/.local/bin"
+    install_path="$install_dir/sandbox-mcp"
+
+    echo "$MSG_DOWNLOADING"
+    mkdir -p "$install_dir"
+
+    url="https://github.com/YujiSuzuki/sandbox-mcp/releases/latest/download/${filename}"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$url" -o "$install_path" 2>&1 || { rm -f "$install_path"; echo "$MSG_DOWNLOAD_FAILED"; return 1; }
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q "$url" -O "$install_path" 2>&1 || { rm -f "$install_path"; echo "$MSG_DOWNLOAD_FAILED"; return 1; }
+    else
+        echo "$MSG_DOWNLOAD_FAILED"
+        return 1
+    fi
+
+    if [ ! -s "$install_path" ]; then
+        rm -f "$install_path"
+        echo "$MSG_DOWNLOAD_FAILED"
+        return 1
+    fi
+
+    chmod +x "$install_path"
+    echo "$MSG_DOWNLOAD_OK $install_path"
+
+    # Make discoverable for the rest of this script / このスクリプト内で使えるようにする
+    export PATH="$install_dir:$PATH"
+    return 0
+}
+
+# ============================================================
 # Initialization / 初期化
 # ============================================================
 

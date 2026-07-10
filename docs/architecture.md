@@ -1,5 +1,7 @@
 # Architecture Details
 
+[日本語版はこちら](architecture.ja.md)
+
 Detailed diagrams explaining how AI Sandbox + HostMCP works.
 
 [← Back to README](../README.md)
@@ -428,3 +430,15 @@ Scripts are classified into two execution environments.
 ```
 
 AI assistants can use `list_scripts` to find them, `get_script_info` to read usage, and `run_script` to execute them.
+
+### Startup Context Injection
+
+Place shell scripts in `.sandbox/sandbox-mcp-setup/` to inject custom context into the AI's startup instructions. They run in alphabetical order (5s timeout each) when SandboxMCP starts, and their stdout is appended to the MCP `instructions` (shown as `<system-reminder>` in Claude Code).
+
+```
+.sandbox/sandbox-mcp-setup/
+├── 10-sandbox-env.sh       ← reports $SANDBOX_ENV
+└── 20-git-uncommitted.sh   ← reports uncommitted changes in nested git repos
+```
+
+This is how the AI learns things like the current sandbox environment type or nested-repo status without being told every session.

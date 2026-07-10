@@ -1,5 +1,7 @@
 # Using Plugins in Multi-Project Workspaces
 
+[日本語版はこちら](plugins.ja.md)
+
 [← Back to README.md](../README.md)
 
 **Note:** This document is for Claude Code only. Gemini Code Assist doesn't support this.

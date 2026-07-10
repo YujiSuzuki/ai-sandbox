@@ -1,5 +1,7 @@
 # Conversation History Search (search-history)
 
+[日本語版はこちら](search-history.ja.md)
+
 A tool for searching and browsing past Claude Code conversations.
 
 Inside the AI Sandbox, just ask your AI — SandboxMCP auto-discovers the tool and AI runs it as needed. No commands to memorize.

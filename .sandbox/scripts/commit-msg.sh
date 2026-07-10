@@ -1,6 +1,7 @@
 #!/bin/bash
 # commit-msg.sh
 # Generate commit message draft from staged changes for AI-assisted refinement, then commit
+# @advertise: true
 #
 # Usage:
 #   .sandbox/scripts/commit-msg.sh [options]

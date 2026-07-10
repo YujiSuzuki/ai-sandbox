@@ -1,6 +1,7 @@
 #!/bin/bash
 # install-commands.sh
 # Install custom slash commands from .sandbox/commands/ into .claude/commands/
+# @advertise: true
 #
 # Lists available custom commands and installs selected ones (or all) as
 # Claude Code slash commands. Installed commands appear as /command-name.

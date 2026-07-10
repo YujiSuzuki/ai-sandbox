@@ -1,5 +1,7 @@
 # はじめてのセットアップガイド
 
+[English version here](getting-started.md)
+
 ゼロから AI Sandbox + HostMCP が動く状態までを、一歩ずつ案内します。
 
 [← README に戻る](../README.ja.md)

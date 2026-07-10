@@ -1,5 +1,7 @@
 # テンプレートの更新
 
+[English version here](updating.md)
+
 オリジナルのテンプレートから更新を取り込む方法を説明します。
 
 [← README に戻る](../README.ja.md)

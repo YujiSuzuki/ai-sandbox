@@ -1,5 +1,7 @@
 # リファレンス
 
+[English version here](reference.md)
+
 環境設定、オプション、トラブルシューティングなどの補足情報です。
 
 [← README に戻る](../README.ja.md)

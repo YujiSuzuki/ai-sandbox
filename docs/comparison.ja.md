@@ -1,5 +1,7 @@
 # 既存ソリューションとの比較
 
+[English version here](comparison.md)
+
 AI Sandbox + HostMCPと他のAIセキュリティツールとの比較、そしてなぜ組み合わせて使うのが効果的かを説明します。
 
 [← READMEに戻る](../README.ja.md)

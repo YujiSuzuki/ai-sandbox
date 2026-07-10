@@ -34,7 +34,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 - [ユースケース](#ユースケース)
 - [クイックスタート](#クイックスタート)
 - [コマンド](#コマンド)
-- [HostMCP ホストアクセス](#dockmcp-ホストアクセス)
+- [HostMCP ホストアクセス](#hostmcp-ホストアクセス)
 - [AI SandBox 内部ツール](#ai-sandbox-内部ツール)
 - [プロジェクト構造](#プロジェクト構造)
 - [セキュリティ機能](#セキュリティ機能)
@@ -345,7 +345,7 @@ AI Sandbox の内部には **SandboxMCP** という軽量な MCP サーバー（
 AI に「使えるスクリプトある？」「会話履歴を検索して」と聞くだけで、SandboxMCP 経由で適切なツールが実行されます。
 
 > [!TIP]
-> SandboxMCP の仕組みについては [docs/architecture.ja.md](docs/architecture.ja.md) を参照
+> SandboxMCP の仕組みについては [docs/architecture.ja.md](docs/architecture.ja.md) を参照。SandboxMCP は単体ツールとしても使える（AI Sandbox 以外でも利用可能）ので、詳しくは [SandboxMCP README](https://github.com/YujiSuzuki/sandbox-mcp#readme) を参照
 
 ## 付属ツール
 

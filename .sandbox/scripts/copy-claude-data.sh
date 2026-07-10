@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Copies Claude local data (memory, plans, optionally settings) to a destination directory.
+# @advertise: true
+
 set -euo pipefail
 
 CLAUDE_DIR="/home/node/.claude"

@@ -1,5 +1,7 @@
 # 会話履歴検索ツール (search-history)
 
+[English version here](search-history.md)
+
 Claude Code の過去の会話を検索・閲覧できるツールです。
 
 AI Sandbox 内で AI に話しかけるだけで使えます。

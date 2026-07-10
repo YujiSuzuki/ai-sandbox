@@ -1,5 +1,7 @@
 # ハンズオン
 
+[English version here](hands-on.md)
+
 セキュリティ機能を実際に体験するための演習です。
 
 [← README に戻る](../README.ja.md)

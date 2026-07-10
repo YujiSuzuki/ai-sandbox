@@ -1,5 +1,7 @@
 # HostMCP ホストアクセス
 
+[English version here](host-access.md)
+
 HostMCP はコンテナだけでなく、ホスト OS への操作も制御付きで AI に提供できます。**ホストツール**、**コンテナライフサイクル**、**ホストコマンド** の 3 機能があり、いずれも監査可能な形でホスト操作を実行します。
 
 [<- README に戻る](../README.ja.md)

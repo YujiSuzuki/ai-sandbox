@@ -1,5 +1,7 @@
 # Customization Guide
 
+[日本語版はこちら](customization.ja.md)
+
 There are three ways to get started with this project. Choose the one that fits your situation.
 
 [← Back to README](../README.md)

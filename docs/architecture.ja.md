@@ -1,5 +1,7 @@
 # アーキテクチャ詳細
 
+[English version here](architecture.md)
+
 AI Sandbox + HostMCP の仕組みを図解で詳しく説明します。
 
 [← README に戻る](../README.ja.md)
@@ -428,3 +430,15 @@ AI アシスタントは `list_tools` でツールを発見し、`get_tool_info`
 ```
 
 AI アシスタントは `list_scripts` でスクリプトを発見し、`get_script_info` で使い方を確認し、`run_script` で実行できます。
+
+### 起動時コンテキスト注入
+
+`.sandbox/sandbox-mcp-setup/` にシェルスクリプトを置くと、AIの起動時instructionsにカスタムコンテキストを注入できます。SandboxMCP起動時にアルファベット順（各5秒タイムアウト）で実行され、その標準出力がMCPの `instructions`（Claude Codeでは `<system-reminder>` として表示）に追記されます。
+
+```
+.sandbox/sandbox-mcp-setup/
+├── 10-sandbox-env.sh       ← $SANDBOX_ENV を報告
+└── 20-git-uncommitted.sh   ← ネストしたgitリポジトリの未コミット変更を報告
+```
+
+これにより、現在のサンドボックス環境の種類やネストしたリポジトリの状態などを、毎回説明しなくてもAIが把握できるようになります。

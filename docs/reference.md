@@ -1,5 +1,7 @@
 # Reference
 
+[日本語版はこちら](reference.ja.md)
+
 Environment settings, options, troubleshooting, and other supplementary information.
 
 [← Back to README](../README.md)

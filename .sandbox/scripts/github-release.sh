@@ -1,6 +1,7 @@
 #!/bin/bash
 # github-release.sh
 # Generate release notes draft for AI-assisted refinement, then publish
+# @advertise: true
 #
 # Usage:
 #   .sandbox/scripts/github-release.sh <version> [options]

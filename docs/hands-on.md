@@ -1,5 +1,7 @@
 # Hands-on Guide
 
+[日本語版はこちら](hands-on.ja.md)
+
 Exercises to experience the security features firsthand.
 
 [← Back to README](../README.md)

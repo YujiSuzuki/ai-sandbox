@@ -1,5 +1,7 @@
 # マルチプロジェクトワークスペースでのプラグイン使用
 
+[English version here](plugins.md)
+
 [← README.ja.md に戻る](../README.ja.md)
 
 **注意**: このドキュメントは Claude Code 専用です。Gemini Code Assist では使えません。

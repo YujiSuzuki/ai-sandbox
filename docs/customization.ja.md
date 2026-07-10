@@ -1,5 +1,7 @@
 # 自分のプロジェクトへの適用
 
+[English version here](customization.md)
+
 このプロジェクトを始める方法は3つあります。状況に合ったものを選んでください。
 
 [← README に戻る](../README.ja.md)

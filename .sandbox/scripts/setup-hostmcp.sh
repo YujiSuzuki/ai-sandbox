@@ -2,6 +2,7 @@
 # setup-hostmcp.sh
 # ⚠️ This script is for use inside the container (sandbox) only. It does not work on the host OS.
 # Register HostMCP as an MCP server for AI tools (Claude Code, Gemini CLI)
+# @advertise: true
 #
 # Detects available AI tools and registers HostMCP as an SSE MCP server.
 # Also checks registration status and connectivity. Designed for AI-driven setup:

@@ -1,5 +1,7 @@
 # Network Restrictions (Firewall)
 
+[日本語版はこちら](network-firewall.ja.md)
+
 How to add network restrictions to AI Sandbox.
 
 [← Back to README](../README.md)

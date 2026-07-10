@@ -66,48 +66,11 @@ else
     MSG_COMPLETE="✅ Startup complete"
 fi
 
-# Download prebuilt sandbox-mcp binary from GitHub Releases (used when Go is unavailable)
-# GitHub Releases からビルド済み sandbox-mcp バイナリをダウンロード（Go がない場合に使用）
-_install_sandbox_mcp_binary() {
-    local os arch filename install_dir install_path url
-
-    case "$(uname -s)" in
-        MINGW*|MSYS*|CYGWIN*) os="windows" ;;
-        *) os=$(uname -s | tr '[:upper:]' '[:lower:]') ;;
-    esac
-    arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
-    filename="sandbox-mcp_${os}_${arch}"
-    [ "$os" = "windows" ] && filename="${filename}.exe"
-
-    install_dir="$HOME/.local/bin"
-    install_path="$install_dir/sandbox-mcp"
-
-    echo "$MSG_DOWNLOADING"
-    mkdir -p "$install_dir"
-
-    url="https://github.com/YujiSuzuki/sandbox-mcp/releases/latest/download/${filename}"
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$url" -o "$install_path" 2>&1 || { rm -f "$install_path"; echo "$MSG_DOWNLOAD_FAILED"; return 1; }
-    elif command -v wget >/dev/null 2>&1; then
-        wget -q "$url" -O "$install_path" 2>&1 || { rm -f "$install_path"; echo "$MSG_DOWNLOAD_FAILED"; return 1; }
-    else
-        echo "$MSG_DOWNLOAD_FAILED"
-        return 1
-    fi
-
-    if [ ! -s "$install_path" ]; then
-        rm -f "$install_path"
-        echo "$MSG_DOWNLOAD_FAILED"
-        return 1
-    fi
-
-    chmod +x "$install_path"
-    echo "$MSG_DOWNLOAD_OK $install_path"
-
-    # Make discoverable for the rest of this script / このスクリプト内で使えるようにする
-    export PATH="$install_dir:$PATH"
-    return 0
-}
+# Note: install_sandbox_mcp_binary (download prebuilt binary from GitHub Releases,
+# used when Go is unavailable) is defined in _startup_common.sh, shared with
+# check-sandbox-mcp-updates.sh's --auto-update path.
+# 注: install_sandbox_mcp_binary は _startup_common.sh で定義（check-sandbox-mcp-updates.sh の
+# --auto-update と共有）。
 
 # Run startup scripts in order
 # 起動スクリプトを順番に実行
@@ -171,6 +134,7 @@ sandbox_mcp_ready=false
 if command -v sandbox-mcp >/dev/null 2>&1; then
     echo "$MSG_ALREADY_INSTALLED"
     sandbox_mcp_ready=true
+    "$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh" || true
 elif command -v go >/dev/null 2>&1; then
     echo "$MSG_FETCHING"
     if go install github.com/YujiSuzuki/sandbox-mcp@latest; then
@@ -180,7 +144,7 @@ elif command -v go >/dev/null 2>&1; then
     fi
 else
     echo "$MSG_NO_GO"
-    if _install_sandbox_mcp_binary; then
+    if install_sandbox_mcp_binary; then
         sandbox_mcp_ready=true
     fi
 fi

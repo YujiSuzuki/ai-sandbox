@@ -1,5 +1,7 @@
 # HostMCP Host Access
 
+[日本語版はこちら](host-access.ja.md)
+
 HostMCP can extend AI's reach beyond containers to the host OS itself. Three features — **Host Tools**, **Container Lifecycle**, and **Host Commands** — let AI perform operations on the host in a controlled, auditable way.
 
 [<- Back to README](../README.md)

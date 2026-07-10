@@ -1,5 +1,7 @@
 # Updating Guide
 
+[日本語版はこちら](updating.ja.md)
+
 How to apply updates from the original template to your project.
 
 [← Back to README](../README.md)

@@ -1,5 +1,7 @@
 # Getting Started Guide
 
+[日本語版はこちら](getting-started.ja.md)
+
 A step-by-step walkthrough from zero to a working AI Sandbox + HostMCP setup.
 
 [← Back to README](../README.md)

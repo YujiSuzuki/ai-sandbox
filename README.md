@@ -33,7 +33,7 @@ This project is designed for local development environments and is not intended 
 - [Use Cases](#use-cases)
 - [Quick Start](#quick-start)
 - [Commands](#commands)
-- [HostMCP Host Access](#dockmcp-host-access)
+- [HostMCP Host Access](#hostmcp-host-access)
 - [AI Sandbox Tools](#ai-sandbox-tools)
 - [Project Structure](#project-structure)
 - [Security Features](#security-features)
@@ -339,7 +339,7 @@ The AI Sandbox includes a lightweight MCP server called **SandboxMCP** (stdio). 
 Just ask AI things like "What scripts are available?" or "Search my conversation history" — SandboxMCP routes it to the right tool automatically.
 
 > [!TIP]
-> For SandboxMCP architecture details, see [docs/architecture.md](docs/architecture.md)
+> For SandboxMCP architecture details, see [docs/architecture.md](docs/architecture.md). For SandboxMCP as a standalone tool (usable outside AI Sandbox too), see the [SandboxMCP README](https://github.com/YujiSuzuki/sandbox-mcp#readme).
 
 ## Bundled Tools
 

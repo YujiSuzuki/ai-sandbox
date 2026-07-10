@@ -1,5 +1,7 @@
 # ネットワーク制限（ファイアウォール）
 
+[English version here](network-firewall.md)
+
 AI Sandboxにネットワーク制限を追加する方法を説明します。
 
 [← READMEに戻る](../README.ja.md)

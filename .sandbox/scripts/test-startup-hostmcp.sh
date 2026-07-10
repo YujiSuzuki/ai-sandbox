@@ -73,11 +73,14 @@ STUB
         chmod +x "$TEST_DIR/workspace/.sandbox/scripts/$script"
     done
 
-    # Create no-op stub for _startup_common.sh
-    cat > "$TEST_DIR/workspace/.sandbox/scripts/_startup_common.sh" << 'STUB'
-#!/bin/bash
-# Stub: no-op common functions
-STUB
+    # Create _startup_common.sh stub: no-op for everything except
+    # install_sandbox_mcp_binary, which is extracted (not duplicated) from the
+    # real file since the binary-download tests below exercise its actual logic.
+    {
+        echo '#!/bin/bash'
+        echo '# Stub: no-op common functions, except install_sandbox_mcp_binary (extracted below)'
+        awk '/^install_sandbox_mcp_binary\(\)/,/^}/' "$SCRIPT_DIR/_startup_common.sh"
+    } > "$TEST_DIR/workspace/.sandbox/scripts/_startup_common.sh"
 
     # Create stub bin directory for go/claude/gemini (default stubs; overridden in SandboxMCP-specific tests)
     mkdir -p "$TEST_DIR/bin"
