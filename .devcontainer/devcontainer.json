@@ -51,8 +51,8 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        // JavaScript/TypeScript linting and formatting (for demo apps)
-        // JavaScript/TypeScript用リンター・フォーマッター（デモアプリ用）
+        // JavaScript/TypeScript linting and formatting
+        // JavaScript/TypeScript用リンター・フォーマッター
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         // Uncomment the following extensions as needed

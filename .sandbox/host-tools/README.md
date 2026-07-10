@@ -39,6 +39,9 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `copy-credentials.sh` | Copy credentials | Cross-platform |
 | `mac-memory.sh` | macOS memory usage report | macOS only |
 | `run-init-host-env-tests.sh` | Run `.sandbox/host-setup/test-init-host-env.sh` | Cross-platform |
+| `docker-compose-up.sh` | Start containers from any docker-compose file | Cross-platform |
+| `docker-compose-down.sh` | Stop containers from any docker-compose file | Cross-platform |
+| `docker-compose-build.sh` | Build images from any docker-compose file | Cross-platform |
 
 ---
 
@@ -104,3 +107,34 @@ Copies credentials to the appropriate location. Works cross-platform.
 ## mac-memory.sh
 
 > **macOS only.** Reports memory usage on macOS.
+
+---
+
+## docker-compose-up.sh / docker-compose-down.sh / docker-compose-build.sh
+
+Generic wrappers around `docker compose up -d` / `down` / `build`, executed on the host OS.
+These are sample scripts — a working starting point, not a full solution for every project.
+Adapted from the demo scripts in `ai-sandbox-demo/.sandbox/host-tools/` (`demo-up.sh` /
+`demo-down.sh` / `demo-build.sh`), which hardcode the demo's compose file path.
+
+```bash
+# Start containers
+./docker-compose-up.sh /path/to/docker-compose.yml
+
+# Stop containers
+./docker-compose-down.sh /path/to/docker-compose.yml
+
+# Build images
+./docker-compose-build.sh /path/to/docker-compose.yml
+
+# Extra docker compose flags after --
+./docker-compose-up.sh ./docker-compose.yml -- --build
+./docker-compose-down.sh ./docker-compose.yml -- --volumes
+./docker-compose-build.sh ./docker-compose.yml -- --no-cache
+```
+
+Since these run through HostMCP's `run_host_tool`, you can start/stop/build containers
+from inside the AI Sandbox even without Docker socket access — no need to ask the user
+to run `docker compose` manually. Copy and adapt these scripts if your project needs
+project-specific defaults (fixed compose file path, extra env vars, service names in
+log messages, etc.).

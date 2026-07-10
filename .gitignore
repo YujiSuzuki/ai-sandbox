@@ -36,8 +36,6 @@
 
 
 # Secrets and sensitive data
-# Demo secrets (demo-apps/securenote-api/secrets/) are tracked with `git add -f`
-# デモ用 secrets (demo-apps/securenote-api/secrets/) は `git add -f` で追加済み
 secrets/
 *.key
 *.pem
@@ -58,9 +56,6 @@ secrets/
 # チームで .claude/settings.json や .claude/commands/ を共有したい場合は、
 # 下の行をコメントアウトし、代わりに .claude/settings.local.json のみ除外してください:
 #   .claude/settings.local.json
-#
-# Demo app settings (demo-apps/.claude/, demo-apps-ios/.claude/) are tracked with `git add -f`
-# デモアプリの設定 (demo-apps/.claude/, demo-apps-ios/.claude/) は `git add -f` で追加済み
 .claude/
 .claude.json
 .claude.json.backup

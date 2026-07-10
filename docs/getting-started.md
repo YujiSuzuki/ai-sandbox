@@ -263,14 +263,7 @@ Try asking the AI:
 
 ## Step 7: Try the Demo Apps (Optional)
 
-To experience HostMCP's full capabilities with a concrete example, use the SecureNote demo from [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo):
-
-```bash
-# On host OS — clone alongside your workspace
-git clone https://github.com/YujiSuzuki/ai-sandbox-demo
-cd ai-sandbox-demo/demo-apps
-docker compose -f docker-compose.demo.yml up -d --build
-```
+Now try the demo apps ([ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo)) to experience, hands-on, that secrets really are inaccessible to the AI, and that the Sandbox can operate and check logs on other containers outside itself.
 
 See the [ai-sandbox-demo README](https://github.com/YujiSuzuki/ai-sandbox-demo) for full setup instructions.
 
