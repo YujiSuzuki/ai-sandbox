@@ -7,6 +7,7 @@
 #
 # IMPORTANT: Must run inside AI Sandbox container (not on host OS). Auto-detects which
 # environment to use ($SANDBOX_ENV: devcontainer, cli_claude, cli_gemini, cli_ai_sandbox).
+# @env: container
 # ---
 # .claude/settings.json から docker-compose.yml へ秘匿ファイルを同期する対話式スクリプト
 # このスクリプトは Claude 設定でブロックされているが docker-compose.yml で隠蔽されていない

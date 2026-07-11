@@ -5,6 +5,7 @@
 # This script automatically reads secret paths from docker-compose.yml and checks if they
 # are actually inaccessible (empty, /dev/null mounted, or tmpfs mounted). Auto-detects which
 # docker-compose.yml to use based on $SANDBOX_ENV (devcontainer, cli_claude, cli_gemini, cli_ai_sandbox).
+# @env: container
 # ---
 # シークレットファイルがAIから適切に隠蔽されているか検証
 # このスクリプトは docker-compose.yml から秘匿パスを自動で読み込み、

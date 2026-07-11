@@ -174,6 +174,20 @@ security:
 
 For multiple instances and more, see [hostmcp/README.md "Server Startup"](../hostmcp/README.md#running-multiple-instances).
 
+### Host tools (optional)
+
+For operations that need the Docker socket (starting/stopping containers, building images), add a script to `.sandbox/host-tools/` and approve it with `hostmcp tools sync` — the AI can then run it via HostMCP's `run_host_tool`, without ever touching the Docker socket directly. See [Direct Docker Access](../CLAUDE.md#what-ai-can-and-cannot-do) for why this is the pattern instead of giving AI the socket.
+
+Generic samples are included as a starting point — copy and adapt them for your project:
+
+| Script | What it does |
+|--------|--------------|
+| `docker-compose-up.sh` | `docker compose -f <compose-file> up -d`, plus any extra flags after `--` |
+| `docker-compose-down.sh` | `docker compose -f <compose-file> down`, plus any extra flags after `--` |
+| `docker-compose-build.sh` | `docker compose -f <compose-file> build`, plus any extra flags after `--` |
+
+See [.sandbox/host-tools/README.md](../.sandbox/host-tools/README.md) for usage and how to write your own.
+
 ### AI assistant configuration
 
 Edit these files so AI assistants correctly understand your project structure and secret policies.

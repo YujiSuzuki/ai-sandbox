@@ -174,6 +174,20 @@ security:
 
 複数インスタンスの起動など、詳細は [hostmcp/README.ja.md「サーバー起動」](../hostmcp/README.ja.md#複数インスタンスの起動) を参照。
 
+### ホストツール（任意）
+
+Dockerソケットが必要な操作（コンテナの起動・停止、イメージビルドなど）は、`.sandbox/host-tools/`にスクリプトを追加し、`hostmcp tools sync`で承認します。AIはHostMCPの`run_host_tool`経由でそれを実行でき、Dockerソケットに直接触れる必要がありません。この方式を採る理由は[Direct Docker Access](../CLAUDE.md#what-ai-can-and-cannot-do)を参照してください。
+
+出発点として汎用サンプルが同梱されています。コピーしてプロジェクトに合わせて調整してください:
+
+| スクリプト | 内容 |
+|-----------|------|
+| `docker-compose-up.sh` | `docker compose -f <compose-file> up -d`（`--`の後に追加オプションも渡せる） |
+| `docker-compose-down.sh` | `docker compose -f <compose-file> down`（`--`の後に追加オプションも渡せる） |
+| `docker-compose-build.sh` | `docker compose -f <compose-file> build`（`--`の後に追加オプションも渡せる） |
+
+使い方や自作スクリプトの書き方は[.sandbox/host-tools/README.ja.md](../.sandbox/host-tools/README.ja.md)を参照してください。
+
 ### AI アシスタントの設定
 
 AI アシスタントがプロジェクトの構成や秘匿ポリシーを正しく理解できるよう、以下のファイルを編集します。

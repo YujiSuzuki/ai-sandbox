@@ -14,15 +14,15 @@ You cannot run `docker` or `docker-compose` commands. Tell users to run these on
 
 ## What AI Can and Cannot Do
 
-### Cannot Do
-- Run `docker` or `docker-compose` commands (no Docker socket)
-- Read files in `secrets/` directories (hidden by tmpfs)
-- Read `.env` files (hidden by /dev/null mount)
+### Direct Docker Access: Not Available, But Host Tools Can Bridge It
+- No direct `docker` / `docker-compose` access from inside the container (no Docker socket)
+- `secrets/` and `.env` files are hidden from AI (tmpfs / `/dev/null` mounts) — intentional
+- Any host-side operation can still be exposed as a script in `.sandbox/host-tools/`, approved via `hostmcp tools sync`, and run from inside the container through HostMCP's `run_host_tool`
 
 ### Can Do
 - Read/edit source code in `/workspace/`
-- Use DockMCP MCP tools to access other containers
-- Use `dkmcp client` commands as fallback when MCP is unavailable
+- Use HostMCP MCP tools to access other containers
+- Use `hostmcp client` commands as fallback when MCP is unavailable
 
 ## Project Structure
 
@@ -31,19 +31,18 @@ You cannot run `docker` or `docker-compose` commands. Tell users to run these on
 ├── .sandbox/          # Infrastructure (scripts, tools, sandbox-mcp, host-tools)
 ├── .devcontainer/     # VS Code DevContainer (secret hiding config)
 ├── cli_sandbox/       # CLI environment (backup)
-├── dkmcp/             # DockMCP MCP Server (Go)
 └── <your-project>/    # Your application code
 ```
 
-## Cross-Container Access (DockMCP)
+## Cross-Container Access (HostMCP)
 
-Use DockMCP MCP tools: `list_containers`, `get_logs`, `exec_command`, `inspect_container`, `search_logs`, `list_host_tools`, `run_host_tool`.
+HostMCP's tools appear with the `mcp__hostmcp__` prefix once connected — treat that live tool list (and HostMCP's own MCP server instructions, if provided) as the source of truth for what's available, rather than a hardcoded list here, since the tool set can change as HostMCP evolves.
 
-### Fallback: dkmcp client
+### Fallback: hostmcp client
 
-If MCP tools are unavailable, use `dkmcp client` commands via Bash. See [../docs/ai-guide.md](../docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
+If MCP tools are unavailable, use `hostmcp client` commands via Bash. See [../docs/ai-guide.md](../docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
 
-If `dkmcp` not found, tell user: `cd /workspace/dkmcp && make install`
+If `hostmcp` not found, tell user: `cd /workspace/hostmcp && make install`
 
 For troubleshooting, see [../docs/ai-guide.md](../docs/ai-guide.md#dockmcp-setup-and-troubleshooting).
 
@@ -51,7 +50,7 @@ For troubleshooting, see [../docs/ai-guide.md](../docs/ai-guide.md#dockmcp-setup
 
 - `.devcontainer/docker-compose.yml` — Secret hiding config (requires user approval to modify)
 - `cli_sandbox/docker-compose.yml` — CLI secret hiding (must match above)
-- `dkmcp/configs/dkmcp.example.yaml` — Container access policy
+- `hostmcp/configs/hostmcp.example.yaml` — Container access policy
 
 ## Development Approach: TDD
 
@@ -74,11 +73,11 @@ Tests must call actual code, not duplicate logic. If unsure whether a test is me
   ```
   Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
 
-- **Releases:** Use `release.sh` to generate release notes:
+- **Releases:** Use `github-release.sh` to generate release notes:
   ```
-  .sandbox/scripts/release.sh v0.5.0          # Generate draft
-  .sandbox/scripts/release.sh --prev           # Check previous release tone
-  .sandbox/scripts/release.sh v0.5.0 --notes-file ReleaseNotes-draft.md  # Publish
+  .sandbox/scripts/github-release.sh v0.5.0          # Generate draft
+  .sandbox/scripts/github-release.sh --prev           # Check previous release tone
+  .sandbox/scripts/github-release.sh v0.5.0 --notes-file ReleaseNotes-draft.md  # Publish
   ```
 
 ## Guidelines
@@ -86,7 +85,7 @@ Tests must call actual code, not duplicate logic. If unsure whether a test is me
 1. Never suggest bypassing security configurations
 2. Explain when files appear empty due to security
 3. Guide users to run Docker commands on host OS
-4. Use DockMCP tools for cross-container operations
+4. Use HostMCP tools for cross-container operations
 5. Follow existing code patterns in the project
 
 ## Reference

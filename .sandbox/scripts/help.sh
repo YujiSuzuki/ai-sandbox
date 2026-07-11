@@ -5,6 +5,7 @@
 #
 # Usage: .sandbox/scripts/help.sh [--list]
 #   --list: Show raw script list (for developers)
+# @hidden: true
 # ---
 # .sandbox/scripts/ 内の全スクリプトの1行サマリーを表示（シェルユーザー向け）
 # 詳細は各スクリプトの冒頭コメントまたは SandboxMCP ツールを参照

@@ -47,7 +47,7 @@ This project is designed for local development environments and is not intended 
 ### 📖 Getting Started
 - [Getting Started Guide](docs/getting-started.md) — Step-by-step setup from zero to a working environment
 - [Comparison with Existing Solutions](docs/comparison.md) — How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc.
-- [Hands-on Guide](docs/hands-on.md) — Hands-on exercises for security features
+- [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md) — Hands-on exercises for security features, using the demo apps
 
 ### 🔧 Setup & Operations
 - [Customization Guide](docs/customization.md) — How to adapt this template to your project
@@ -255,7 +255,7 @@ See [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) for setup i
 
 ## Next Steps
 
-- **Want to experience the security features?** → [Hands-on Guide](docs/hands-on.md)
+- **Want to experience the security features?** → [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md)
 - **Ready to use with your own project?** → [Customization Guide](docs/customization.md)
 - **Want to detect configuration gaps?** → `.sandbox/scripts/check-secret-sync.sh` (sync check between AI deny settings and docker-compose.yml)
 
@@ -518,7 +518,7 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 |----------|-------------|
 | [Getting Started Guide](docs/getting-started.md) | Step-by-step setup from zero to a working environment |
 | [Comparison with Existing Solutions](docs/comparison.md) | How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc. |
-| [Hands-on Guide](docs/hands-on.md) | Hands-on exercises for security features |
+| [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md) | Hands-on exercises for security features, using the demo apps |
 | [Customization Guide](docs/customization.md) | How to adapt this template to your project |
 | [Reference](docs/reference.md) | Environment settings, options, troubleshooting |
 | [Architecture Details](docs/architecture.md) | Security mechanisms and architecture diagrams |

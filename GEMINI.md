@@ -63,14 +63,12 @@ A secure AI development environment demonstrating:
 
 ## What AI Can and Cannot Do
 
-### Cannot Do
-- Run `docker` or `docker-compose` commands (no Docker socket)
-- Read files in `secrets/` directories (hidden by tmpfs)
-- Read `.env` files (hidden by /dev/null mount)
-- Start/stop containers directly
-- Build Docker images
+### Direct Docker Access: Not Available, But Host Tools Can Bridge It
 
-**These operations MUST be done on the host OS by the user** (or via HostMCP host tools if available).
+- No direct `docker` / `docker-compose` access from inside the container (no Docker socket)
+- `secrets/` and `.env` files are hidden from AI (tmpfs / `/dev/null` mounts) — intentional
+
+**These are not dead ends.** Any host-side operation — starting/stopping containers, building images, etc. — can be exposed as a script in `.sandbox/host-tools/`, approved via `hostmcp tools sync`, and then run from inside the container through HostMCP's `run_host_tool`. See [.sandbox/host-tools/README.md](.sandbox/host-tools/README.md) for the current script list and how to add new ones.
 
 ### Can Do
 - Read/edit source code in `/workspace/`
@@ -95,14 +93,8 @@ A secure AI development environment demonstrating:
 
 ## Common Tasks
 
-### "Start / stop containers"
-Do NOT run `docker-compose` inside AI Sandbox (will fail). Ask user to run on host OS, or use approved host tools via `run_host_tool` if set up with `hostmcp serve --sync`.
-
-### "Check the API logs"
-Use HostMCP MCP: `get_logs` (container: `<container-name>`, tail: 100).
-
-### "Run the tests"
-Use HostMCP MCP: `exec_command` (container: `<container-name>`, command: `npm test`).
+### "Start / stop containers", "Check the API logs", "Run the tests"
+Possible via HostMCP — do NOT run `docker-compose` directly inside AI Sandbox (will fail), and do NOT read log files or access the Docker socket directly. Use the relevant `mcp__hostmcp__*` tool instead (e.g. `run_host_tool`, `get_logs`, `exec_command`). For exact tool names, arguments, and whitelisting behavior, follow HostMCP's own MCP server instructions rather than this file — they reflect the running server's actual capabilities.
 
 ### "Read the .env file"
 It will appear empty (hidden by volume mount). Explain: "This file is hidden for security. The API container has access to it, but I don't."
@@ -111,30 +103,7 @@ It will appear empty (hidden by volume mount). Explain: "This file is hidden for
 
 ## HostMCP
 
-HostMCP runs on the host OS and provides controlled container access via MCP.
-
-### MCP Tools
-
-| Tool | What It Does |
-|------|--------------|
-| `list_containers` | List accessible containers |
-| `get_logs` | Get container logs |
-| `get_stats` | Get resource usage stats |
-| `exec_command` | Run whitelisted command |
-| `inspect_container` | Get detailed container info |
-| `get_allowed_commands` | List whitelisted commands |
-| `get_security_policy` | Get current security policy |
-| `search_logs` | Search logs for a pattern |
-| `list_files` | List files in container directory |
-| `read_file` | Read file from container |
-| `get_blocked_paths` | Get blocked file paths |
-| `restart_container` | Restart a container |
-| `stop_container` | Stop a container |
-| `start_container` | Start a container |
-| `list_host_tools` | List available host tools |
-| `get_host_tool_info` | Get host tool details |
-| `run_host_tool` | Execute a host tool |
-| `exec_host_command` | Execute whitelisted host command |
+HostMCP runs on the host OS and provides controlled container access via MCP. Its tools appear with the `mcp__hostmcp__` prefix once connected — treat that live tool list (and HostMCP's own MCP server instructions, if provided) as the source of truth for what's available, rather than a hardcoded list here, since the tool set can change as HostMCP evolves.
 
 ### Fallback: hostmcp client
 
@@ -169,7 +138,6 @@ For HostMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#d
 ├── .sandbox/          # Infrastructure (scripts, tools, sandbox-mcp, host-tools)
 ├── .devcontainer/     # VS Code DevContainer (secret hiding config)
 ├── cli_sandbox/       # CLI environment (backup)
-├── hostmcp/             # HostMCP MCP Server (Go)
 └── <your-project>/    # Your application code
 ```
 
@@ -202,5 +170,5 @@ For full structure, see [docs/ai-guide.md](docs/ai-guide.md#project-structure-fu
 
 For more details, see:
 - [README.md](README.md) — User documentation
-- [hostmcp/README.md](hostmcp/README.md) — HostMCP details
+- [hostmcp/README.md](https://raw.githubusercontent.com/YujiSuzuki/hostmcp/refs/heads/main/README.md) — HostMCP details
 - [docs/ai-guide.md](docs/ai-guide.md) — AI reference guide
