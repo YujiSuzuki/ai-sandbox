@@ -491,6 +491,56 @@ install_sandbox_mcp_binary() {
     return 0
 }
 
+# Download prebuilt hostmcp binary from GitHub Releases (used when Go is unavailable)
+# Installs the client CLI only — inside AI Sandbox this is used for `hostmcp client ...`
+# fallback commands, never `hostmcp serve` (that requires host OS Docker access).
+# Callers set $MSG_DKMCP_CLIENT_DOWNLOADING / $MSG_DKMCP_CLIENT_DOWNLOAD_OK /
+# $MSG_DKMCP_CLIENT_DOWNLOAD_FAILED before invoking (same convention as $STATE_FILE above).
+# GitHub Releases からビルド済み hostmcp バイナリをダウンロード（Go がない場合に使用）
+# クライアントCLIのみインストール — AI Sandbox内では `hostmcp client ...` フォールバック用
+# であり、`hostmcp serve`（ホストOSのDockerアクセスが必要）には使わない。
+# 呼び出し側は事前に $MSG_DKMCP_CLIENT_DOWNLOADING 等を設定すること。
+install_hostmcp_binary() {
+    local os arch filename install_dir install_path url
+
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*) os="windows" ;;
+        *) os=$(uname -s | tr '[:upper:]' '[:lower:]') ;;
+    esac
+    arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+    filename="hostmcp_${os}_${arch}"
+    [ "$os" = "windows" ] && filename="${filename}.exe"
+
+    install_dir="$HOME/.local/bin"
+    install_path="$install_dir/hostmcp"
+
+    echo "$MSG_DKMCP_CLIENT_DOWNLOADING"
+    mkdir -p "$install_dir"
+
+    url="https://github.com/YujiSuzuki/hostmcp/releases/latest/download/${filename}"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$url" -o "$install_path" 2>&1 || { rm -f "$install_path"; echo "$MSG_DKMCP_CLIENT_DOWNLOAD_FAILED"; return 1; }
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q "$url" -O "$install_path" 2>&1 || { rm -f "$install_path"; echo "$MSG_DKMCP_CLIENT_DOWNLOAD_FAILED"; return 1; }
+    else
+        echo "$MSG_DKMCP_CLIENT_DOWNLOAD_FAILED"
+        return 1
+    fi
+
+    if [ ! -s "$install_path" ]; then
+        rm -f "$install_path"
+        echo "$MSG_DKMCP_CLIENT_DOWNLOAD_FAILED"
+        return 1
+    fi
+
+    chmod +x "$install_path"
+    echo "$MSG_DKMCP_CLIENT_DOWNLOAD_OK $install_path"
+
+    # Make discoverable for the rest of this script / このスクリプト内で使えるようにする
+    export PATH="$install_dir:$PATH"
+    return 0
+}
+
 # ============================================================
 # Initialization / 初期化
 # ============================================================

@@ -85,7 +85,7 @@ git pull origin main
 
 1. Download the latest ZIP from [the repository](https://github.com/YujiSuzuki/ai-sandbox) (**"Code"** → **"Download ZIP"**)
 2. Compare the new files with your current project and apply relevant changes manually
-3. Focus on infrastructure directories: `.sandbox/`, `hostmcp/`, `.devcontainer/`, `cli_sandbox/`
+3. Focus on infrastructure directories: `.sandbox/`, `.devcontainer/`, `cli_sandbox/`
 
 ### If you created from the GitHub template
 
@@ -144,7 +144,7 @@ Best for: teams that want to stay up-to-date with minimal effort.
 
 ---
 
-The important parts of updates are the infrastructure files: `.sandbox/`, `hostmcp/`, `.devcontainer/`, and `cli_sandbox/`.
+The important parts of updates are the infrastructure files: `.sandbox/`, `.devcontainer/`, and `cli_sandbox/`.
 
 ---
 
@@ -152,21 +152,16 @@ The important parts of updates are the infrastructure files: `.sandbox/`, `hostm
 
 Regardless of how you applied the update, you may need to rebuild components.
 
-### Rebuild SandboxMCP (if `.sandbox/sandbox-mcp/` changed)
-
-```bash
-# Inside AI Sandbox
-cd .sandbox/sandbox-mcp
-make clean && make register
-```
-
-### Rebuild HostMCP (if `hostmcp/` changed)
-
-```bash
-# On Host OS (not in AI Sandbox)
-cd hostmcp
-make install
-```
+> **Note:** SandboxMCP and HostMCP are separate projects ([sandbox-mcp](https://github.com/YujiSuzuki/sandbox-mcp), [hostmcp](https://github.com/YujiSuzuki/hostmcp)) with their own release cycles — they are not subdirectories of this repo, and `git pull`/merging this repo never changes their installed version. Update them independently, any time, regardless of whether you just updated `ai-sandbox`:
+>
+> ```bash
+> # SandboxMCP (inside AI Sandbox)
+> .sandbox/scripts/check-sandbox-mcp-updates.sh --auto-update
+> # or: go install github.com/YujiSuzuki/sandbox-mcp@latest
+>
+> # HostMCP (on host OS)
+> go install github.com/YujiSuzuki/hostmcp@latest
+> ```
 
 ### Restart VS Code or reconnect MCP
 
@@ -187,7 +182,5 @@ git diff HEAD~1 --stat
 
 | Changed directory | Action needed |
 |---|---|
-| `.sandbox/sandbox-mcp/` | Rebuild SandboxMCP |
-| `hostmcp/` | Rebuild HostMCP (host OS) |
 | `.devcontainer/` | Rebuild DevContainer |
 | `.sandbox/scripts/` | No rebuild needed (used directly) |

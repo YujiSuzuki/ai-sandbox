@@ -55,7 +55,7 @@ If you plan to use HostMCP, you'll also need:
 | **Go** (1.24+) | `go version` | [go.dev](https://go.dev/dl/) |
 
 > [!TIP]
-> **No Go on host?** The AI Sandbox includes a Go environment, so you can cross-compile the host binary from inside the container (explained in Step 4).
+> **No Go on host?** No problem — `init-host-env.sh` (Step 4) offers to download a prebuilt `hostmcp` binary automatically, no Go required.
 
 ### Expected Result
 
@@ -92,7 +92,6 @@ cd ai-sandbox
 your-repo/
 ├── .devcontainer/
 ├── .sandbox/
-├── hostmcp/
 └── README.md
 ```
 
@@ -143,37 +142,19 @@ If you don't need HostMCP (access to other containers), skip ahead to [Next Step
 
 ---
 
-## Step 4: Build HostMCP (on Host OS)
+## Step 4: Install HostMCP (on Host OS)
 
 > [!IMPORTANT]
 > From here, work on your **host OS** (outside the DevContainer). Open a separate terminal window — not the VS Code integrated terminal.
 
+Run the host-setup script and follow its prompts. It detects whether `hostmcp` is installed, offers to install it (`go install`, or a prebuilt binary download if you don't have Go), and generates the HostMCP config:
+
 ```bash
-cd hostmcp
-make install
+.sandbox/host-setup/init-host-env.sh
 ```
 
-This installs the `hostmcp` command to `~/go/bin/`.
-
-<details>
-<summary>No Go on your host OS?</summary>
-
-The AI Sandbox includes a Go environment, so you can cross-compile for your host.
-
-**Inside AI Sandbox:**
-```bash
-cd /workspace/hostmcp
-make build-host
-```
-
-**On host OS:**
-```bash
-cd <path-to-repo>/hostmcp
-make install-host DEST=~/go/bin        # If Go is installed
-make install-host DEST=/usr/local/bin  # If Go is not installed
-```
-
-</details>
+> [!TIP]
+> For manual installation or other install options (no Go required), see the [HostMCP README](https://github.com/YujiSuzuki/hostmcp#readme).
 
 ### Expected Result
 
@@ -186,16 +167,16 @@ x.x.x    # Version shown = OK
 
 ## Step 5: Start the HostMCP Server (on Host OS)
 
-Still on the host OS:
+Still on the host OS (this is the command `init-host-env.sh` showed you at the end of Step 4):
 
 ```bash
-hostmcp serve --config configs/hostmcp.example.yaml
+hostmcp serve --workspace /path/to/your-repo
 ```
 
 Adding `--sync` enables host tools — scripts in `.sandbox/host-tools/` (for building, starting, and stopping demo apps, etc.) that AI can execute via HostMCP. The first time AI tries to use a host tool, you'll be prompted to approve it.
 
 ```bash
-hostmcp serve --config configs/hostmcp.example.yaml --sync
+hostmcp serve --workspace /path/to/your-repo --sync
 ```
 
 ### Expected Result

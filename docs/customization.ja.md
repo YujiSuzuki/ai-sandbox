@@ -134,10 +134,10 @@ exit
 
 ### HostMCP設定
 
-**`hostmcp/configs/hostmcp.example.yaml`** をコピーして編集：
+`hostmcp init` で設定ファイルを生成して編集（`.sandbox/config/hostmcp.yaml` が作成されます）：
 
 ```bash
-cp hostmcp/configs/hostmcp.example.yaml hostmcp.yaml
+hostmcp init --workspace /path/to/your-repo
 ```
 
 ```yaml

@@ -438,7 +438,8 @@ AI アシスタントは `list_scripts` でスクリプトを発見し、`get_sc
 ```
 .sandbox/sandbox-mcp-setup/
 ├── 10-sandbox-env.sh       ← $SANDBOX_ENV を報告
-└── 20-git-uncommitted.sh   ← ネストしたgitリポジトリの未コミット変更を報告
+├── 20-git-uncommitted.sh   ← ネストしたgitリポジトリの未コミット変更を報告
+└── 30-language.sh          ← $LANG から導出した応答言語を報告
 ```
 
 これにより、現在のサンドボックス環境の種類やネストしたリポジトリの状態などを、毎回説明しなくてもAIが把握できるようになります。

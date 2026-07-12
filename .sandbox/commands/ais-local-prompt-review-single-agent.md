@@ -9,11 +9,11 @@ allowed-tools: [Read, Bash(git -C:*), Bash(find:*), Bash(test:*), Task, AskUserQ
 
 > **This is an experimental variant of `ais-local-prompt-review.md`, created only for A/B comparison.** Steps 1–3 and 7 are identical to the original. Step 4 is the substantive change — one Sonnet agent runs the full combined checklist instead of 4 (Non-Git mode) or 5 (Git mode) parallel agents — and Steps 5–6 have matching, but not word-for-word identical, wording (agent-number references such as "Agent #3"/"Agent #5" are replaced with category names, since there is only one agent). Run both commands on the same change set (same diff, same siblings, same CLAUDE.md, same change summary) and compare the final reports along two axes: (1) whether recall drops for Consistency and Regression findings, and (2) resilience — this variant has a single point of failure (the agent call is retried once on failure, but if both attempts fail, it yields zero findings for every category), whereas the original degrades gracefully when one of several agents fails.
 
-Reviews AI command/prompt files (.md) for quality, consistency, and effectiveness. If a Git repository exists, it reviews the diff between branches; otherwise, it reviews the specified files/directories. Focuses on prompt design, agent orchestration, instruction clarity, and cross-command consistency.
+Reviews AI command/prompt files (.md) for quality, consistency, and effectiveness. If a Git repository exists, it reviews either uncommitted changes or the diff between branches; otherwise, it reviews the specified files/directories. Focuses on prompt design, agent orchestration, instruction clarity, and cross-command consistency.
 
 ## Language
 
-Detect the user's language from their previous messages in the conversation. Output all review results, issue descriptions, and recommendations in the same language the user uses. If uncertain, default to English.
+Detect the user's language from their previous messages in the conversation. Output all review results, issue descriptions, and recommendations in the same language the user uses. If uncertain, follow the session's default response language (see CLAUDE.md's "Response Language" rule / sandbox-mcp's language signal); only fall back to English if no such signal is available.
 
 ## Arguments
 
@@ -21,7 +21,7 @@ User-specified arguments: $ARGUMENTS
 
 Argument interpretation:
 - 1st argument: Project path (absolute or relative) or a single file path — the first whitespace-delimited token in `$ARGUMENTS`, if it looks like a path (starts with `/`, `./`, `../`, or contains `/`) and actually exists on disk. If no such token exists, or it doesn't exist on disk, treat the entire `$ARGUMENTS` string as the change summary and ask the user what to review.
-- 2nd argument onwards: Everything after the 1st argument (change summary); asked via AskUserQuestion in Step 2 if omitted
+- 2nd argument onwards: Everything after the 1st argument (change summary); asked via AskUserQuestion in Step 2 if omitted. In Git mode, this same text is also checked in Step 2 to infer the review scope (uncommitted vs. branch comparison) before asking.
 
 ## Execution Steps
 
@@ -63,16 +63,26 @@ First, determine whether a change summary is already available:
 
 #### For Git Mode:
 
-1. Check the current branch and available branches:
+1. Check the repository state:
    ```bash
+   git -C <project-path> status --porcelain -uall
    git -C <project-path> branch -a
    git -C <project-path> branch --show-current
    ```
+   Note: `--show-current` prints nothing on a detached HEAD. In that case, treat `HEAD` as the target ref and only offer the branch-comparison flow if the user explicitly names a base ref.
 
-2. Use the AskUserQuestion tool **once** to confirm, in a single call:
-   - **Base branch**: The branch to compare against (e.g., main, master, develop)
-   - **Target branch**: The branch to review (current branch by default)
+2. Try to infer the **review scope** from the change-summary text determined above (the 2nd-argument-onwards text), before asking anything:
+   - If it contains a clear signal for uncommitted work (e.g. "staged", "unstaged", "uncommitted", "working tree", "ステージ", "未コミット", "作業ツリー") AND `git status --porcelain -uall` produced output, treat scope as **Uncommitted changes** and skip step 3 entirely — no branch question is needed.
+   - Else if it contains a clear signal for comparing branches (e.g. "branch", "compare", "vs", "..", "against main", a branch name from the `branch -a` output), treat scope as **Branch comparison**; step 3 still runs, but only to confirm which branches (omit the scope option from that question).
+   - Otherwise, inference is inconclusive; step 3 runs and must include the scope option.
+
+3. Use the AskUserQuestion tool **once** to confirm, in a single call, whichever of the following are still needed:
+   - **Review scope** (only include if scope inference in step 2 was inconclusive): Uncommitted changes (offer this option only if `git status --porcelain -uall` produced output) / Branch comparison
+   - **Base branch** (omit if scope is confirmed as Uncommitted changes): The branch to compare against (e.g., main, master, develop)
+   - **Target branch** (omit if scope is confirmed as Uncommitted changes): The branch to review (current branch by default)
    - **Change summary** (only include this question if no change summary is available from above): A brief explanation of the purpose and background of the changes. Examples: "New review command for security", "Updated agent configuration", "Added prompt template"
+
+   If the user selects **Uncommitted changes** for Review scope in this call, no base/target branches are needed.
 
 #### For Non-Git Mode:
 
@@ -90,7 +100,23 @@ First, determine whether a change summary is already available:
 
 ### Step 3: Retrieve and Analyze Review Targets
 
-#### For Git Mode:
+#### For Git Mode — Uncommitted changes:
+
+1. Get the working-tree diff and changed files:
+   ```bash
+   git -C <project-path> diff HEAD --name-only
+   git -C <project-path> diff HEAD
+   git -C <project-path> status --porcelain -uall
+   ```
+   (`-uall` expands untracked directories into individual file entries; without it, a whole untracked directory would appear as a single `?? dir/` line.)
+
+2. From the combined changed-files list (diffed `--name-only` output plus untracked files from `status --porcelain -uall`), keep only files matching `*.md` and drop `README*`, `CHANGELOG*`, `CONTRIBUTING*`, `LICENSE*` (same filter as Non-Git mode). Record the resulting list as the review targets.
+
+   If the resulting list is empty (e.g., the uncommitted changes only touch non-Markdown files), inform the user that no command/prompt files have uncommitted changes and stop here — do not proceed to Step 4.
+
+3. For untracked files in the resulting list, read their full content with the Read tool and treat it as newly added; tracked/modified files are already covered by the diff from step 1. Skip files that are clearly binary.
+
+#### For Git Mode — Branch comparison:
 
 1. Get the diff between base branch and target branch:
    ```bash
@@ -133,11 +159,11 @@ First, determine whether a change summary is already available:
 If the agent fails or returns no response, retry once. If it still fails, skip Steps 5–6 and, in place of the Step 7 "no issues found" report, output a short notice that the review could not be completed because the review agent failed twice — do not output "No issues found", since nothing was actually checked.
 
 Pass the following to the agent — this is the union of everything the 4-or-5-agent version would have distributed across its agents, so the single agent is not information-starved relative to it:
-- Review target file contents (Git mode: diff + full text of changed files, Non-Git mode: full files)
+- Review target file contents (Git mode: diff + full text of changed files, plus untracked-file contents where applicable, Non-Git mode: full files)
 - Change summary (from Step 2)
 - Related CLAUDE.md contents
 - ALL sibling command files in the directories containing review target files (always included, since the single agent must cover the cross-command consistency and orchestration-comparison checks that previously required siblings)
-- **Git mode only**: for each changed command/prompt file, the output of the following, retrieved by the orchestrator beforehand (not by the agent) and passed in as text, and retained for reuse in Steps 5 and 6:
+- **Git mode only**: for each changed command/prompt file (untracked files have no history — skip them), the output of the following, retrieved by the orchestrator beforehand (not by the agent) and passed in as text, and retained for reuse in Steps 5 and 6:
   ```bash
   git -C <project-path> log -p --follow --max-count=20 -- <file>
   ```
@@ -267,13 +293,14 @@ Remove REJECTED issues from the final report.
 ## Prompt Review Results
 
 **Project**: <project-path>
-**Mode**: Git mode / Non-Git mode
+**Mode**: Git mode (uncommitted changes) / Git mode (branch comparison) / Non-Git mode
 **Review target**:
-  - Git mode: <base-branch>...<target-branch>
+  - Git mode (uncommitted): working tree vs HEAD
+  - Git mode (branch comparison): <base-branch>...<target-branch>
   - Non-Git mode: <target-files-or-directories>
 **Change summary**: <user-provided-summary>
-**Files reviewed**: <count> command files (<count> review targets + <count> siblings for consistency; Git mode: review targets are changed files, Non-Git mode: review targets are the specified files)
-**Deleted files** (Git mode only; include this line only if applicable): <paths of files deleted in the diff, per Step 3>
+**Files reviewed**: <count> command files (<count> review targets + <count> siblings for consistency; Git mode: review targets are changed/uncommitted files, Non-Git mode: review targets are the specified files)
+**Deleted files** (Git mode branch comparison only; include this line only if applicable): <paths of files deleted in the diff, per Step 3>
 
 
 ### Issues Found

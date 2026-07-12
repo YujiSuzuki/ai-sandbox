@@ -43,6 +43,14 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_DKMCP_REGISTER_FAILED="⚠️  HostMCP 登録に失敗しましたが、続行します..."
     MSG_DKMCP_CONNECTED="🔗 HostMCP: ✅ registered, 接続OK"
     MSG_DKMCP_OFFLINE="🔗 HostMCP: ⚠️ registered, 接続不可（ホスト OS で hostmcp serve を起動してください）"
+    MSG_INSTALLING_DKMCP_CLIENT="📦 hostmcp CLI インストール（client フォールバック用）"
+    MSG_DKMCP_CLIENT_ALREADY_INSTALLED="  ✅ hostmcp は既にインストール済みです"
+    MSG_DKMCP_CLIENT_FETCHING="  📥 hostmcp を取得中..."
+    MSG_DKMCP_CLIENT_INSTALL_FAILED="  ⚠️  hostmcp のインストールに失敗しましたが、続行します..."
+    MSG_DKMCP_CLIENT_NO_GO="  ⚠️  Go が見つかりません。GitHub Releases からビルド済みバイナリを試します"
+    MSG_DKMCP_CLIENT_DOWNLOADING="  📥 hostmcp のビルド済みバイナリをダウンロード中..."
+    MSG_DKMCP_CLIENT_DOWNLOAD_OK="  ✅ hostmcp をインストールしました:"
+    MSG_DKMCP_CLIENT_DOWNLOAD_FAILED="  ⚠️  ダウンロードに失敗しました。手動でインストールしてください: go install github.com/YujiSuzuki/hostmcp@latest"
     MSG_COMPLETE="✅ 起動完了"
 else
     MSG_TITLE="🚀 AI Sandbox Startup"
@@ -63,6 +71,14 @@ else
     MSG_DKMCP_REGISTER_FAILED="⚠️  HostMCP registration failed, but continuing..."
     MSG_DKMCP_CONNECTED="🔗 HostMCP: ✅ registered, connected"
     MSG_DKMCP_OFFLINE="🔗 HostMCP: ⚠️ registered, server not reachable (run 'hostmcp serve' on host OS)"
+    MSG_INSTALLING_DKMCP_CLIENT="📦 Installing hostmcp CLI (client fallback)"
+    MSG_DKMCP_CLIENT_ALREADY_INSTALLED="  ✅ hostmcp already installed"
+    MSG_DKMCP_CLIENT_FETCHING="  📥 Fetching hostmcp..."
+    MSG_DKMCP_CLIENT_INSTALL_FAILED="  ⚠️  hostmcp installation failed, but continuing..."
+    MSG_DKMCP_CLIENT_NO_GO="  ⚠️  Go not found, trying prebuilt binary from GitHub Releases instead"
+    MSG_DKMCP_CLIENT_DOWNLOADING="  📥 Downloading hostmcp prebuilt binary..."
+    MSG_DKMCP_CLIENT_DOWNLOAD_OK="  ✅ hostmcp installed to:"
+    MSG_DKMCP_CLIENT_DOWNLOAD_FAILED="  ⚠️  Download failed. Install manually: go install github.com/YujiSuzuki/hostmcp@latest"
     MSG_COMPLETE="✅ Startup complete"
 fi
 
@@ -171,7 +187,28 @@ if [ "$sandbox_mcp_ready" = "true" ]; then
     fi
 fi
 
-# 8. Register HostMCP if not registered, or show one-liner status
+# 8. Install hostmcp CLI (via Go if available, otherwise a prebuilt binary download)
+# Used for `hostmcp client ...` fallback commands when the MCP protocol is unavailable.
+# Never installs/runs `hostmcp serve` here — that requires host OS Docker access.
+# hostmcp CLI インストール（Go があれば go install、なければビルド済みバイナリをダウンロード）
+# MCP接続が使えない場合の `hostmcp client ...` フォールバック用。
+# `hostmcp serve`（ホストOSのDockerアクセスが必要）はここではインストール・実行しない。
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "$MSG_INSTALLING_DKMCP_CLIENT"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+if command -v hostmcp >/dev/null 2>&1; then
+    echo "$MSG_DKMCP_CLIENT_ALREADY_INSTALLED"
+elif command -v go >/dev/null 2>&1; then
+    echo "$MSG_DKMCP_CLIENT_FETCHING"
+    go install github.com/YujiSuzuki/hostmcp@latest \
+        || echo "$MSG_DKMCP_CLIENT_INSTALL_FAILED"
+else
+    echo "$MSG_DKMCP_CLIENT_NO_GO"
+    install_hostmcp_binary || true
+fi
+
+# 9. Register HostMCP if not registered, or show one-liner status
 # HostMCP 登録（未登録なら登録、登録済みなら1行サマリー）
 hostmcp_check=0
 "$WORKSPACE/.sandbox/scripts/setup-hostmcp.sh" --check 2>/dev/null || hostmcp_check=$?

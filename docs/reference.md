@@ -279,15 +279,12 @@ If the MCP protocol isn't working (Claude Code or Gemini can't connect), you can
 > 2. If that doesn't work, AI uses `hostmcp client` commands as fallback
 > 3. As a last resort, fully restart VS Code to re-establish the connection
 
-**Setup (first time only):**
+**Setup:** Automatic. `startup.sh` installs the `hostmcp` CLI on container start — via `go install` if Go is available, otherwise a prebuilt binary download from GitHub Releases. No manual action needed.
 
-Install hostmcp inside AI Sandbox:
+If it's missing for some reason, install it manually:
 ```bash
-cd /workspace/hostmcp
-make install
+go install github.com/YujiSuzuki/hostmcp@latest
 ```
-
-> **Note:** Go environment is enabled by default. After installation, if you want to reduce image size, comment out the `features` block in `.devcontainer/devcontainer.json` and rebuild.
 
 **Usage:**
 ```bash

@@ -438,7 +438,8 @@ Place shell scripts in `.sandbox/sandbox-mcp-setup/` to inject custom context in
 ```
 .sandbox/sandbox-mcp-setup/
 ├── 10-sandbox-env.sh       ← reports $SANDBOX_ENV
-└── 20-git-uncommitted.sh   ← reports uncommitted changes in nested git repos
+├── 20-git-uncommitted.sh   ← reports uncommitted changes in nested git repos
+└── 30-language.sh          ← reports the response language derived from $LANG
 ```
 
 This is how the AI learns things like the current sandbox environment type or nested-repo status without being told every session.

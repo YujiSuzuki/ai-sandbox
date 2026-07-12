@@ -66,5 +66,27 @@ if [ ! -f "$TEST_SCRIPT" ]; then
     exit 1
 fi
 
+OUT_LOG="${WORKSPACE_DIR}/.sandbox/tmp/test-init-host-env-output.log"
+mkdir -p "$(dirname "$OUT_LOG")"
+
+info "Impact / 影響範囲: creates/overwrites a log file at ${OUT_LOG}; the invoked test suite also creates and removes several mktemp -d temp directories (fake \$HOME, mock PATH dirs) on the host during the run"
+info "Impact / 影響範囲: ${OUT_LOG} にログファイルを作成（上書き）します。呼び出し先のテストスイート自体も、実行中にホスト上で mktemp -d による一時ディレクトリ（偽の \$HOME やモック PATH）を複数作成・削除します"
+info "Risk / リスク: Low - only local temp files/dirs (all self-cleaned by the test suite), no ports or processes left running"
+info "Risk / リスク: 低 - ローカルの一時ファイル・ディレクトリのみ（テストスイートが自ら後片付け）。ポートやプロセスは残りません"
+info "Recovery / 失敗時の対処法: rm -f ${OUT_LOG}"
+
 info "Running: $TEST_SCRIPT"
-bash "$TEST_SCRIPT"
+# tee を使うと MCP のバッファが溢れて SIGPIPE が発生し test-init-host-env.sh が強制終了する。
+# ログファイルへの直接リダイレクトにして SIGPIPE を回避する。
+set +e
+bash "$TEST_SCRIPT" > "$OUT_LOG" 2>&1
+test_exit=$?
+set -e
+
+if [ "$test_exit" -ne 0 ]; then
+    error "Tests failed (exit code: $test_exit)"
+    error "Recovery / 失敗時の対処法: rm -f ${OUT_LOG}"
+    error "Full log / 全ログ: ${OUT_LOG}"
+fi
+
+exit "$test_exit"

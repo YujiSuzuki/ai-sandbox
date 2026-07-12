@@ -15,10 +15,11 @@ This file is referenced from [CLAUDE.md](../CLAUDE.md) — read sections on dema
 
 ```bash
 # On Host OS (NOT in AI Sandbox)
-cd hostmcp
-make install  # Builds and installs to $GOPATH/bin
-hostmcp serve --config configs/hostmcp.example.yaml
+.sandbox/host-setup/init-host-env.sh   # installs hostmcp + generates config, if not already done
+hostmcp serve --workspace /path/to/your-repo
 ```
+
+`hostmcp` is a separate project from `ai-sandbox` (https://github.com/YujiSuzuki/hostmcp), installed independently — not a subdirectory of this repo.
 
 If HostMCP server is restarted, SSE connections drop. Inform user to run `/mcp` → "Reconnect".
 
@@ -93,7 +94,7 @@ hostmcp client list --url http://host.docker.internal:9090
 export HOSTMCP_SERVER_URL=http://host.docker.internal:9090
 ```
 
-**If `hostmcp` not found:** Tell user to run `cd /workspace/hostmcp && make install`. This works inside AI Sandbox (Go is available). Client commands connect to host via HTTP.
+**If `hostmcp` not found:** `startup.sh` installs the `hostmcp` CLI automatically on container start (via `go install` or a prebuilt binary download from GitHub Releases), so it should already be on PATH. If it's still missing, tell the user to run `go install github.com/YujiSuzuki/hostmcp@latest` inside AI Sandbox (Go is available). Client commands connect to host via HTTP.
 
 ---
 
@@ -124,15 +125,14 @@ git log HEAD..origin/main --oneline
    ```
 
 2. **Identify affected components**
-   - `.sandbox/sandbox-mcp/` → SandboxMCP needs rebuild
-   - `hostmcp/` → HostMCP needs rebuild (user must do on host OS)
    - `.devcontainer/` or `cli_sandbox/` → Container restart required
    - `.sandbox/scripts/` → Scripts updated (may need re-run)
+   - Note: SandboxMCP and HostMCP are separate projects (their own repos, own release
+     cadence), not part of this repo. Their versions aren't tied to `ai-sandbox`'s.
 
 3. **Detect conflicts** — Check if user customized:
    - `.devcontainer/docker-compose.yml`
    - `cli_sandbox/docker-compose.yml`
-   - `hostmcp/configs/hostmcp.example.yaml` (and user's local `hostmcp.yaml`)
    - `.claude/settings.json`
 
 4. **Explain changes and risks** to user before applying
@@ -140,13 +140,16 @@ git log HEAD..origin/main --oneline
 5. **Apply the update**
    ```bash
    git pull origin main
+   ```
 
-   # Rebuild SandboxMCP (if affected)
-   cd /workspace/.sandbox/sandbox-mcp
-   make clean && make register
+   To update SandboxMCP or HostMCP themselves (independent of this repo's version):
+   ```bash
+   # SandboxMCP (inside AI Sandbox)
+   .sandbox/scripts/check-sandbox-mcp-updates.sh --auto-update
+   # or: go install github.com/YujiSuzuki/sandbox-mcp@latest
 
-   # HostMCP: user must rebuild on host OS
-   # cd /workspace/hostmcp && make install
+   # HostMCP (on host OS)
+   go install github.com/YujiSuzuki/hostmcp@latest
    ```
 
 6. **Verify** — Check SandboxMCP tools, HostMCP connection
@@ -220,9 +223,9 @@ tmpfs:
 ### Step 4: Configure HostMCP
 
 ```bash
-cp hostmcp/configs/hostmcp.example.yaml hostmcp.yaml
+hostmcp init --workspace /path/to/your-repo
 ```
-Update `allowed_containers` and `exec_whitelist`.
+Update `allowed_containers` and `exec_whitelist` in the generated `.sandbox/config/hostmcp.yaml`.
 
 ### Step 5: Update AI configuration
 

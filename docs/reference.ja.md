@@ -279,15 +279,12 @@ MCPプロトコルが動作しない場合（Claude CodeやGeminiが接続でき
 > 2. それでも解決しない場合、AIは `hostmcp client` コマンドをフォールバックとして使用
 > 3. 最終手段として、VS Codeを完全に再起動して接続を再確立
 
-**セットアップ（初回のみ）:**
+**セットアップ:** 自動です。コンテナ起動時に `startup.sh` が `hostmcp` CLI をインストールします（Go が使える場合は `go install`、そうでなければ GitHub Releases からビルド済みバイナリをダウンロード）。手動操作は不要です。
 
-AI Sandbox内でhostmcpをインストール：
+何らかの理由で入っていない場合は、手動でインストールしてください：
 ```bash
-cd /workspace/hostmcp
-make install
+go install github.com/YujiSuzuki/hostmcp@latest
 ```
-
-> **注意:** Go環境はデフォルトで有効です。インストール後、イメージサイズを小さくしたい場合は `.devcontainer/devcontainer.json` の `features` ブロックをコメントアウトしてリビルドできます。
 
 **使用方法:**
 ```bash

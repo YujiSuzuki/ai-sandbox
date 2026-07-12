@@ -134,10 +134,10 @@ Detection rules:
 
 ### HostMCP configuration
 
-Copy and edit **`hostmcp/configs/hostmcp.example.yaml`**:
+Generate and edit the config with `hostmcp init` (creates `.sandbox/config/hostmcp.yaml`):
 
 ```bash
-cp hostmcp/configs/hostmcp.example.yaml hostmcp.yaml
+hostmcp init --workspace /path/to/your-repo
 ```
 
 ```yaml

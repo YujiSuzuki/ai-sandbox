@@ -85,7 +85,7 @@ git pull origin main
 
 1. [リポジトリページ](https://github.com/YujiSuzuki/ai-sandbox)から最新の ZIP をダウンロード（**「Code」** → **「Download ZIP」**）
 2. 新しいファイルと現在のプロジェクトを比較して、必要な変更を手動で適用
-3. インフラ部分（`.sandbox/`、`hostmcp/`、`.devcontainer/`、`cli_sandbox/`）を重点的に確認
+3. インフラ部分（`.sandbox/`、`.devcontainer/`、`cli_sandbox/`）を重点的に確認
 
 ### GitHub テンプレートから作成した場合
 
@@ -144,7 +144,7 @@ jobs:
 
 ---
 
-更新で重要なのはインフラ部分（`.sandbox/`、`hostmcp/`、`.devcontainer/`、`cli_sandbox/`）です。
+更新で重要なのはインフラ部分（`.sandbox/`、`.devcontainer/`、`cli_sandbox/`）です。
 
 ---
 
@@ -152,21 +152,16 @@ jobs:
 
 どの方法で更新しても、変更内容に応じてコンポーネントのリビルドが必要です。
 
-### SandboxMCP のリビルド（`.sandbox/sandbox-mcp/` が変更された場合）
-
-```bash
-# AI Sandbox 内で実行
-cd .sandbox/sandbox-mcp
-make clean && make register
-```
-
-### HostMCP のリビルド（`hostmcp/` が変更された場合）
-
-```bash
-# ホストOS上で実行（AI Sandbox内ではない）
-cd hostmcp
-make install
-```
+> **注意:** SandboxMCPとHostMCPは、このリポジトリとは別のプロジェクト（[sandbox-mcp](https://github.com/YujiSuzuki/sandbox-mcp)、[hostmcp](https://github.com/YujiSuzuki/hostmcp)）で、それぞれ独自のリリースサイクルを持ちます。このリポジトリのサブディレクトリではないため、`git pull`／マージしても、インストール済みのバージョンが変わることはありません。`ai-sandbox` を更新したかどうかに関係なく、いつでも独立して更新してください：
+>
+> ```bash
+> # SandboxMCP（AI Sandbox内で実行）
+> .sandbox/scripts/check-sandbox-mcp-updates.sh --auto-update
+> # または: go install github.com/YujiSuzuki/sandbox-mcp@latest
+>
+> # HostMCP（ホストOS上で実行）
+> go install github.com/YujiSuzuki/hostmcp@latest
+> ```
 
 ### VS Code の再起動または MCP の再接続
 
@@ -187,7 +182,5 @@ git diff HEAD~1 --stat
 
 | 変更されたディレクトリ | 必要な作業 |
 |---|---|
-| `.sandbox/sandbox-mcp/` | SandboxMCP をリビルド |
-| `hostmcp/` | HostMCP をリビルド（ホストOS） |
 | `.devcontainer/` | DevContainer をリビルド |
 | `.sandbox/scripts/` | リビルド不要（直接使用される） |

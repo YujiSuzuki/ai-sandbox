@@ -144,7 +144,8 @@ _fetch_hostmcp_version() {
 # Download hostmcp binary from GitHub Releases / GitHub Releases からバイナリをダウンロード
 _download_hostmcp_binary() {
     local version="${1:-}"
-    local os arch filename install_dir install_path url download_ok
+    local install_dir="$2"
+    local os arch filename install_path url download_ok
 
     case "$(uname -s)" in
         MINGW*|MSYS*|CYGWIN*) os="windows" ;;
@@ -159,7 +160,6 @@ _download_hostmcp_binary() {
     else
         url="https://github.com/YujiSuzuki/hostmcp/releases/latest/download/${filename}"
     fi
-    install_dir="$HOME/.local/bin"
     install_path="$install_dir/hostmcp"
 
     msg "Downloading hostmcp ($filename) from GitHub Releases..." \
@@ -195,6 +195,7 @@ _download_hostmcp_binary() {
 
     chmod +x "$install_path"
     msg "hostmcp installed to: $install_path" "hostmcp をインストールしました: $install_path"
+    _warn_stale_hostmcp_hash "$install_dir"
 
     # Make discoverable for the rest of this script / このスクリプト内で hostmcp を使えるようにする
     local original_path="$PATH"
@@ -208,6 +209,34 @@ _download_hostmcp_binary() {
             ;;
     esac
     return 0
+}
+
+# Warn that bash caches resolved command paths (`hash`), so a shell that already
+# looked up `hostmcp` before this install (e.g. from a prior install in the other
+# of the two known dirs, ~/go/bin or ~/.local/bin) may keep running the old,
+# now-missing path until `hash -r` or a new shell. Also flag a leftover binary
+# at that other location, since switching install dirs across runs is exactly
+# what leaves one behind.
+# bashはコマンドの解決済みパスをキャッシュ（`hash`）するため、このインストール以前に
+# 一度でも `hostmcp` を解決したことのあるシェル（例: 2つのインストール先候補
+# ~/go/bin と ~/.local/bin のもう一方に以前インストールしていた場合）は、
+# `hash -r` するか新しいシェルを開くまで、存在しなくなった古いパスを使い続ける
+# ことがある。実行のたびにインストール先を切り替えられる仕様上、もう一方の場所に
+# 古いバイナリが残っていないかも合わせて警告する。
+_warn_stale_hostmcp_hash() {
+    local installed_dir="$1"
+    local go_bin="$HOME/go/bin"
+    local local_bin="$HOME/.local/bin"
+    local other_dir="$local_bin"
+    [ "$installed_dir" = "$local_bin" ] && other_dir="$go_bin"
+
+    msg "Note: if a shell already looked up 'hostmcp' before this install, run 'hash -r' (or open a new terminal) so it finds this one." \
+        "注意: このインストール前に一度でも 'hostmcp' を解決したシェルがある場合は、'hash -r' を実行するか新しいターミナルを開いて、こちらを認識させてください。"
+
+    if [ -f "$other_dir/hostmcp" ]; then
+        msg "A hostmcp binary also exists at $other_dir — consider removing it to avoid confusion: rm $other_dir/hostmcp" \
+            "$other_dir にも hostmcp のバイナリが残っています。混乱を避けるため削除を検討してください: rm $other_dir/hostmcp"
+    fi
 }
 
 # Offer to append PATH export to the user's shell rc file / シェル設定ファイルへの PATH 追記を提案
@@ -261,8 +290,13 @@ _offer_path_append() {
 setup_hostmcp_install() {
     trap '_hostmcp_sigint_handler' INT
 
-    # Determine GOPATH bin dir if Go is available / Go が使える場合に GOPATH/bin を取得
-    local gopath_bin=""
+    # Determine GOPATH bin dir — used both for the "already installed" check and as the
+    # install target when downloading a binary (kept in sync with where `go install` would
+    # place it, so a later manual `go install` doesn't create a second, conflicting copy)
+    # GOPATH/bin を決定 — インストール済みチェックと、バイナリダウンロード時のインストール先の両方で使用
+    # （`go install` が置く場所と揃えておくことで、後から手動で `go install` した際に
+    #  別の場所に重複インストールされて衝突するのを防ぐ）
+    local gopath_bin
     if command -v go > /dev/null 2>&1; then
         local gopath_raw
         if gopath_raw=$(go env GOPATH 2>/dev/null) && [ -n "$gopath_raw" ]; then
@@ -270,6 +304,8 @@ setup_hostmcp_install() {
         else
             gopath_bin="$HOME/go/bin"
         fi
+    else
+        gopath_bin="$HOME/go/bin"
     fi
 
     # Already installed? / インストール済みチェック
@@ -336,9 +372,32 @@ setup_hostmcp_install() {
                     return 0
                 fi
                 msg "hostmcp installation complete." "hostmcp のインストールが完了しました。"
+                _warn_stale_hostmcp_hash "$gopath_bin"
                 DKMCP_AVAILABLE=true
             else
-                if _download_hostmcp_binary "$hostmcp_version"; then
+                # Default to ~/.local/bin here: this branch only runs when Go is absent,
+                # and ~/.local/bin (unlike ~/go/bin) doesn't imply a Go toolchain — offering
+                # a GOPATH-shaped path as the default for a no-Go user is confusing and
+                # reverses the original rationale for choosing ~/.local/bin in this fallback.
+                # ここでは ~/.local/bin をデフォルトにする: この分岐はGoが存在しない場合のみ
+                # 実行されるため、~/go/bin と違い Go ツールチェーンを前提としない ~/.local/bin の方が
+                # Go未導入ユーザーにとって分かりやすい。GOPATH風のパスをデフォルトにすると、
+                # このフォールバックで元々 ~/.local/bin を選んでいた理由と矛盾してしまう。
+                local local_bin="$HOME/.local/bin"
+                echo ""
+                msg "Where should hostmcp be installed?" "hostmcp のインストール先を選択してください:"
+                msg "  1) $local_bin (default)" "  1) $local_bin (デフォルト)"
+                msg "  2) $gopath_bin" "  2) $gopath_bin"
+                echo ""
+                local _dir_prompt dir_choice download_dir
+                _dir_prompt=$(msg "Enter 1 or 2 [1]: " "1 または 2 を入力 [1]: ")
+                read -r -p "$_dir_prompt" dir_choice || true
+                if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+                case "$dir_choice" in
+                    2) download_dir="$gopath_bin" ;;
+                    *) download_dir="$local_bin" ;;
+                esac
+                if _download_hostmcp_binary "$hostmcp_version" "$download_dir"; then
                     DKMCP_AVAILABLE=true
                 fi
             fi
@@ -535,7 +594,7 @@ if [ ! -f "$PROJECT_ROOT/.env.sandbox" ]; then
 elif [ "$INTERACTIVE" = true ]; then
     msg ".env.sandbox already exists." ".env.sandbox は既に存在します。"
     _update_prompt=$(msg "Update language setting? [y/N]: " "言語設定を更新しますか? [y/N]: ")
-    read -r -p "$_update_prompt" update_lang
+    read -r -p "$_update_prompt" update_lang || true
     if [[ "$update_lang" =~ ^[Yy] ]]; then
         env_sandbox_created=true
     fi

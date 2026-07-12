@@ -55,7 +55,7 @@ HostMCP も使う場合は追加で必要：
 | **Go** (1.24 以上) | `go version` | [go.dev](https://go.dev/dl/) |
 
 > [!TIP]
-> **Go がなくても大丈夫:** AI Sandbox の中に Go 環境があるため、ホスト向けバイナリをクロスビルドできます（ステップ 4 で説明）。
+> **Go がなくても大丈夫:** `init-host-env.sh`（ステップ 4）が、Go 不要でプレビルド済みの `hostmcp` バイナリを自動でダウンロードしてくれます。
 
 ### 期待される結果
 
@@ -101,7 +101,6 @@ DevContainer を開く前に、ホスト OS 上で以下を実行しておくと
 your-repo/
 ├── .devcontainer/
 ├── .sandbox/
-├── hostmcp/
 └── README.md
 ```
 
@@ -152,37 +151,19 @@ HostMCP（他コンテナへのアクセス）が不要なら、[次のステッ
 
 ---
 
-## ステップ 4: HostMCP をビルドする（ホスト OS 上で）
+## ステップ 4: HostMCP をインストールする（ホスト OS 上で）
 
 > [!IMPORTANT]
 > ここからはホスト OS 上（DevContainer の外）で作業します。VS Code のターミナルではなく、別のターミナルウィンドウを開いてください。
 
+ホストセットアップスクリプトを実行し、表示される案内に従ってください。`hostmcp` がインストール済みか確認し、未インストールならインストール方法（`go install`、または Go がなければプレビルドバイナリのダウンロード）を提案し、HostMCP の設定ファイルも生成してくれます。
+
 ```bash
-cd hostmcp
-make install
+.sandbox/host-setup/init-host-env.sh
 ```
 
-これで `hostmcp` コマンドが `~/go/bin/` にインストールされます。
-
-<details>
-<summary>ホスト OS に Go がない場合</summary>
-
-AI Sandbox の中には Go 環境があるので、ホスト OS 向けのバイナリをクロスビルドできます。
-
-**AI Sandbox 内で実行：**
-```bash
-cd /workspace/hostmcp
-make build-host
-```
-
-**ホスト OS で実行：**
-```bash
-cd <リポジトリのパス>/hostmcp
-make install-host DEST=~/go/bin        # Go がある場合
-make install-host DEST=/usr/local/bin  # Go がない場合
-```
-
-</details>
+> [!TIP]
+> 手動インストールやその他のインストール方法（Go 不要）については [HostMCP の README](https://github.com/YujiSuzuki/hostmcp#readme) を参照してください。
 
 ### 期待される結果
 
@@ -195,16 +176,16 @@ x.x.x    # バージョンが表示されれば OK
 
 ## ステップ 5: HostMCP サーバーを起動する（ホスト OS 上で）
 
-引き続きホスト OS 上で：
+引き続きホスト OS 上で（この起動コマンドはステップ4の `init-host-env.sh` が最後に表示してくれます）：
 
 ```bash
-hostmcp serve --config configs/hostmcp.example.yaml
+hostmcp serve --workspace /path/to/your-repo
 ```
 
 `--sync` を付けると、`.sandbox/host-tools/` にあるスクリプト（デモアプリのビルド・起動・停止など）を AI が HostMCP 経由で実行できるようになります。初回実行時に AI がホストツールを使おうとすると、ユーザーに承認を求めるプロンプトが表示されます。
 
 ```bash
-hostmcp serve --config configs/hostmcp.example.yaml --sync
+hostmcp serve --workspace /path/to/your-repo --sync
 ```
 
 ### 期待される結果

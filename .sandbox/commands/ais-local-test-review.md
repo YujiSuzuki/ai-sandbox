@@ -7,11 +7,11 @@ allowed-tools: [Read, Glob, Grep, Bash(git:*), Bash(ls:*), Bash(find:*), Task, A
 
 # Local Test Review
 
-Performs quality-focused review of existing test code. If a Git repository exists, it reviews tests related to the diff between branches; otherwise, it reviews tests in specified files/directories. Focuses on whether tests are meaningful (actually verifying intended behavior), detecting anti-patterns, assessing robustness, and identifying coverage gaps.
+Performs quality-focused review of existing test code. If a Git repository exists, it reviews tests related to either uncommitted changes or the diff between branches; otherwise, it reviews tests in specified files/directories. Focuses on whether tests are meaningful (actually verifying intended behavior), detecting anti-patterns, assessing robustness, and identifying coverage gaps.
 
 ## Language
 
-Detect the user's language from their previous messages in the conversation. Output all review results, issue descriptions, and recommendations in the same language the user uses. If uncertain, default to English.
+Detect the user's language from their previous messages in the conversation. Output all review results, issue descriptions, and recommendations in the same language the user uses. If uncertain, follow the session's default response language (see CLAUDE.md's "Response Language" rule / sandbox-mcp's language signal); only fall back to English if no such signal is available.
 
 ## Arguments
 
@@ -19,7 +19,7 @@ User-specified arguments: $ARGUMENTS
 
 Argument interpretation:
 - 1st argument: Project path (absolute or relative) or a single file path — the first whitespace-delimited token in `$ARGUMENTS`, if it looks like a path (starts with `/`, `./`, `../`, or contains `/`) and actually exists on disk. If no such token exists, or it doesn't exist on disk, treat the entire `$ARGUMENTS` string as the change summary and ask the user what to review.
-- 2nd argument onwards: Everything after the 1st argument (change summary); asked via AskUserQuestion in Step 3 if omitted
+- 2nd argument onwards: Everything after the 1st argument (change summary); asked via AskUserQuestion in Step 3 if omitted. In Git mode, this same text is also checked in Step 2 to infer the review scope (uncommitted vs. branch comparison) before asking.
 
 ## Execution Steps
 
@@ -54,15 +54,29 @@ Follow these steps precisely:
 
 #### For Git Mode:
 
-1. Check the current branch and available branches:
+1. Check the repository state:
    ```bash
+   git -C <project-path> status --porcelain -uall
    git -C <project-path> branch -a
    git -C <project-path> branch --show-current
    ```
+   Note: `--show-current` prints nothing on a detached HEAD. In that case, treat `HEAD` as the target ref and only offer the branch-comparison flow if the user explicitly names a base ref.
 
-2. Use the AskUserQuestion tool to confirm:
-   - **Base branch**: The branch to compare against (e.g., main, master, develop)
+   If `status --porcelain -uall` produced no output AND only one branch exists (nothing to compare against), there is nothing to review in Git mode. Tell the user so and ask whether they want to review specific files/directories directly instead (following the Non-Git mode flow), rather than proceeding.
+
+2. Try to infer the **review scope** from the 2nd-argument-onwards text (the raw remainder of `$ARGUMENTS` after the project path — the same text used as the change summary in Step 3), before asking anything:
+   - If it contains a clear signal for uncommitted work (e.g. "staged", "unstaged", "uncommitted", "working tree", "ステージ", "未コミット", "作業ツリー") AND `git status --porcelain -uall` produced output, treat scope as **Uncommitted changes** and skip step 3 below.
+   - Else if it contains a clear signal for comparing branches (e.g. "branch", "compare", "vs", "..", "against main", a branch name from the `branch -a` output), treat scope as **Branch comparison** and skip step 3 below (step 4 still runs to confirm which branches).
+   - Otherwise, inference is inconclusive — fall through to step 3.
+
+3. Only if the scope could not be inferred in step 2, use the AskUserQuestion tool to confirm the **review scope**:
+   - **Uncommitted changes** (offer this option only if `git status --porcelain -uall` produced output): review the working tree against `HEAD` (`git diff HEAD`, plus untracked files reported by `status --porcelain`)
+   - **Branch comparison**: review the diff between two branches
+
+4. If the scope is **Branch comparison** (inferred or chosen above), use the AskUserQuestion tool to confirm:
+   - **Base branch**: The branch to compare against — offer common candidates found in the `branch -a` output (e.g., main, master, develop) as options, with free-form input for anything else
    - **Target branch**: The branch to review (current branch by default)
+   - If the chosen base and target are identical, tell the user the diff would be empty and ask again.
 
 #### For Non-Git Mode:
 
@@ -89,7 +103,23 @@ Only if no change summary text is available in either case, use the AskUserQuest
 
 ### Step 4: Retrieve and Analyze Review Targets
 
-#### For Git Mode:
+#### For Git Mode — Uncommitted changes:
+
+1. Get the working-tree diff and changed files:
+   ```bash
+   git -C <project-path> diff HEAD --name-only
+   git -C <project-path> diff HEAD
+   git -C <project-path> status --porcelain -uall
+   ```
+   (`-uall` expands untracked directories into individual file entries; without it, a whole untracked directory would appear as a single `?? dir/` line.)
+
+2. Untracked files (lines starting with `??` in the `status --porcelain -uall` output) do not appear in `git diff HEAD`. Treat them as newly added files. Skip files that are clearly binary.
+
+3. Identify test files among the combined (diffed + untracked) changed files AND the source files they test
+
+4. Read both the test files and corresponding source files (tests cannot be reviewed without understanding the code they test)
+
+#### For Git Mode — Branch comparison:
 
 1. Get the diff between base branch and target branch:
    ```bash
@@ -126,13 +156,13 @@ Only if no change summary text is available in either case, use the AskUserQuest
 
 ### Step 5: Parallel Test Review Execution
 
-**For Git mode**: Launch 5 parallel Sonnet agents
+**For Git mode** (both uncommitted and branch comparison): Launch 5 parallel Sonnet agents
 **For Non-Git mode**: Launch 4 parallel Sonnet agents (skip Agent #5)
 
 If an agent fails or returns no response, continue with the results from the remaining agents.
 
 Pass the following to each agent:
-- Test file contents (Git mode: diff + full test files, Non-Git mode: full test files)
+- Test file contents (Git mode: diff + full test files, plus untracked test files where applicable, Non-Git mode: full test files)
 - Corresponding source file contents (the code being tested)
 - Change summary (from Step 3)
 - Test framework and conventions detected (from Step 4)
@@ -189,7 +219,7 @@ Identify important behaviors that lack test coverage:
 
 **Agent #5: Regression Test Analysis** (Git mode only)
 
-Analyze git history to evaluate test coverage of past issues. Use the source files and test files identified in Step 4:
+Analyze git history to evaluate test coverage of past issues. Use the source files and test files identified in Step 4 (untracked files have no history — skip them):
 
 - Check git history for bug fixes in the changed source files:
   ```bash
@@ -258,9 +288,10 @@ Remove REJECTED issues from the final report.
 ## Test Review Results
 
 **Project**: <project-path>
-**Mode**: Git mode / Non-Git mode
+**Mode**: Git mode (uncommitted changes) / Git mode (branch comparison) / Non-Git mode
 **Review target**:
-  - Git mode: <base-branch>...<target-branch>
+  - Git mode (uncommitted): working tree vs HEAD
+  - Git mode (branch comparison): <base-branch>...<target-branch>
   - Non-Git mode: <target-files-or-directories>
 **Change summary**: <user-provided-summary>
 **Test framework**: <detected framework>

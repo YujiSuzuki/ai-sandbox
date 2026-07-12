@@ -7,11 +7,11 @@ allowed-tools: [Read, Bash(git -C:*), Bash(find:*), Bash(test:*), Task, AskUserQ
 
 # Local Prompt Review
 
-Reviews AI command/prompt files (.md) for quality, consistency, and effectiveness. If a Git repository exists, it reviews the diff between branches; otherwise, it reviews the specified files/directories. Focuses on prompt design, agent orchestration, instruction clarity, and cross-command consistency.
+Reviews AI command/prompt files (.md) for quality, consistency, and effectiveness. If a Git repository exists, it reviews either uncommitted changes or the diff between branches; otherwise, it reviews the specified files/directories. Focuses on prompt design, agent orchestration, instruction clarity, and cross-command consistency.
 
 ## Language
 
-Detect the user's language from their previous messages in the conversation. Output all review results, issue descriptions, and recommendations in the same language the user uses. If uncertain, default to English.
+Detect the user's language from their previous messages in the conversation. Output all review results, issue descriptions, and recommendations in the same language the user uses. If uncertain, follow the session's default response language (see CLAUDE.md's "Response Language" rule / sandbox-mcp's language signal); only fall back to English if no such signal is available.
 
 ## Arguments
 
@@ -19,7 +19,7 @@ User-specified arguments: $ARGUMENTS
 
 Argument interpretation:
 - 1st argument: Project path (absolute or relative) or a single file path — the first whitespace-delimited token in `$ARGUMENTS`, if it looks like a path (starts with `/`, `./`, `../`, or contains `/`) and actually exists on disk. If no such token exists, or it doesn't exist on disk, treat the entire `$ARGUMENTS` string as the change summary and ask the user what to review.
-- 2nd argument onwards: Everything after the 1st argument (change summary); asked via AskUserQuestion in Step 2 if omitted
+- 2nd argument onwards: Everything after the 1st argument (change summary); asked via AskUserQuestion in Step 2 if omitted. In Git mode, this same text is also checked in Step 2 to infer the review scope (uncommitted vs. branch comparison) before asking.
 
 ## Execution Steps
 
@@ -61,16 +61,26 @@ First, determine whether a change summary is already available:
 
 #### For Git Mode:
 
-1. Check the current branch and available branches:
+1. Check the repository state:
    ```bash
+   git -C <project-path> status --porcelain -uall
    git -C <project-path> branch -a
    git -C <project-path> branch --show-current
    ```
+   Note: `--show-current` prints nothing on a detached HEAD. In that case, treat `HEAD` as the target ref and only offer the branch-comparison flow if the user explicitly names a base ref.
 
-2. Use the AskUserQuestion tool **once** to confirm, in a single call:
-   - **Base branch**: The branch to compare against (e.g., main, master, develop)
-   - **Target branch**: The branch to review (current branch by default)
+2. Try to infer the **review scope** from the change-summary text determined above (the 2nd-argument-onwards text), before asking anything:
+   - If it contains a clear signal for uncommitted work (e.g. "staged", "unstaged", "uncommitted", "working tree", "ステージ", "未コミット", "作業ツリー") AND `git status --porcelain -uall` produced output, treat scope as **Uncommitted changes** and skip step 3 entirely — no branch question is needed.
+   - Else if it contains a clear signal for comparing branches (e.g. "branch", "compare", "vs", "..", "against main", a branch name from the `branch -a` output), treat scope as **Branch comparison**; step 3 still runs, but only to confirm which branches (omit the scope option from that question).
+   - Otherwise, inference is inconclusive; step 3 runs and must include the scope option.
+
+3. Use the AskUserQuestion tool **once** to confirm, in a single call, whichever of the following are still needed:
+   - **Review scope** (only include if scope inference in step 2 was inconclusive): Uncommitted changes (offer this option only if `git status --porcelain -uall` produced output) / Branch comparison
+   - **Base branch** (omit if scope is confirmed as Uncommitted changes): The branch to compare against (e.g., main, master, develop)
+   - **Target branch** (omit if scope is confirmed as Uncommitted changes): The branch to review (current branch by default)
    - **Change summary** (only include this question if no change summary is available from above): A brief explanation of the purpose and background of the changes. Examples: "New review command for security", "Updated agent configuration", "Added prompt template"
+
+   If the user selects **Uncommitted changes** for Review scope in this call, no base/target branches are needed.
 
 #### For Non-Git Mode:
 
@@ -88,7 +98,23 @@ First, determine whether a change summary is already available:
 
 ### Step 3: Retrieve and Analyze Review Targets
 
-#### For Git Mode:
+#### For Git Mode — Uncommitted changes:
+
+1. Get the working-tree diff and changed files:
+   ```bash
+   git -C <project-path> diff HEAD --name-only
+   git -C <project-path> diff HEAD
+   git -C <project-path> status --porcelain -uall
+   ```
+   (`-uall` expands untracked directories into individual file entries; without it, a whole untracked directory would appear as a single `?? dir/` line.)
+
+2. From the combined changed-files list (diffed `--name-only` output plus untracked files from `status --porcelain -uall`), keep only files matching `*.md` and drop `README*`, `CHANGELOG*`, `CONTRIBUTING*`, `LICENSE*` (same filter as Non-Git mode). Record the resulting list as the review targets.
+
+   If the resulting list is empty (e.g., the uncommitted changes only touch non-Markdown files), inform the user that no command/prompt files have uncommitted changes and stop here — do not proceed to Step 4.
+
+3. For untracked files in the resulting list, read their full content with the Read tool and treat it as newly added; tracked/modified files are already covered by the diff from step 1. Skip files that are clearly binary.
+
+#### For Git Mode — Branch comparison:
 
 1. Get the diff between base branch and target branch:
    ```bash
@@ -126,13 +152,13 @@ First, determine whether a change summary is already available:
 
 ### Step 4: Parallel Prompt Review Execution
 
-**For Git mode**: Launch 5 parallel Sonnet agents
+**For Git mode** (both uncommitted and branch comparison): Launch 5 parallel Sonnet agents
 **For Non-Git mode**: Launch 4 parallel Sonnet agents (skip Agent #5)
 
 If an agent fails or returns no response, continue with the results from the remaining agents.
 
 Pass the following to each agent:
-- Review target file contents (Git mode: diff + full text of changed files, Non-Git mode: full files)
+- Review target file contents (Git mode: diff + full text of changed files, plus untracked-file contents where applicable, Non-Git mode: full files)
 - Change summary (from Step 2)
 - Related CLAUDE.md contents
 
@@ -184,7 +210,7 @@ Focus on whether the review, as designed, would actually produce a good signal-t
 
 **Agent #5: Prompt Regression Detection** (Git mode only)
 
-Before launching Agent #5, run the following yourself (in the main orchestrator, not inside the sub-agent) for each changed command/prompt file, and retain the raw output — it is reused as-is in Steps 5 and 6, since sub-agents do not share context with later steps:
+Before launching Agent #5, run the following yourself (in the main orchestrator, not inside the sub-agent) for each changed command/prompt file, and retain the raw output — it is reused as-is in Steps 5 and 6, since sub-agents do not share context with later steps. Untracked files have no history — skip them here and omit them from this agent's input:
 ```bash
 git -C <project-path> log -p --follow --max-count=20 -- <file>
 ```
@@ -271,13 +297,14 @@ Remove REJECTED issues from the final report.
 ## Prompt Review Results
 
 **Project**: <project-path>
-**Mode**: Git mode / Non-Git mode
+**Mode**: Git mode (uncommitted changes) / Git mode (branch comparison) / Non-Git mode
 **Review target**:
-  - Git mode: <base-branch>...<target-branch>
+  - Git mode (uncommitted): working tree vs HEAD
+  - Git mode (branch comparison): <base-branch>...<target-branch>
   - Non-Git mode: <target-files-or-directories>
 **Change summary**: <user-provided-summary>
-**Files reviewed**: <count> command files (<count> review targets + <count> siblings for consistency; Git mode: review targets are changed files, Non-Git mode: review targets are the specified files)
-**Deleted files** (Git mode only; include this line only if applicable): <paths of files deleted in the diff, per Step 3>
+**Files reviewed**: <count> command files (<count> review targets + <count> siblings for consistency; Git mode: review targets are changed/uncommitted files, Non-Git mode: review targets are the specified files)
+**Deleted files** (Git mode branch comparison only; include this line only if applicable): <paths of files deleted in the diff, per Step 3>
 
 
 ### Issues Found

@@ -98,6 +98,18 @@ Readable from inside the container with the Read tool.
 
 ---
 
+## run-init-host-env-tests.sh
+
+Runs `.sandbox/host-setup/test-init-host-env.sh` on the host OS. Full output is also saved to:
+
+```
+<workspace>/.sandbox/tmp/test-init-host-env-output.log
+```
+
+Readable from inside the container with the Read tool.
+
+---
+
 ## copy-credentials.sh
 
 Copies credentials to the appropriate location. Works cross-platform.

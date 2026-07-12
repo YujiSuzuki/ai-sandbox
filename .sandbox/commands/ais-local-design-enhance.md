@@ -11,7 +11,7 @@ Reads design documents, identifies missing elements through structured brainstor
 
 ## Language
 
-Detect the user's language from their previous messages in the conversation. Output all results in the same language the user uses. If uncertain, default to Japanese.
+Detect the user's language from their previous messages in the conversation. Output all results in the same language the user uses. If uncertain, follow the session's default response language (see CLAUDE.md's "Response Language" rule / sandbox-mcp's language signal); only fall back to Japanese if no such signal is available.
 
 ## Arguments
 

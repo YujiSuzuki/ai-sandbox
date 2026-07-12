@@ -52,6 +52,57 @@ info() {
     echo -e "${YELLOW}ℹ️  $1${NC}"
 }
 
+# Remove a directory tree even if it contains read-only entries (e.g. a real
+# `go install` accidentally populating a module cache, whose files/dirs Go
+# marks read-only by design). Plain `rm -rf` cannot unlink those and would
+# leave a wall of "Permission denied" noise burying the real test failure.
+# 読み取り専用エントリ（例: go のモジュールキャッシュ）が混ざっていても
+# 削除できるようにする。素の `rm -rf` では権限エラーが大量に出て
+# 本来のテスト失敗が埋もれてしまうため。
+safe_rm_rf() {
+    for target in "$@"; do
+        [ -e "$target" ] || continue
+        chmod -R u+w "$target" 2>/dev/null
+        rm -rf "$target"
+    done
+}
+
+# Build a PATH dir with symlinks to every real binary except go/gofmt/hostmcp/
+# curl/wget, so tests that assume "hostmcp not installed yet" behave the same
+# regardless of what's actually installed on the machine running the test
+# (e.g. a dev host that already has hostmcp installed system-wide in order to
+# run HostMCP itself). Without this, `command -v hostmcp` / `command -v go`
+# unexpectedly succeed for real, shifting the number of prompts the script
+# asks and desyncing the piped answers from the questions they're meant to
+# answer.
+# go/gofmt/hostmcp/curl/wget 以外の実バイナリへのシンボリックリンクを持つ PATH を
+# 作る。「hostmcp 未インストール」を前提とするテストが、実行するマシンに実際に
+# 何がインストールされているかによらず同じ結果になるようにするため
+# （例: HostMCP 自体を動かすために hostmcp がシステムにインストール済みの開発機）。
+# これがないと `command -v hostmcp` / `command -v go` が実環境で本当に成功して
+# しまい、スクリプトが尋ねるプロンプトの数がずれて、パイプで渡す回答が対応する
+# 質問とずれてしまう。
+_isolate_hostmcp_absent() {
+    local _mb_var="$1"
+    local _mb
+    _mb=$(mktemp -d)
+    eval "$_mb_var='$_mb'"
+
+    local dir base f
+    for dir in /bin /usr/bin /usr/local/bin /opt/homebrew/bin; do
+        [ -d "$dir" ] || continue
+        for f in "$dir"/*; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            case "$base" in
+                go|gofmt|hostmcp|curl|wget) continue ;;
+            esac
+            [ -e "$_mb/$base" ] && continue
+            ln -sf "$f" "$_mb/$base" 2>/dev/null
+        done
+    done
+}
+
 # Setup test environment
 # テスト環境のセットアップ
 setup() {
@@ -63,7 +114,7 @@ setup() {
 # テスト環境のクリーンアップ
 cleanup() {
     if [ -n "$TEST_PROJECT" ] && [ -d "$TEST_PROJECT" ]; then
-        rm -rf "$TEST_PROJECT"
+        safe_rm_rf "$TEST_PROJECT"
     fi
 }
 
@@ -351,6 +402,9 @@ test_interactive_japanese_new_file() {
     echo "=== Test: Interactive mode with Japanese selection (new file) ==="
 
     setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
     # Create .env.sandbox.example with LANG setting
     cat > "$TEST_PROJECT/.env.sandbox.example" << 'EOF'
@@ -359,7 +413,7 @@ LANG=C.UTF-8
 EOF
 
     # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2)
-    echo -e "2\n2\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -371,6 +425,7 @@ EOF
         fail ".env.sandbox was not created"
     fi
 
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -381,6 +436,9 @@ test_interactive_english_new_file() {
     echo "=== Test: Interactive mode with English selection (new file) ==="
 
     setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
     cat > "$TEST_PROJECT/.env.sandbox.example" << 'EOF'
 NODE_ENV=development
@@ -388,7 +446,7 @@ LANG=ja_JP.UTF-8
 EOF
 
     # Run in default (interactive) mode, select English (1), decline install (2)
-    echo -e "1\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -400,6 +458,7 @@ EOF
         fail ".env.sandbox was not created"
     fi
 
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -410,12 +469,15 @@ test_interactive_update_existing() {
     echo "=== Test: Interactive mode updates existing file when confirmed ==="
 
     setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
     # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2), confirm update (y)
-    echo -e "2\n2\n2\ny" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\n2\ny' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode updates language when confirmed"
@@ -423,6 +485,7 @@ test_interactive_update_existing() {
         fail "LANG should be updated to ja_JP.UTF-8"
     fi
 
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -433,12 +496,15 @@ test_interactive_decline_update() {
     echo "=== Test: Interactive mode preserves existing file when declined ==="
 
     setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
     # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2), decline update (n)
-    echo -e "2\n2\n2\nn" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\n2\nn' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode preserves language when declined"
@@ -446,6 +512,7 @@ test_interactive_decline_update() {
         fail "LANG should remain C.UTF-8"
     fi
 
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -456,6 +523,9 @@ test_interactive_japanese_with_tz() {
     echo "=== Test: Japanese selection + accept TZ sets Asia/Tokyo ==="
 
     setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
     cat > "$TEST_PROJECT/.env.sandbox.example" << 'EOF'
 NODE_ENV=development
@@ -464,7 +534,7 @@ LANG=C.UTF-8
 EOF
 
     # Select Japanese (2), accept TZ (1), decline install (2)
-    echo -e "2\n1\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n1\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
@@ -476,6 +546,7 @@ EOF
         fail ".env.sandbox was not created"
     fi
 
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -486,6 +557,9 @@ test_interactive_japanese_decline_tz() {
     echo "=== Test: Japanese selection + decline TZ keeps TZ commented ==="
 
     setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
     cat > "$TEST_PROJECT/.env.sandbox.example" << 'EOF'
 NODE_ENV=development
@@ -494,7 +568,7 @@ LANG=C.UTF-8
 EOF
 
     # Select Japanese (2), decline TZ (2), decline install (2)
-    echo -e "2\n2\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
@@ -506,6 +580,7 @@ EOF
         fail ".env.sandbox was not created"
     fi
 
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -516,6 +591,9 @@ test_interactive_english_no_tz_prompt() {
     echo "=== Test: English selection does not change TZ ==="
 
     setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
     cat > "$TEST_PROJECT/.env.sandbox.example" << 'EOF'
 NODE_ENV=development
@@ -524,7 +602,7 @@ LANG=C.UTF-8
 EOF
 
     # Select English (1), decline install (2) — no TZ prompt should appear
-    echo -e "1\n2" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
@@ -536,6 +614,7 @@ EOF
         fail ".env.sandbox was not created"
     fi
 
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -546,6 +625,9 @@ test_interactive_tz_update_existing() {
     echo "=== Test: Japanese + TZ on existing file updates TZ ==="
 
     setup
+    local fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
     # Create existing .env.sandbox without TZ
     cat > "$TEST_PROJECT/.env.sandbox" << 'EOF'
@@ -554,7 +636,7 @@ LANG=C.UTF-8
 EOF
 
     # Select Japanese (2), accept TZ (1), decline install (2), confirm update (y)
-    echo -e "2\n1\n2\ny" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n1\n2\ny' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
         pass "TZ=Asia/Tokyo added to existing file"
@@ -562,6 +644,7 @@ EOF
         fail "TZ should be added, got: $(grep 'TZ' "$TEST_PROJECT/.env.sandbox" || echo '(not found)')"
     fi
 
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -698,7 +781,7 @@ DKMCPEOF
 
 _cleanup_mocks() {
     local fp="$1" mb="$2"
-    rm -rf "$fp" "$mb"
+    safe_rm_rf "$fp" "$mb"
 }
 
 # ─── hostmcp tests ──────────────────────────────────────────────────────────────
@@ -810,7 +893,7 @@ test_interactive_hostmcp_no_go() {
         fail "Expected binary download option, got: $output"
     fi
 
-    rm -rf "$mb" "$fake_home"
+    safe_rm_rf "$mb" "$fake_home"
     cleanup
 }
 
@@ -1232,7 +1315,7 @@ DEOF
         fail "Expected success with HOME/go fallback, got: $output"
     fi
 
-    rm -rf "$fake_home"
+    safe_rm_rf "$fake_home"
     _cleanup_mocks "$fp" "$mb"
     cleanup
 }
@@ -1375,7 +1458,7 @@ CURLEOF
 
 _cleanup_binary_download_mocks() {
     local home="$1" mb="$2"
-    rm -rf "$home" "$mb"
+    safe_rm_rf "$home" "$mb"
 }
 
 # ─── binary download tests ──────────────────────────────────────────────────────
@@ -1421,11 +1504,11 @@ test_interactive_hostmcp_binary_download_success() {
     local fake_home mb
     _setup_binary_download_mocks fake_home mb
 
-    # Input: lang=1, install=1(yes), port=default(1)
+    # Input: lang=1, install=1(yes), install-dir=default(1, now ~/.local/bin), port=default(1)
     local output
     output=$(HOME="$fake_home" bash -c "
         export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+        echo -e '1\n1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
     if echo "$output" | grep -q "installed to:"; then
@@ -1446,6 +1529,142 @@ test_interactive_hostmcp_binary_download_success() {
         fail "Expected version number (v0.0.1) in output, got: $output"
     fi
 
+    if [ -f "$fake_home/.local/bin/hostmcp" ]; then
+        pass "Binary installed to default location (~/.local/bin) when option 1 selected"
+    else
+        fail "Expected binary at $fake_home/.local/bin/hostmcp, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 41b: no go, binary download accepted, install-dir=2 (~/go/bin) → installs there
+test_interactive_hostmcp_binary_download_success_go_bin() {
+    echo ""
+    echo "=== Test: no go, binary download accepted, install-dir=~/go/bin ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Input: lang=1, install=1(yes), install-dir=2(~/go/bin), port=default(1)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1\n2\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "installed to:"; then
+        pass "Binary install success message shown"
+    else
+        fail "Expected install success message, got: $output"
+    fi
+
+    if [ -f "$fake_home/go/bin/hostmcp" ]; then
+        pass "Binary installed to ~/go/bin when option 2 selected"
+    else
+        fail "Expected binary at $fake_home/go/bin/hostmcp, got: $output"
+    fi
+
+    if [ -f "$fake_home/.local/bin/hostmcp" ]; then
+        fail "Binary should NOT be installed to ~/.local/bin when option 2 was selected"
+    else
+        pass "Binary not installed to default ~/.local/bin when option 2 selected"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 41c: no go, binary download accepted → install-dir prompt shows both options
+test_interactive_hostmcp_binary_download_dir_prompt_shown() {
+    echo ""
+    echo "=== Test: install-dir prompt lists both ~/go/bin and ~/.local/bin ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Input: lang=1, install=1(yes), install-dir=default(1), port=default(1)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "$fake_home/go/bin" && echo "$output" | grep -q "$fake_home/.local/bin"; then
+        pass "Install-dir prompt lists both ~/go/bin and ~/.local/bin"
+    else
+        fail "Expected both directory options in prompt, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 41d: no go, binary download succeeds → warns that a shell with a stale
+# `hash` cache should run `hash -r` (reproduces the real-world symptom where
+# `hostmcp` resolves to a since-removed path even though `which hostmcp` finds
+# the current binary).
+test_interactive_hostmcp_binary_download_warns_hash_r() {
+    echo ""
+    echo "=== Test: binary download success warns about shell hash cache ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Input: lang=1, install=1(yes), install-dir=default(1), port=default(1)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "hash -r"; then
+        pass "Warns to run 'hash -r' after successful binary install"
+    else
+        fail "Expected a 'hash -r' reminder after install, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Test 41e: no go, binary download explicitly to ~/go/bin (option 2) while a
+# stale binary already exists at ~/.local/bin → warns to remove the stale one.
+# NOTE: this direction only (installing to go/bin while .local/bin has the
+# leftover) is actually reachable: a leftover binary sitting at $gopath_bin
+# itself trips the earlier "already installed?" check
+# ([ -f "$gopath_bin/hostmcp" ]) and short-circuits before the download
+# branch (and its install-dir prompt) is ever reached.
+test_interactive_hostmcp_binary_download_warns_stale_other_location() {
+    echo ""
+    echo "=== Test: warns about leftover hostmcp binary at the other known location ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # Simulate a previous install left behind at ~/.local/bin
+    mkdir -p "$fake_home/.local/bin"
+    printf '#!/bin/bash\nexit 0\n' > "$fake_home/.local/bin/hostmcp"
+    chmod +x "$fake_home/.local/bin/hostmcp"
+
+    # Input: lang=1, install=1(yes), install-dir=2(~/go/bin), port=default(1)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1\n2\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "$fake_home/.local/bin.*rm $fake_home/.local/bin/hostmcp\|rm $fake_home/.local/bin/hostmcp"; then
+        pass "Warns about leftover binary at the other (unselected) install location"
+    else
+        fail "Expected a warning to remove $fake_home/.local/bin/hostmcp, got: $output"
+    fi
+
     _cleanup_binary_download_mocks "$fake_home" "$mb"
     cleanup
 }
@@ -1463,11 +1682,11 @@ test_interactive_hostmcp_binary_download_curl_fails() {
     printf '#!/bin/bash\nexit 1\n' > "$mb/curl"
     chmod +x "$mb/curl"
 
-    # Input: lang=1, install=1(yes)
+    # Input: lang=1, install=1(yes), install-dir=default(1)
     local output
     output=$(HOME="$fake_home" bash -c "
         export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
     if echo "$output" | grep -q "Download failed"; then
@@ -1494,30 +1713,13 @@ test_interactive_hostmcp_no_curl_no_wget() {
     setup
     local fake_home mb
     fake_home=$(mktemp -d)
-    mb=$(mktemp -d)
+    _isolate_hostmcp_absent mb
 
-    # Build a PATH dir with symlinks to every real binary except curl/wget,
-    # so system-provided curl (e.g. /usr/bin/curl on macOS) can't leak in.
-    # curl/wget 以外の実バイナリへのシンボリックリンクを作り、
-    # macOS 標準の /usr/bin/curl 等が紛れ込まないようにする。
-    local dir base
-    for dir in /bin /usr/bin /usr/local/bin /opt/homebrew/bin; do
-        [ -d "$dir" ] || continue
-        for f in "$dir"/*; do
-            [ -f "$f" ] || continue
-            base=$(basename "$f")
-            [ "$base" = "curl" ] && continue
-            [ "$base" = "wget" ] && continue
-            [ -e "$mb/$base" ] && continue
-            ln -sf "$f" "$mb/$base" 2>/dev/null
-        done
-    done
-
-    # Input: lang=1, install=1(yes) — no curl/wget in PATH
+    # Input: lang=1, install=1(yes), install-dir=default(1) — no curl/wget in PATH
     local output
     output=$(HOME="$fake_home" bash -c "
         export PATH='$mb'
-        echo -e '1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
     if echo "$output" | grep -q "Neither curl nor wget found"; then
@@ -1526,7 +1728,7 @@ test_interactive_hostmcp_no_curl_no_wget() {
         fail "Expected curl/wget error, got: $output"
     fi
 
-    rm -rf "$fake_home" "$mb"
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
@@ -1585,11 +1787,11 @@ exit 0
 CURLEOF
     chmod +x "$mb/curl"
 
-    # Input: lang=1, install=1(yes), port=default(1)
+    # Input: lang=1, install=1(yes), install-dir=default(1), port=default(1)
     local output
     output=$(HOME="$fake_home" bash -c "
         export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+        echo -e '1\n1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
     if echo "$output" | grep -q "installed to:"; then
@@ -1651,6 +1853,10 @@ main() {
     test_interactive_hostmcp_init_fails_skips_next_steps
     test_interactive_hostmcp_binary_download_declined
     test_interactive_hostmcp_binary_download_success
+    test_interactive_hostmcp_binary_download_success_go_bin
+    test_interactive_hostmcp_binary_download_dir_prompt_shown
+    test_interactive_hostmcp_binary_download_warns_hash_r
+    test_interactive_hostmcp_binary_download_warns_stale_other_location
     test_interactive_hostmcp_binary_download_curl_fails
     test_interactive_hostmcp_no_curl_no_wget
     test_interactive_hostmcp_version_shown_in_prompt
