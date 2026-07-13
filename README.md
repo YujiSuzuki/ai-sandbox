@@ -150,7 +150,7 @@ Separately from HostMCP, **SandboxMCP** runs inside the container and lets AI au
 > .sandbox/host-setup/init-host-env.sh
 > ```
 > Select `2) 日本語` to switch terminal output to Japanese.
-> (Can also be run from inside the container)
+> (Host OS only — the script refuses to run inside the container)
 
 
 ## Option A: Sandbox

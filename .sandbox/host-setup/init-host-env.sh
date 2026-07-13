@@ -15,6 +15,8 @@
 #   - .devcontainer/devcontainer.json initializeCommand (DevContainer startup) — with --silent
 #
 # Writes host OS info to .sandbox/.host-os for cross-build support (used by hostmcp/Makefile build-host)
+# Must run on the host OS — refuses to run inside the AI Sandbox container (see guard below).
+# @env: host
 # ---
 # ホスト側の初期化: テンプレートからenvファイル作成、ホストOS情報の書き出し
 #
@@ -24,8 +26,40 @@
 #                         init-host-env.sh -s [project_root]
 #
 # クロスビルド用にホストOS情報を .sandbox/.host-os に書き出す
+# ホストOS上で実行する必要があります — AI Sandbox コンテナ内では実行を拒否します（下記ガード参照）。
 
 set -euo pipefail
+
+# Refuse to run inside the AI Sandbox container — this script writes host OS
+# info to .sandbox/.host-os for cross-build use (see header), which would be
+# silently corrupted with the container's own OS/arch if run from inside it.
+# Note: $SANDBOX_ENV is NOT a reliable signal here — it can be exported on
+# the HOST shell too (cli_sandbox/_common.sh sets it before invoking this
+# script, and a user could also `export SANDBOX_ENV=...` manually outside
+# any container), so its presence alone doesn't prove we're inside one.
+# /.dockerenv is Docker's own marker file, created only inside a container.
+# AI Sandbox コンテナ内では実行を拒否する — このスクリプトはクロスビルド用に
+# ホストOS情報を .sandbox/.host-os に書き出すため（ヘッダー参照）、コンテナ内で
+# 実行するとコンテナ自身のOS/アーキテクチャで情報が黙って上書きされてしまう。
+# 注意: $SANDBOX_ENV はここでは判定に使えない — ホストOS側のシェルでも
+# 設定されうる値のため（cli_sandbox/_common.sh がこのスクリプトを呼び出す前に
+# 設定する場合や、ユーザーが手動で export した場合も含む）、
+# これが設定されているだけではコンテナ内にいる証拠にならない。
+# /.dockerenv は Docker がコンテナ内にのみ作成する専用のマーカーファイル。
+if [[ -f "/.dockerenv" ]]; then
+    if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
+        echo "❌ このスクリプトは AI Sandbox コンテナ内では実行できません。" >&2
+        echo "" >&2
+        echo "ホストOS上のターミナルから実行してください:" >&2
+        echo "  .sandbox/host-setup/init-host-env.sh" >&2
+    else
+        echo "❌ This script cannot be run inside the AI Sandbox container." >&2
+        echo "" >&2
+        echo "Please run it from a terminal on the host OS:" >&2
+        echo "  .sandbox/host-setup/init-host-env.sh" >&2
+    fi
+    exit 1
+fi
 
 # Parse arguments / 引数のパース
 INTERACTIVE=true
@@ -141,16 +175,24 @@ _fetch_hostmcp_version() {
     esac
 }
 
+# Canonical OS name for hostmcp binary filenames and cross-build info (.host-os)
+# MINGW/MSYS/CYGWIN (git-bash etc.) report their own uname, not "windows"
+# hostmcpバイナリのファイル名・クロスビルド情報(.host-os)用に正規化したOS名を返す
+# MINGW/MSYS/CYGWIN（git-bash等）は "windows" ではなく独自の uname を返すため
+_detect_os_name() {
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*) echo "windows" ;;
+        *) uname -s | tr '[:upper:]' '[:lower:]' ;;
+    esac
+}
+
 # Download hostmcp binary from GitHub Releases / GitHub Releases からバイナリをダウンロード
 _download_hostmcp_binary() {
     local version="${1:-}"
     local install_dir="$2"
     local os arch filename install_path url download_ok
 
-    case "$(uname -s)" in
-        MINGW*|MSYS*|CYGWIN*) os="windows" ;;
-        *) os=$(uname -s | tr '[:upper:]' '[:lower:]') ;;
-    esac
+    os=$(_detect_os_name)
     arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
     filename="hostmcp_${os}_${arch}"
     [ "$os" = "windows" ] && filename="${filename}.exe"
@@ -366,7 +408,9 @@ setup_hostmcp_install() {
                     return 0
                 fi
                 if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
-                if [ ! -f "$gopath_bin/hostmcp" ]; then
+                # On Windows, `go install` produces hostmcp.exe, not hostmcp.
+                # Windowsでは `go install` は hostmcp ではなく hostmcp.exe を生成する
+                if [ ! -f "$gopath_bin/hostmcp" ] && [ ! -f "$gopath_bin/hostmcp.exe" ]; then
                     msg "Error: Failed to install hostmcp. To install manually: go install github.com/YujiSuzuki/hostmcp@latest" \
                         "エラー: hostmcp のインストールに失敗しました。手動でインストールする場合: go install github.com/YujiSuzuki/hostmcp@latest"
                     return 0
@@ -454,7 +498,15 @@ setup_hostmcp_init() {
                 continue
             fi
 
-            local port_num=$((port_input + 0))
+            # Force base-10 interpretation: a bare `$((port_input))` treats a
+            # leading-zero numeral as octal, which is a fatal arithmetic error
+            # under `set -euo pipefail` for digits 8/9 (e.g. "08080"), and
+            # silently misreads other leading-zero input (e.g. "0123" -> 83).
+            # 先頭ゼロの数値をbashが8進数として解釈してしまうのを防ぐため、
+            # 10進数指定で強制変換する。8/9を含む場合(例: "08080")は
+            # `set -euo pipefail` 下で致命的エラーになり、それ以外でも
+            # 誤った値（例: "0123" → 83）として黙って解釈されてしまう。
+            local port_num=$((10#$port_input))
             if [ "$port_num" -le 0 ] || [ "$port_num" -ge 65536 ]; then
                 msg "Invalid port number. Enter an integer (1-65535):" "無効なポート番号です。整数（1〜65535）を入力してください:"
                 retry=$((retry + 1))
@@ -643,5 +695,5 @@ fi
 # クロスビルド用にホストOS情報を書き出し（hostmcp/Makefile build-host で使用）
 HOST_OS_FILE="$PROJECT_ROOT/.sandbox/.host-os"
 mkdir -p "$(dirname "$HOST_OS_FILE")"
-uname -s | tr '[:upper:]' '[:lower:]' > "$HOST_OS_FILE"
+_detect_os_name > "$HOST_OS_FILE"
 uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/' >> "$HOST_OS_FILE"

@@ -28,7 +28,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_TITLE="🚀 AI Sandbox 起動"
     MSG_MERGE_FAILED="⚠️  設定マージに失敗しましたが、続行します..."
     MSG_COMPARE_FAILED="⚠️  設定比較に失敗しましたが、続行します..."
-    MSG_VALIDATE_FAILED="⚠️  秘匿検証に失敗しました"
+    MSG_VALIDATE_FAILED="⚠️  秘匿検証に失敗しましたが、続行します..."
     MSG_SYNC_CHECK_FAILED="⚠️  秘匿同期チェックに失敗しましたが、続行します..."
     MSG_REGISTERING="📦 SandboxMCP 登録"
     MSG_FETCHING="  📥 sandbox-mcp を取得中..."
@@ -56,7 +56,7 @@ else
     MSG_TITLE="🚀 AI Sandbox Startup"
     MSG_MERGE_FAILED="⚠️  Settings merge failed, but continuing..."
     MSG_COMPARE_FAILED="⚠️  Config comparison failed, but continuing..."
-    MSG_VALIDATE_FAILED="⚠️  Secret validation failed"
+    MSG_VALIDATE_FAILED="⚠️  Secret validation failed, but continuing..."
     MSG_SYNC_CHECK_FAILED="⚠️  Secret sync check failed, but continuing..."
     MSG_REGISTERING="📦 Registering SandboxMCP"
     MSG_FETCHING="  📥 Fetching sandbox-mcp..."
@@ -126,8 +126,8 @@ BANNER
     echo ""
 }
 
-# 3. Validate secrets (critical check)
-# 秘匿検証（重要チェック）
+# 3. Validate secrets (critical check, but does not block startup on failure)
+# 秘匿検証（重要チェック。ただし失敗しても起動はブロックしない）
 "$WORKSPACE/.sandbox/scripts/validate-secrets.sh" || {
     echo "$MSG_VALIDATE_FAILED"
     echo ""
@@ -170,8 +170,11 @@ elif command -v go >/dev/null 2>&1; then
     fi
 else
     echo "$MSG_NO_GO"
-    if install_sandbox_mcp_binary; then
-        sandbox_mcp_ready=true
+    if declare -f install_sandbox_mcp_binary >/dev/null 2>&1; then
+        # install_sandbox_mcp_binary already echoes $MSG_DOWNLOAD_FAILED on failure
+        install_sandbox_mcp_binary && sandbox_mcp_ready=true
+    else
+        echo "$MSG_DOWNLOAD_FAILED"
     fi
 fi
 if [ "$sandbox_mcp_ready" = "true" ]; then
@@ -205,7 +208,12 @@ elif command -v go >/dev/null 2>&1; then
         || echo "$MSG_DKMCP_CLIENT_INSTALL_FAILED"
 else
     echo "$MSG_DKMCP_CLIENT_NO_GO"
-    install_hostmcp_binary || true
+    if declare -f install_hostmcp_binary >/dev/null 2>&1; then
+        # install_hostmcp_binary already echoes $MSG_DKMCP_CLIENT_DOWNLOAD_FAILED on failure
+        install_hostmcp_binary || true
+    else
+        echo "$MSG_DKMCP_CLIENT_DOWNLOAD_FAILED"
+    fi
 fi
 
 # 9. Register HostMCP if not registered, or show one-liner status

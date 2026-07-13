@@ -147,6 +147,41 @@ test_script_executable_and_valid() {
     fi
 }
 
+# Test: SANDBOX_ENV alone (no /.dockerenv) must NOT block execution — this is
+# a regression test: SANDBOX_ENV can be exported on the HOST shell too
+# (cli_sandbox/_common.sh sets it before invoking this script, and a user
+# could also export it manually outside any container), so treating it as an
+# "inside container" signal would wrongly block that legitimate host-side
+# call path.
+# (The actual /.dockerenv-present "must block" branch is not covered here:
+# simulating it would require creating Docker's marker file on the real host
+# filesystem, which this test suite avoids as too invasive to automate.)
+# テスト: SANDBOX_ENV だけが設定されていて /.dockerenv がない場合はブロックしない
+# ことを確認する回帰テスト。SANDBOX_ENV はホストOS側のシェルでも設定されうる値
+# のため（cli_sandbox/_common.sh がこのスクリプトを呼び出す前に設定する場合や、
+# ユーザーが手動で export した場合も含む）、これを「コンテナ内」の判定に使うと、
+# その正規のホスト側呼び出しまで誤ってブロックしてしまう。
+# （実際に /.dockerenv が存在する「ブロックすべき」分岐はここではカバーしていない。
+# 　再現には実ホストのファイルシステムに Docker のマーカーファイルを作る必要があり、
+# 　自動テストとしては侵襲的すぎるため避けている。）
+test_sandbox_env_alone_does_not_block() {
+    echo ""
+    echo "=== Test: SANDBOX_ENV set without /.dockerenv does not block execution ==="
+
+    setup
+
+    local output exit_code
+    output=$(SANDBOX_ENV=cli_claude bash "$SCRIPT" --silent "$TEST_PROJECT" 2>&1) && exit_code=0 || exit_code=$?
+
+    if [ "$exit_code" -eq 0 ] && ! echo "$output" | grep -q "cannot be run inside the AI Sandbox container"; then
+        pass "SANDBOX_ENV alone does not block execution (matches cli_sandbox host-side call path)"
+    else
+        fail "Should not block on SANDBOX_ENV alone, got exit_code=$exit_code, output: $output"
+    fi
+
+    cleanup
+}
+
 # Test 2: Creates .env.sandbox from .example
 # テスト2: .example から .env.sandbox を作成
 test_creates_env_sandbox_from_example() {
@@ -697,6 +732,46 @@ test_creates_host_os_file() {
     cleanup
 }
 
+# Test: MINGW/MSYS/CYGWIN uname is normalized to "windows" in .host-os,
+# matching the normalization already used for the hostmcp binary filename in
+# _download_hostmcp_binary (both now share _detect_os_name). Regression test
+# for A2-2: the .host-os write previously lacked this normalization and would
+# write the raw MINGW/MSYS/CYGWIN uname string instead.
+# テスト: .host-os でも MINGW/MSYS/CYGWIN の uname が「windows」に正規化される
+# ことを確認する回帰テスト（_download_hostmcp_binary と _detect_os_name を共有）。
+# 修正前は .host-os の書き出し処理にこの正規化がなく、MINGW/MSYS/CYGWIN の生の
+# uname文字列がそのまま書き込まれていた。
+test_creates_host_os_file_windows_normalized() {
+    echo ""
+    echo "=== Test: .host-os normalizes MINGW/MSYS/CYGWIN uname to 'windows' ==="
+
+    setup
+    local mock_bin
+    mock_bin=$(mktemp -d)
+    cat > "$mock_bin/uname" << 'EOF'
+#!/bin/bash
+case "$1" in
+    -s) echo "MINGW64_NT-10.0-19045" ;;
+    -m) echo "x86_64" ;;
+esac
+EOF
+    chmod +x "$mock_bin/uname"
+
+    PATH="$mock_bin:$PATH" bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
+
+    local os_name
+    os_name=$(sed -n '1p' "$TEST_PROJECT/.sandbox/.host-os" 2>/dev/null)
+
+    if [ "$os_name" = "windows" ]; then
+        pass ".host-os normalizes MINGW uname to 'windows'"
+    else
+        fail ".host-os should contain 'windows' for MINGW uname, got: $os_name"
+    fi
+
+    safe_rm_rf "$mock_bin"
+    cleanup
+}
+
 # Test 21: .sandbox/.host-os is overwritten on each run
 # テスト21: .sandbox/.host-os は毎回上書きされる
 test_host_os_file_overwritten() {
@@ -897,6 +972,56 @@ test_interactive_hostmcp_no_go() {
     cleanup
 }
 
+# Test: go install producing hostmcp.exe (Windows) must not be reported as a
+# failed install. Regression test for A2-3: the post-install check only
+# looked for "$gopath_bin/hostmcp" with no .exe fallback, even though a
+# Windows `go install` produces hostmcp.exe, not hostmcp.
+# テスト: go install が hostmcp.exe を生成する場合(Windows)、インストール失敗と
+# 誤報告されないことを確認する回帰テスト。修正前は "$gopath_bin/hostmcp" のみを
+# 確認しており、.exe へのフォールバックがなかった。
+test_interactive_hostmcp_go_install_windows_exe() {
+    echo ""
+    echo "=== Test: go install producing hostmcp.exe is not reported as failed ==="
+
+    setup
+    local mb fake_home fake_gopath
+    mb=$(mktemp -d)
+    fake_home=$(mktemp -d)
+    fake_gopath=$(mktemp -d)
+
+    # Fake go: GOPATH lookup + install creates hostmcp.exe only (simulating Windows)
+    cat > "$mb/go" << GOEOF
+#!/bin/bash
+if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
+    echo "$fake_gopath"
+elif [ "\$1" = "install" ]; then
+    mkdir -p "$fake_gopath/bin"
+    touch "$fake_gopath/bin/hostmcp.exe"
+    chmod +x "$fake_gopath/bin/hostmcp.exe"
+    exit 0
+fi
+GOEOF
+    chmod +x "$mb/go"
+
+    # Input: lang=1(English), install=1(accept), port=default(1)
+    local output
+    output=$(HOME="$fake_home" bash -c "
+        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1) || true
+
+    if echo "$output" | grep -q "Failed to install hostmcp"; then
+        fail "Should not report install failure when only hostmcp.exe exists, got: $output"
+    elif echo "$output" | grep -q "installation complete"; then
+        pass "Install correctly recognized via hostmcp.exe (Windows)"
+    else
+        fail "Expected install completion message, got: $output"
+    fi
+
+    safe_rm_rf "$mb" "$fake_home" "$fake_gopath"
+    cleanup
+}
+
 # Test 26: default port → hostmcp init called without --port
 test_interactive_hostmcp_init_default_port() {
     echo ""
@@ -982,6 +1107,67 @@ DEOF
         fi
     else
         fail "hostmcp was not called"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test: leading-zero port input must not crash the script. Regression test
+# for A2-1: bash arithmetic treats a leading-zero numeral as octal, and "8"/"9"
+# are invalid octal digits, so `$((08080 + 0))` was a fatal error under
+# `set -euo pipefail`.
+# テスト: 先頭ゼロのポート入力でスクリプトがクラッシュしないことを確認する回帰
+# テスト。bashの算術展開は先頭ゼロの数値を8進数として扱うため、"8"/"9"を含む
+# 場合は無効な8進数となり `set -euo pipefail` 下で致命的エラーになっていた。
+test_interactive_hostmcp_init_port_leading_zero_no_crash() {
+    echo ""
+    echo "=== Test: leading-zero port '08080' does not crash ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+
+    # Input: language=1, port=custom(2), port_number=08080
+    local exit_code
+    echo -e "1\n2\n08080" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1 && exit_code=0 || exit_code=$?
+
+    if [ "$exit_code" -eq 0 ]; then
+        pass "Leading-zero port '08080' does not crash the script"
+    else
+        fail "Script crashed on leading-zero port '08080' (exit_code=$exit_code)"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test: leading-zero port input is validated using its decimal value, not a
+# misinterpreted octal value. Regression test for A2-1's "silent wrong value"
+# case: "01777" (decimal 1777, >1023) was previously misread as octal 1023
+# (<=1023), triggering a spurious "may require administrator privileges"
+# warning.
+# テスト: 先頭ゼロのポート入力が誤って8進数として解釈されず、正しく10進数として
+# 検証されることを確認する回帰テスト。「01777」(10進数で1777、1023超)は修正前は
+# 8進数として1023と誤読され、不要な「管理者権限が必要」警告が出ていた。
+test_interactive_hostmcp_init_port_leading_zero_decimal_value() {
+    echo ""
+    echo "=== Test: leading-zero port '01777' is validated as decimal 1777 ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+
+    # Input: language=1, port=custom(2), port_number=01777
+    local output
+    output=$(echo -e "1\n2\n01777" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1) || true
+
+    if echo "$output" | grep -q "administrator privileges"; then
+        fail "Port '01777' (decimal 1777) should not trigger the <=1023 admin-privileges warning, got: $output"
+    else
+        pass "Port '01777' is correctly validated as decimal 1777 (no spurious admin warning)"
     fi
 
     _cleanup_mocks "$fp" "$mb"
@@ -1813,6 +1999,7 @@ main() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_executable_and_valid
+    test_sandbox_env_alone_does_not_block
     test_creates_env_sandbox_from_example
     test_creates_empty_env_sandbox
     test_creates_cli_env_from_example
@@ -1832,13 +2019,17 @@ main() {
     test_interactive_english_no_tz_prompt
     test_interactive_tz_update_existing
     test_creates_host_os_file
+    test_creates_host_os_file_windows_normalized
     test_host_os_file_overwritten
     test_interactive_hostmcp_already_installed
     # test_interactive_hostmcp_install_accepted  # DISABLED: see _setup_hostmcp_mocks KNOWN LIMITATION
     # test_interactive_hostmcp_install_declined  # DISABLED: see _setup_hostmcp_mocks KNOWN LIMITATION
     test_interactive_hostmcp_no_go
+    test_interactive_hostmcp_go_install_windows_exe
     test_interactive_hostmcp_init_default_port
     test_interactive_hostmcp_init_custom_port
+    test_interactive_hostmcp_init_port_leading_zero_no_crash
+    test_interactive_hostmcp_init_port_leading_zero_decimal_value
     test_interactive_hostmcp_init_already_exists
     test_interactive_hostmcp_next_steps_shown
     test_silent_mode_skips_hostmcp_setup
