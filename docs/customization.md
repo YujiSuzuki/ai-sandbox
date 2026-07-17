@@ -102,6 +102,19 @@ services:
 - `secrets/` directories → `tmpfs` + `:ro` for empty directories
 - Keep both docker-compose.yml files in sync
 
+### Custom domains (optional)
+
+If your project's containers are easier to reach via a hostname than `localhost`, add an `extra_hosts` entry to both `.devcontainer/docker-compose.yml` and `cli_sandbox/docker-compose.yml` (keep them in sync, same as above) — AI Sandbox resolves it automatically:
+
+```yaml
+services:
+  ai-sandbox:
+    extra_hosts:
+      - "yourapp.test:host-gateway"
+```
+
+You'll also need the same entry in your host OS's `/etc/hosts` (or Windows equivalent) so the containers are reachable from your browser too. See [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) for a working example.
+
 **Automatic validation:**
 
 These checks run automatically at startup:

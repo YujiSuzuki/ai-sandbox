@@ -237,16 +237,7 @@ Claude Codeの場合は `/mcp` → 「Reconnect」を実行してください。
 
 > **重要:** HostMCPサーバーを再起動した場合も、再接続が必要です。
 
-### ステップ4（推奨）: カスタムドメイン設定
-
-```bash
-# macOS/Linux — ホストOS上で実行
-echo "127.0.0.1 securenote.test api.securenote.test" | sudo tee -a /etc/hosts
-```
-
-> AI Sandboxは `docker-compose.yml` の `extra_hosts` により、カスタムドメインを自動的に解決します。
-
-### ステップ5（オプション）: デモアプリで試す
+### ステップ4（オプション）: デモアプリで試す
 
 秘匿情報隠蔽と HostMCP の動作を体験できる SecureNote デモは、別リポジトリで提供しています:
 
@@ -254,7 +245,7 @@ echo "127.0.0.1 securenote.test api.securenote.test" | sudo tee -a /etc/hosts
 git clone https://github.com/YujiSuzuki/ai-sandbox-demo
 ```
 
-セットアップ手順は [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) を参照してください。
+セットアップ手順(カスタムドメイン設定など、このデモ固有の内容を含む)は [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) を参照してください。
 
 → 接続できない場合は [トラブルシューティング](docs/reference.ja.md#トラブルシューティング) を参照
 
@@ -406,6 +397,7 @@ AI: ① ツールでトークン数を集計
 | `/ais-local-architecture-review` | アーキテクチャレビュー |
 | `/ais-local-test-review` | テストの品質レビュー |
 | `/ais-local-doc-review` | ドキュメントレビュー |
+| `/ais-local-comment-review` | コードコメントの品質レビュー（客観的妥当性・わかりやすさ・過不足・存在意義） |
 | `/ais-local-prompt-review` | AIコマンド／プロンプトファイルのレビュー |
 | `/ais-refactor` | リファクタリング提案 |
 | `/ais-test-gen` | テスト自動生成 |

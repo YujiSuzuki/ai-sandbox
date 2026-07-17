@@ -161,6 +161,7 @@ The code-review plugin normally requires the gh (GitHub CLI) command. Here, we'l
    > | `/ais-local-performance-review` | Performance review<br>Spot bottlenecks in compute, memory, I/O, and scalability. |
    > | `/ais-local-test-review` | Test quality review<br>Verify tests exercise real behavior, catch anti-patterns, and identify coverage gaps. |
    > | `/ais-local-doc-review` | Review documentation for accuracy, consistency, and clarity<br>Check that READMEs and docs match the actual code and are easy to read. |
+   > | `/ais-local-comment-review` | Review in-code comments for accuracy, first-read clarity, excess/deficiency, and necessity<br>Scans full files (not just a diff) — catches stale or low-value comments that a diff-scoped review would never see. |
    > | `/ais-local-spec-review` | Design doc quality review (coverage, consistency, test validity, etc.)<br>Before implementation: find gaps, contradictions, and ambiguities in the spec itself. |
    > | `/ais-local-prompt-review` | Review AI command / prompt files<br>Check quality and consistency of prompts in `.claude/commands/` and similar locations. |
    > | `/ais-local-design-enhance` | Brainstorm and enhance design docs (identify gaps and generate additions)<br>While drafting a spec: surface overlooked areas and generate ready-to-insert text. |

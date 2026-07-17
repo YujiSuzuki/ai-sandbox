@@ -232,16 +232,7 @@ For Claude Code, run `/mcp` → "Reconnect".
 
 > **Important:** If you restart the HostMCP server, reconnection is required again.
 
-### Step 4 (Recommended): Custom domain setup
-
-```bash
-# macOS/Linux — run on host OS
-echo "127.0.0.1 securenote.test api.securenote.test" | sudo tee -a /etc/hosts
-```
-
-> AI Sandbox automatically resolves custom domains via `extra_hosts` in `docker-compose.yml`.
-
-### Step 5 (Optional): Try the demo apps
+### Step 4 (Optional): Try the demo apps
 
 The SecureNote demo (a concrete example of secret hiding and HostMCP in action) is available as a separate repository:
 
@@ -249,7 +240,7 @@ The SecureNote demo (a concrete example of secret hiding and HostMCP in action) 
 git clone https://github.com/YujiSuzuki/ai-sandbox-demo
 ```
 
-See [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) for setup instructions.
+See [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) for setup instructions — including custom domain setup, which is specific to that demo.
 
 → If connection fails, see [Troubleshooting](docs/reference.md#troubleshooting)
 
@@ -399,6 +390,7 @@ Slash commands for code review, refactoring, and test generation are included. T
 | `/ais-local-architecture-review` | Architecture review |
 | `/ais-local-test-review` | Test quality review |
 | `/ais-local-doc-review` | Documentation review |
+| `/ais-local-comment-review` | In-code comment quality review (accuracy, clarity, excess/deficiency, necessity) |
 | `/ais-local-prompt-review` | AI command / prompt file review |
 | `/ais-refactor` | Refactoring suggestions |
 | `/ais-test-gen` | Automated test generation |

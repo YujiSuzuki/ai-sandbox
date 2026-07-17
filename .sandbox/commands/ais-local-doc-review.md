@@ -186,6 +186,7 @@ Pass the following to each agent:
 - Missing context for who the audience is
 - Inconsistent formatting (heading levels, list styles, code block languages)
 - Unclear ordering of steps or sections
+- Decision-history narrative (e.g. "this used to work differently, we changed it because...") inserted into task-oriented docs (README, setup guides, usage instructions) where the reader just needs current instructions, not the change's backstory — distracts from the task at hand. Does not apply to docs whose stated purpose is design rationale (see False Positive Examples)
 
 **Agent #4: Cross-Document Consistency**
 - Contradicting information between different docs
@@ -303,6 +304,7 @@ The following should be excluded as false positives:
 - Intentional simplification in docs (not every code detail needs to be documented), except when complex concepts lack any explanation or example
 - Documentation for features that are intentionally not yet implemented (if clearly marked as planned)
 - Differences between language variants that are intentional localization choices (not translation errors)
+- Decision-history / rationale narrative in documents whose stated purpose is architectural or design rationale (e.g. `architecture.md`, ADRs, CHANGELOG) — that's the intended content there, not noise
 
 For Git mode only:
 - Existing issues (not introduced in this PR)

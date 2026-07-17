@@ -55,7 +55,7 @@ If you plan to use HostMCP, you'll also need:
 | **Go** (1.24+) | `go version` | [go.dev](https://go.dev/dl/) |
 
 > [!TIP]
-> **No Go on host?** No problem — `init-host-env.sh` (Step 4) offers to download a prebuilt `hostmcp` binary automatically, no Go required.
+> **No Go on host?** No problem — `install-hostmcp.sh` (Step 4) offers to download a prebuilt `hostmcp` binary automatically, no Go required.
 
 ### Expected Result
 
@@ -147,10 +147,10 @@ If you don't need HostMCP (access to other containers), skip ahead to [Next Step
 > [!IMPORTANT]
 > From here, work on your **host OS** (outside the DevContainer). Open a separate terminal window — not the VS Code integrated terminal.
 
-Run the host-setup script and follow its prompts. It detects whether `hostmcp` is installed, offers to install it (`go install`, or a prebuilt binary download if you don't have Go), and generates the HostMCP config:
+Run the install script and follow its prompts. It detects whether `hostmcp` is installed (and offers to update it if a newer release exists), offers to install it (`go install`, or a prebuilt binary download if you don't have Go), and generates the HostMCP config:
 
 ```bash
-.sandbox/host-setup/init-host-env.sh
+.sandbox/host-setup/install-hostmcp.sh
 ```
 
 > [!TIP]
@@ -167,7 +167,7 @@ x.x.x    # Version shown = OK
 
 ## Step 5: Start the HostMCP Server (on Host OS)
 
-Still on the host OS (this is the command `init-host-env.sh` showed you at the end of Step 4):
+Still on the host OS (this is the command `install-hostmcp.sh` showed you at the end of Step 4):
 
 ```bash
 hostmcp serve --workspace /path/to/your-repo
@@ -246,7 +246,7 @@ Try asking the AI:
 
 Now try the demo apps ([ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo)) to experience, hands-on, that secrets really are inaccessible to the AI, and that the Sandbox can operate and check logs on other containers outside itself.
 
-See the [ai-sandbox-demo README](https://github.com/YujiSuzuki/ai-sandbox-demo) for full setup instructions.
+See the [ai-sandbox-demo README](https://github.com/YujiSuzuki/ai-sandbox-demo) for setup instructions, and the [Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md) for example prompts and exercises once the demo apps are running.
 
 ---
 
@@ -261,16 +261,6 @@ In the AI Sandbox, try these prompts with Claude Code (or Gemini):
 → Script list from .sandbox/ displayed via SandboxMCP
 ```
 
-### With demo apps running (ai-sandbox-demo):
-
-```
-"Show me the logs from securenote-api"
-→ Container logs displayed via HostMCP
-
-"Run npm test in securenote-api"
-→ Test results returned
-```
-
 ### Security Verification
 
 ```
@@ -278,15 +268,7 @@ In the AI Sandbox, try these prompts with Claude Code (or Gemini):
 → AI runs validation script and reports the hiding status
 ```
 
-### HostMCP Features
-
-```
-"Show me detailed info about the securenote-api container"
-→ Container inspect results displayed
-
-"How much memory is securenote-api using?"
-→ Container resource stats displayed
-```
+> For prompts that exercise HostMCP against the demo apps (log viewing, running tests, container inspect/stats on `securenote-api`), see the [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md).
 
 ---
 
@@ -327,6 +309,4 @@ For more details, see [Troubleshooting](reference.md#troubleshooting).
 
 ### Demo app containers not found
 
-- Run `docker ps` on the host OS to verify containers are running
-- Re-run `docker compose -f docker-compose.demo.yml up -d --build`
-- Check that `allowed_containers` in `hostmcp.example.yaml` includes the container name patterns
+See the [ai-sandbox-demo Hands-on Guide's Troubleshooting section](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md#troubleshooting).

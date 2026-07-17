@@ -447,8 +447,8 @@ NODE_ENV=development
 LANG=C.UTF-8
 EOF
 
-    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2)
-    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -480,8 +480,8 @@ NODE_ENV=development
 LANG=ja_JP.UTF-8
 EOF
 
-    # Run in default (interactive) mode, select English (1), decline install (2)
-    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
+    # Run in default (interactive) mode, select English (1)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -511,8 +511,8 @@ test_interactive_update_existing() {
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
-    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2), confirm update (y)
-    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\n2\ny' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), confirm update (y)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\ny' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode updates language when confirmed"
@@ -538,8 +538,8 @@ test_interactive_decline_update() {
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
-    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline install (2), decline update (n)
-    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\n2\nn' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
+    # Run in default (interactive) mode, select Japanese (2), decline TZ (2), decline update (n)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\nn' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode preserves language when declined"
@@ -568,8 +568,8 @@ LANG=C.UTF-8
 # TZ=Asia/Tokyo
 EOF
 
-    # Select Japanese (2), accept TZ (1), decline install (2)
-    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n1\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
+    # Select Japanese (2), accept TZ (1)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n1' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
@@ -602,8 +602,8 @@ LANG=C.UTF-8
 # TZ=Asia/Tokyo
 EOF
 
-    # Select Japanese (2), decline TZ (2), decline install (2)
-    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
+    # Select Japanese (2), decline TZ (2)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
@@ -636,8 +636,8 @@ LANG=C.UTF-8
 # TZ=Asia/Tokyo
 EOF
 
-    # Select English (1), decline install (2) — no TZ prompt should appear
-    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
+    # Select English (1) — no TZ prompt should appear
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
@@ -670,8 +670,8 @@ NODE_ENV=development
 LANG=C.UTF-8
 EOF
 
-    # Select Japanese (2), accept TZ (1), decline install (2), confirm update (y)
-    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n1\n2\ny' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
+    # Select Japanese (2), accept TZ (1), confirm update (y)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '2\n1\ny' | bash '$SCRIPT' '$TEST_PROJECT'" > /dev/null 2>&1
 
     if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
         pass "TZ=Asia/Tokyo added to existing file"
@@ -733,12 +733,17 @@ test_creates_host_os_file() {
 }
 
 # Test: MINGW/MSYS/CYGWIN uname is normalized to "windows" in .host-os,
-# matching the normalization already used for the hostmcp binary filename in
-# _download_hostmcp_binary (both now share _detect_os_name). Regression test
-# for A2-2: the .host-os write previously lacked this normalization and would
-# write the raw MINGW/MSYS/CYGWIN uname string instead.
+# matching the normalization also used for the hostmcp binary filename in
+# install-hostmcp.sh's _download_hostmcp_binary (both scripts keep their own
+# copy of _detect_os_name — see the comment on
+# test_detect_os_name_stays_in_sync_with_install_hostmcp below for why they split).
+# Regression test for A2-2: the .host-os write previously lacked this
+# normalization and would write the raw MINGW/MSYS/CYGWIN uname string instead.
 # テスト: .host-os でも MINGW/MSYS/CYGWIN の uname が「windows」に正規化される
-# ことを確認する回帰テスト（_download_hostmcp_binary と _detect_os_name を共有）。
+# ことを確認する回帰テスト（install-hostmcp.sh の _download_hostmcp_binary と
+# 同じ正規化を使用。_detect_os_name は両スクリプトがそれぞれ独自に持つ —
+# 分割理由は下記の test_detect_os_name_stays_in_sync_with_install_hostmcp の
+# コメント参照）。
 # 修正前は .host-os の書き出し処理にこの正規化がなく、MINGW/MSYS/CYGWIN の生の
 # uname文字列がそのまま書き込まれていた。
 test_creates_host_os_file_windows_normalized() {
@@ -798,1200 +803,198 @@ test_host_os_file_overwritten() {
     cleanup
 }
 
-# ─── hostmcp helper: create mock bin dir ───────────────────────────────────────
-# Usage: _setup_hostmcp_mocks <fake_gopath_var> <mock_bin_var>
-#   Sets named variables to temp dirs and prepends mock_bin to PATH.
-#   fake_go is written to mock_bin/go; callers customise hostmcp and gopath/bin.
-#
-# KNOWN LIMITATION: this helper always places a fake hostmcp at mock_bin/hostmcp
-# (needed so the later `hostmcp init` call can resolve it after a simulated
-# `go install`). That means `command -v hostmcp` succeeds from the very start,
-# so tests built on this helper can never exercise the "hostmcp not found yet,
-# user accepts install" branch — DKMCP_AVAILABLE is already true before the
-# script's install-prompt check runs. Tests that need that branch are disabled
-# in main() (see test_interactive_hostmcp_install_accepted and friends below).
-# Fixing this requires reworking the fixture so the stub only appears after a
-# simulated install, without breaking the ~11 other tests that rely on hostmcp
-# being pre-available (already-installed / init / port-selection scenarios).
-_setup_hostmcp_mocks() {
-    local _fp_var="$1" _mb_var="$2"
-    local _fp _mb
-    _fp=$(mktemp -d)
-    _mb=$(mktemp -d)
-    eval "$_fp_var='$_fp'"
-    eval "$_mb_var='$_mb'"
-
-    # Fake go binary
-    cat > "$_mb/go" << GOEOF
-#!/bin/bash
-if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
-    echo "$_fp"
-elif [ "\$1" = "install" ]; then
-    mkdir -p "$_fp/bin"
-    touch "$_fp/bin/hostmcp"
-    chmod +x "$_fp/bin/hostmcp"
-    exit 0
-fi
-GOEOF
-    chmod +x "$_mb/go"
-
-    # Default fake hostmcp (records calls, creates yaml on init)
-    cat > "$_mb/hostmcp" << 'DKMCPEOF'
-#!/bin/bash
-if [ "$1" = "init" ]; then
-    ws=""
-    shift
-    while [ $# -gt 0 ]; do
-        [ "$1" = "--workspace" ] && ws="$2"
-        shift
-    done
-    [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/hostmcp.yaml"
-fi
-exit 0
-DKMCPEOF
-    chmod +x "$_mb/hostmcp"
-
-    export PATH="$_mb:$PATH"
-}
-
-_cleanup_mocks() {
-    local fp="$1" mb="$2"
-    safe_rm_rf "$fp" "$mb"
-}
-
-# ─── hostmcp tests ──────────────────────────────────────────────────────────────
-
-# Test 22: hostmcp already installed → skip install prompt, run init
-test_interactive_hostmcp_already_installed() {
+# Code-review guard: init-host-env.sh and install-hostmcp.sh each keep their
+# own copy of _detect_os_name (see the comment on
+# test_creates_host_os_file_windows_normalized above for why they split).
+# The two copies are not a single source of truth, so a future edit to only
+# one of them (e.g. adding another `uname -s` case) can silently make them
+# diverge. This test guards that constraint by failing loudly the moment the
+# two copies produce different output for the same input.
+# コードレビューガード: init-host-env.sh と install-hostmcp.sh は
+# それぞれ独自に _detect_os_name のコピーを持つ（分割理由は上の
+# test_creates_host_os_file_windows_normalized のコメント参照）。2つの
+# コピーは単一の定義を共有していないため、将来どちらか片方だけ修正されると
+# （例: `uname -s` の分岐を追加）、静かに乖離しうる。このテストは、
+# 2つのコピーが同じ入力に対して異なる出力を返した瞬間に検知して失敗させる
+# ことでその制約を守る。
+test_detect_os_name_stays_in_sync_with_install_hostmcp() {
     echo ""
-    echo "=== Test: hostmcp already installed — no install prompt ==="
+    echo "=== Test: _detect_os_name stays identical between init-host-env.sh and install-hostmcp.sh ==="
 
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    # Input: language=1(English), port=default(1)
-    local output
-    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "hostmcp が見つかりません"; then
-        fail "Install prompt should NOT appear when hostmcp is already installed"
-    else
-        pass "No install prompt when hostmcp already installed"
+    local other_script="$SCRIPT_DIR/install-hostmcp.sh"
+    if [ ! -f "$other_script" ]; then
+        fail "install-hostmcp.sh not found at $other_script — cannot compare _detect_os_name"
+        return
     fi
 
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
+    local this_def other_def
+    this_def=$(awk '/^_detect_os_name\(\) \{/{f=1} f{print} f&&/^}/{exit}' "$SCRIPT")
+    other_def=$(awk '/^_detect_os_name\(\) \{/{f=1} f{print} f&&/^}/{exit}' "$other_script")
+
+    if [ -z "$this_def" ]; then
+        fail "_detect_os_name not found in init-host-env.sh"
+    elif [ -z "$other_def" ]; then
+        fail "_detect_os_name not found in install-hostmcp.sh"
+    elif [ "$this_def" = "$other_def" ]; then
+        pass "_detect_os_name is identical in both scripts"
+    else
+        fail "_detect_os_name has diverged between init-host-env.sh and install-hostmcp.sh — mirror the change into both files:
+--- init-host-env.sh ---
+$this_def
+--- install-hostmcp.sh ---
+$other_def"
+    fi
 }
 
-# Test 23: hostmcp not installed, user accepts → go install called, binary confirmed
-# DISABLED: _setup_hostmcp_mocks always makes hostmcp findable via mock_bin,
-# so the "not found" branch this test depends on can never execute. See the
-# KNOWN LIMITATION note on _setup_hostmcp_mocks above. Not called from main().
-test_interactive_hostmcp_install_accepted() {
+# Test: interactive mode points to install-hostmcp.sh when no HostMCP config
+# exists yet and the install prompt is left at its default ("N", no answer
+# left in the input queue after language selection is consumed).
+# テスト: HostMCP の設定ファイルが未生成で、かつ言語選択で入力を使い切って
+# インストール可否プロンプトがデフォルト（「N」）のままの場合、対話モードでは
+# install-hostmcp.sh への案内が表示されることを確認する。
+test_interactive_shows_install_hostmcp_hint() {
     echo ""
-    echo "=== Test: hostmcp install accepted → go install executed ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-
-    # Input: language=1, install=1(yes), port=default(1)
-    local output
-    output=$(echo -e "1\n1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "installation complete"; then
-        pass "hostmcp install completed message shown"
-    else
-        fail "Expected install completion message, got: $output"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 24: hostmcp not installed, user declines → init and next steps skipped
-# DISABLED: same _setup_hostmcp_mocks limitation as Test 23. Not called from main().
-test_interactive_hostmcp_install_declined() {
-    echo ""
-    echo "=== Test: hostmcp install declined → init skipped ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-
-    # Input: language=1, install=2(no)
-    local output
-    output=$(echo -e "1\n2" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "Skipped HostMCP setup"; then
-        pass "Skip message shown when install declined"
-    else
-        fail "Expected skip message, got: $output"
-    fi
-
-    if echo "$output" | grep -q "HostMCP setup complete"; then
-        fail "Next-steps message should NOT appear when install declined"
-    else
-        pass "Next-steps message not shown when install declined"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 25: go not found → binary download option shown
-test_interactive_hostmcp_no_go() {
-    echo ""
-    echo "=== Test: go not found → binary download option shown ==="
-
-    setup
-    local mb fake_home
-    mb=$(mktemp -d)
-    fake_home=$(mktemp -d)
-
-    # Fake curl (decline install so download isn't attempted)
-    printf '#!/bin/bash\nexit 0\n' > "$mb/curl"
-    chmod +x "$mb/curl"
-
-    # Input: lang=1(English), install=2(decline)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
-
-    if echo "$output" | grep -q "download binary from GitHub Releases"; then
-        pass "Binary download option shown when go is not found"
-    else
-        fail "Expected binary download option, got: $output"
-    fi
-
-    safe_rm_rf "$mb" "$fake_home"
-    cleanup
-}
-
-# Test: go install producing hostmcp.exe (Windows) must not be reported as a
-# failed install. Regression test for A2-3: the post-install check only
-# looked for "$gopath_bin/hostmcp" with no .exe fallback, even though a
-# Windows `go install` produces hostmcp.exe, not hostmcp.
-# テスト: go install が hostmcp.exe を生成する場合(Windows)、インストール失敗と
-# 誤報告されないことを確認する回帰テスト。修正前は "$gopath_bin/hostmcp" のみを
-# 確認しており、.exe へのフォールバックがなかった。
-test_interactive_hostmcp_go_install_windows_exe() {
-    echo ""
-    echo "=== Test: go install producing hostmcp.exe is not reported as failed ==="
-
-    setup
-    local mb fake_home fake_gopath
-    mb=$(mktemp -d)
-    fake_home=$(mktemp -d)
-    fake_gopath=$(mktemp -d)
-
-    # Fake go: GOPATH lookup + install creates hostmcp.exe only (simulating Windows)
-    cat > "$mb/go" << GOEOF
-#!/bin/bash
-if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
-    echo "$fake_gopath"
-elif [ "\$1" = "install" ]; then
-    mkdir -p "$fake_gopath/bin"
-    touch "$fake_gopath/bin/hostmcp.exe"
-    chmod +x "$fake_gopath/bin/hostmcp.exe"
-    exit 0
-fi
-GOEOF
-    chmod +x "$mb/go"
-
-    # Input: lang=1(English), install=1(accept), port=default(1)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1) || true
-
-    if echo "$output" | grep -q "Failed to install hostmcp"; then
-        fail "Should not report install failure when only hostmcp.exe exists, got: $output"
-    elif echo "$output" | grep -q "installation complete"; then
-        pass "Install correctly recognized via hostmcp.exe (Windows)"
-    else
-        fail "Expected install completion message, got: $output"
-    fi
-
-    safe_rm_rf "$mb" "$fake_home" "$fake_gopath"
-    cleanup
-}
-
-# Test 26: default port → hostmcp init called without --port
-test_interactive_hostmcp_init_default_port() {
-    echo ""
-    echo "=== Test: default port → hostmcp init without --port ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    # Override hostmcp to log args
-    cat > "$mb/hostmcp" << DEOF
-#!/bin/bash
-echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
-if [ "\$1" = "init" ]; then
-    ws=""
-    shift
-    while [ \$# -gt 0 ]; do
-        [ "\$1" = "--workspace" ] && ws="\$2"
-        shift
-    done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
-fi
-exit 0
-DEOF
-    chmod +x "$mb/hostmcp"
-
-    # Input: language=1, port=default(1)
-    echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
-
-    if [ -f "$TEST_PROJECT/hostmcp-calls.log" ]; then
-        local call
-        call=$(cat "$TEST_PROJECT/hostmcp-calls.log")
-        if echo "$call" | grep -q "\-\-port"; then
-            fail "hostmcp init should NOT include --port for default: $call"
-        else
-            pass "hostmcp init called without --port for default"
-        fi
-    else
-        fail "hostmcp was not called"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 27: custom port → hostmcp init called with --port 9999
-test_interactive_hostmcp_init_custom_port() {
-    echo ""
-    echo "=== Test: custom port 9999 → hostmcp init --port 9999 ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    cat > "$mb/hostmcp" << DEOF
-#!/bin/bash
-echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
-if [ "\$1" = "init" ]; then
-    ws=""
-    shift
-    while [ \$# -gt 0 ]; do
-        [ "\$1" = "--workspace" ] && ws="\$2"
-        shift
-    done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
-fi
-exit 0
-DEOF
-    chmod +x "$mb/hostmcp"
-
-    # Input: language=1, port=custom(2), port_number=9999
-    echo -e "1\n2\n9999" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
-
-    if [ -f "$TEST_PROJECT/hostmcp-calls.log" ]; then
-        local call
-        call=$(cat "$TEST_PROJECT/hostmcp-calls.log")
-        if echo "$call" | grep -q "\-\-port 9999"; then
-            pass "hostmcp init called with --port 9999"
-        else
-            fail "Expected --port 9999 in: $call"
-        fi
-    else
-        fail "hostmcp was not called"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test: leading-zero port input must not crash the script. Regression test
-# for A2-1: bash arithmetic treats a leading-zero numeral as octal, and "8"/"9"
-# are invalid octal digits, so `$((08080 + 0))` was a fatal error under
-# `set -euo pipefail`.
-# テスト: 先頭ゼロのポート入力でスクリプトがクラッシュしないことを確認する回帰
-# テスト。bashの算術展開は先頭ゼロの数値を8進数として扱うため、"8"/"9"を含む
-# 場合は無効な8進数となり `set -euo pipefail` 下で致命的エラーになっていた。
-test_interactive_hostmcp_init_port_leading_zero_no_crash() {
-    echo ""
-    echo "=== Test: leading-zero port '08080' does not crash ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    # Input: language=1, port=custom(2), port_number=08080
-    local exit_code
-    echo -e "1\n2\n08080" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1 && exit_code=0 || exit_code=$?
-
-    if [ "$exit_code" -eq 0 ]; then
-        pass "Leading-zero port '08080' does not crash the script"
-    else
-        fail "Script crashed on leading-zero port '08080' (exit_code=$exit_code)"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test: leading-zero port input is validated using its decimal value, not a
-# misinterpreted octal value. Regression test for A2-1's "silent wrong value"
-# case: "01777" (decimal 1777, >1023) was previously misread as octal 1023
-# (<=1023), triggering a spurious "may require administrator privileges"
-# warning.
-# テスト: 先頭ゼロのポート入力が誤って8進数として解釈されず、正しく10進数として
-# 検証されることを確認する回帰テスト。「01777」(10進数で1777、1023超)は修正前は
-# 8進数として1023と誤読され、不要な「管理者権限が必要」警告が出ていた。
-test_interactive_hostmcp_init_port_leading_zero_decimal_value() {
-    echo ""
-    echo "=== Test: leading-zero port '01777' is validated as decimal 1777 ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    # Input: language=1, port=custom(2), port_number=01777
-    local output
-    output=$(echo -e "1\n2\n01777" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1) || true
-
-    if echo "$output" | grep -q "administrator privileges"; then
-        fail "Port '01777' (decimal 1777) should not trigger the <=1023 admin-privileges warning, got: $output"
-    else
-        pass "Port '01777' is correctly validated as decimal 1777 (no spurious admin warning)"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 28: hostmcp.yaml already exists → init skipped, next steps shown
-test_interactive_hostmcp_init_already_exists() {
-    echo ""
-    echo "=== Test: hostmcp.yaml exists → init skipped, next steps shown ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    mkdir -p "$TEST_PROJECT/.sandbox/config"
-    touch "$TEST_PROJECT/.sandbox/config/hostmcp.yaml"
-
-    local output
-    output=$(echo -e "1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "HostMCP configuration already exists"; then
-        pass "Existing yaml: skip message shown"
-    else
-        fail "Expected existing-yaml message, got: $output"
-    fi
-
-    if echo "$output" | grep -q "hostmcp serve"; then
-        pass "Next steps shown even when yaml exists"
-    else
-        fail "Expected next-steps with hostmcp serve, got: $output"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 29: init success → next steps shown
-test_interactive_hostmcp_next_steps_shown() {
-    echo ""
-    echo "=== Test: init success → next steps shown ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    local output
-    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "hostmcp serve"; then
-        pass "Next steps (hostmcp serve) shown after init success"
-    else
-        fail "Expected next steps, got: $output"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 30: --silent mode → hostmcp setup entirely skipped
-test_silent_mode_skips_hostmcp_setup() {
-    echo ""
-    echo "=== Test: --silent mode skips hostmcp setup ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-
-    bash "$SCRIPT" --silent "$TEST_PROJECT" > /dev/null 2>&1
-
-    if [ -f "$TEST_PROJECT/.sandbox/config/hostmcp.yaml" ]; then
-        fail "hostmcp.yaml should NOT be created in --silent mode"
-    else
-        pass "hostmcp.yaml not created in --silent mode"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 31: go install fails → error shown, init skipped
-# DISABLED: same _setup_hostmcp_mocks limitation as Test 23. Not called from main().
-test_interactive_hostmcp_install_go_install_fails() {
-    echo ""
-    echo "=== Test: go install fails → error shown, init skipped ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-
-    # Override go to fail on install
-    cat > "$mb/go" << GOEOF
-#!/bin/bash
-if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
-    echo "$fp"
-elif [ "\$1" = "install" ]; then
-    echo "go install failed: some error" >&2
-    exit 1
-fi
-GOEOF
-    chmod +x "$mb/go"
-
-    local output
-    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "Failed to install hostmcp"; then
-        pass "Install failure error shown"
-    else
-        fail "Expected install failure message, got: $output"
-    fi
-
-    if echo "$output" | grep -q "HostMCP setup complete"; then
-        fail "Next steps should NOT appear after install failure"
-    else
-        pass "Next steps not shown after install failure"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 32: go install succeeds but binary not found → failure
-# DISABLED: same _setup_hostmcp_mocks limitation as Test 23. Not called from main().
-test_interactive_hostmcp_install_binary_not_found_after_install() {
-    echo ""
-    echo "=== Test: go install ok but binary missing → install failure ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-
-    # go install succeeds but does NOT create the binary
-    cat > "$mb/go" << GOEOF
-#!/bin/bash
-if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
-    echo "$fp"
-elif [ "\$1" = "install" ]; then
-    exit 0
-fi
-GOEOF
-    chmod +x "$mb/go"
-
-    local output
-    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "Failed to install hostmcp"; then
-        pass "Binary-not-found after install treated as failure"
-    else
-        fail "Expected failure message, got: $output"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 33: invalid port string → validation error
-test_interactive_hostmcp_init_invalid_port_string() {
-    echo ""
-    echo "=== Test: invalid port string 'abc' → validation error ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    # Input: lang=1, port=custom(2), bad=abc, then valid=8080
-    local output
-    output=$(echo -e "1\n2\nabc\n8080" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "Invalid port number"; then
-        pass "Validation error shown for non-integer port"
-    else
-        fail "Expected validation error for 'abc', got: $output"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 34: out-of-range port → validation error
-test_interactive_hostmcp_init_invalid_port_out_of_range() {
-    echo ""
-    echo "=== Test: out-of-range port 99999 → validation error ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    cat > "$mb/hostmcp" << DEOF
-#!/bin/bash
-echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
-if [ "\$1" = "init" ]; then
-    ws=""
-    shift
-    while [ \$# -gt 0 ]; do
-        [ "\$1" = "--workspace" ] && ws="\$2"
-        shift
-    done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
-fi
-exit 0
-DEOF
-    chmod +x "$mb/hostmcp"
-
-    # bad=99999, then valid=8080
-    local output
-    output=$(echo -e "1\n2\n99999\n8080" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "Invalid port number"; then
-        pass "Validation error for out-of-range port 99999"
-    else
-        fail "Expected validation error for 99999, got: $output"
-    fi
-
-    if [ -f "$TEST_PROJECT/hostmcp-calls.log" ]; then
-        local call
-        call=$(cat "$TEST_PROJECT/hostmcp-calls.log")
-        if echo "$call" | grep -q "\-\-port 99999"; then
-            fail "hostmcp init should NOT be called with invalid port 99999"
-        else
-            pass "hostmcp init not called with invalid port"
-        fi
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 35: 3 invalid inputs → fallback to default port 18080
-test_interactive_hostmcp_port_retry_fallback() {
-    echo ""
-    echo "=== Test: 3 invalid inputs → fallback to default port 18080 ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    cat > "$mb/hostmcp" << DEOF
-#!/bin/bash
-echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
-if [ "\$1" = "init" ]; then
-    ws=""
-    shift
-    while [ \$# -gt 0 ]; do
-        [ "\$1" = "--workspace" ] && ws="\$2"
-        shift
-    done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
-fi
-exit 0
-DEOF
-    chmod +x "$mb/hostmcp"
-
-    # 3 invalid ports → fallback
-    local output
-    output=$(echo -e "1\n2\nabc\nxyz\n99999" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "Using default port (18080)"; then
-        pass "Fallback message shown after 3 invalid ports"
-    else
-        fail "Expected fallback message, got: $output"
-    fi
-
-    if [ -f "$TEST_PROJECT/hostmcp-calls.log" ]; then
-        local call
-        call=$(cat "$TEST_PROJECT/hostmcp-calls.log")
-        if echo "$call" | grep -q "\-\-port"; then
-            fail "hostmcp init should NOT have --port on fallback: $call"
-        else
-            pass "hostmcp init called without --port on fallback"
-        fi
-    else
-        fail "hostmcp init was not called after fallback"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 36: go env GOPATH returns empty → fallback to $HOME/go/bin
-test_interactive_hostmcp_gopath_empty() {
-    echo ""
-    echo "=== Test: GOPATH empty → fallback to \$HOME/go/bin ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-
-    local fake_home
-    fake_home=$(mktemp -d)
-
-    # go returns empty GOPATH; binary only in $HOME/go/bin
-    cat > "$mb/go" << GOEOF
-#!/bin/bash
-if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
-    echo ""
-elif [ "\$1" = "install" ]; then
-    mkdir -p "$fake_home/go/bin"
-    touch "$fake_home/go/bin/hostmcp"
-    chmod +x "$fake_home/go/bin/hostmcp"
-    exit 0
-fi
-GOEOF
-    chmod +x "$mb/go"
-
-    cat > "$mb/hostmcp" << DEOF
-#!/bin/bash
-if [ "\$1" = "init" ]; then
-    ws=""
-    shift
-    while [ \$# -gt 0 ]; do
-        [ "\$1" = "--workspace" ] && ws="\$2"
-        shift
-    done
-    [ -n "\$ws" ] && mkdir -p "\$ws/.sandbox/config" && touch "\$ws/.sandbox/config/hostmcp.yaml"
-fi
-exit 0
-DEOF
-    chmod +x "$mb/hostmcp"
-
-    local output
-    output=$(HOME="$fake_home" bash -c "export PATH='$mb:$PATH'; echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'" 2>&1)
-
-    if echo "$output" | grep -q "installation complete\|setup complete"; then
-        pass "Empty GOPATH: fallback to \$HOME/go/bin works"
-    else
-        fail "Expected success with HOME/go fallback, got: $output"
-    fi
-
-    safe_rm_rf "$fake_home"
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 37: go env GOPATH exits non-zero → silent fallback to $HOME/go/bin, normal flow
-test_interactive_hostmcp_gopath_command_fails() {
-    echo ""
-    echo "=== Test: go env GOPATH fails → silent fallback, normal flow ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-
-    # go returns exit 1 for GOPATH (hostmcp is still discoverable via PATH from mock bin)
-    cat > "$mb/go" << 'GOEOF'
-#!/bin/bash
-if [ "$1" = "env" ] && [ "$2" = "GOPATH" ]; then
-    exit 1
-fi
-GOEOF
-    chmod +x "$mb/go"
-
-    local output
-    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "GOPATH が取得できません"; then
-        fail "GOPATH error should not be shown (silent fallback expected)"
-    else
-        pass "No GOPATH error shown (silent fallback works)"
-    fi
-
-    # hostmcp is in PATH (mock bin), so normal flow should proceed
-    if echo "$output" | grep -q "hostmcp serve\|セットアップが完了\|設定ファイルは既に存在"; then
-        pass "Normal flow proceeds despite GOPATH failure"
-    else
-        fail "Expected normal flow to proceed, got: $output"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 38: next steps shows absolute path (PROJECT_ROOT=.)
-test_interactive_hostmcp_next_steps_shows_absolute_path() {
-    echo ""
-    echo "=== Test: next steps shows absolute path ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    local abs_path
-    abs_path="$(cd "$TEST_PROJECT" && pwd)"
-
-    local output
-    output=$(cd "$TEST_PROJECT" && echo -e "1\n1" | PATH="$mb:$PATH" bash "$SCRIPT" "." 2>&1)
-
-    if echo "$output" | grep -q "$abs_path"; then
-        pass "Next steps shows absolute path: $abs_path"
-    else
-        fail "Expected absolute path in next steps, got: $output"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# Test 39: hostmcp init fails → error shown, next steps skipped
-test_interactive_hostmcp_init_fails_skips_next_steps() {
-    echo ""
-    echo "=== Test: hostmcp init fails → error shown, next steps skipped ==="
-
-    setup
-    local fp mb
-    _setup_hostmcp_mocks fp mb
-    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
-
-    # hostmcp init always fails
-    cat > "$mb/hostmcp" << 'DEOF'
-#!/bin/bash
-if [ "$1" = "init" ]; then
-    echo "init failed" >&2
-    exit 1
-fi
-exit 0
-DEOF
-    chmod +x "$mb/hostmcp"
-
-    local output
-    output=$(echo -e "1\n1" | bash "$SCRIPT" "$TEST_PROJECT" 2>&1)
-
-    if echo "$output" | grep -q "Failed to generate HostMCP configuration file"; then
-        pass "Error shown when hostmcp init fails"
-    else
-        fail "Expected init failure message, got: $output"
-    fi
-
-    if echo "$output" | grep -q "hostmcp serve"; then
-        fail "Next steps should NOT appear after init failure"
-    else
-        pass "Next steps not shown after init failure"
-    fi
-
-    _cleanup_mocks "$fp" "$mb"
-    cleanup
-}
-
-# ─── binary download helper ────────────────────────────────────────────────────
-# Set up mocks for binary download scenario: no go, fake curl that writes a hostmcp stub
-_setup_binary_download_mocks() {
-    local _home_var="$1" _mb_var="$2"
-    local _home _mb
-    _home=$(mktemp -d)
-    _mb=$(mktemp -d)
-    eval "$_home_var='$_home'"
-    eval "$_mb_var='$_mb'"
-
-    # Fake curl: handles both version fetch (-o /dev/null) and binary download (-o <path>)
-    cat > "$_mb/curl" << 'CURLEOF'
-#!/bin/bash
-out_file=""
-prev=""
-for arg in "$@"; do
-    [ "$prev" = "-o" ] && out_file="$arg"
-    prev="$arg"
-done
-if [ "$out_file" = "/dev/null" ]; then
-    printf 'https://github.com/YujiSuzuki/hostmcp/releases/tag/v0.0.1'
-    exit 0
-fi
-if [ -n "$out_file" ]; then
-    mkdir -p "$(dirname "$out_file")"
-    printf '#!/bin/bash\nif [ "$1" = "init" ]; then ws=""; shift; while [ $# -gt 0 ]; do [ "$1" = "--workspace" ] && ws="$2"; shift; done; [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/hostmcp.yaml"; fi\nexit 0\n' > "$out_file"
-fi
-exit 0
-CURLEOF
-    chmod +x "$_mb/curl"
-}
-
-_cleanup_binary_download_mocks() {
-    local home="$1" mb="$2"
-    safe_rm_rf "$home" "$mb"
-}
-
-# ─── binary download tests ──────────────────────────────────────────────────────
-
-# Test 40: no go, binary download declined → skip message with GitHub URL
-test_interactive_hostmcp_binary_download_declined() {
-    echo ""
-    echo "=== Test: no go, binary download declined → skip with GitHub URL ==="
-
-    setup
-    local fake_home mb
-    _setup_binary_download_mocks fake_home mb
-
-    # Input: lang=1(English), install=2(decline)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
-
-    if echo "$output" | grep -q "Skipped HostMCP setup"; then
-        pass "Skip message shown when binary download declined"
-    else
-        fail "Expected skip message, got: $output"
-    fi
-
-    if echo "$output" | grep -q "releases/latest\|YujiSuzuki/hostmcp"; then
-        pass "GitHub Releases URL shown in skip message"
-    else
-        fail "Expected GitHub URL in skip message, got: $output"
-    fi
-
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
-    cleanup
-}
-
-# Test 41: no go, binary download accepted, curl succeeds → install + next steps
-test_interactive_hostmcp_binary_download_success() {
-    echo ""
-    echo "=== Test: no go, binary download accepted, curl succeeds → install ==="
-
-    setup
-    local fake_home mb
-    _setup_binary_download_mocks fake_home mb
-
-    # Input: lang=1, install=1(yes), install-dir=default(1, now ~/.local/bin), port=default(1)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
-
-    if echo "$output" | grep -q "installed to:"; then
-        pass "Binary install success message shown"
-    else
-        fail "Expected install success message, got: $output"
-    fi
-
-    if echo "$output" | grep -q "hostmcp serve"; then
-        pass "Next steps shown after binary install success"
-    else
-        fail "Expected next steps (hostmcp serve), got: $output"
-    fi
-
-    if echo "$output" | grep -q "v0.0.1"; then
-        pass "Version number shown in install prompt"
-    else
-        fail "Expected version number (v0.0.1) in output, got: $output"
-    fi
-
-    if [ -f "$fake_home/.local/bin/hostmcp" ]; then
-        pass "Binary installed to default location (~/.local/bin) when option 1 selected"
-    else
-        fail "Expected binary at $fake_home/.local/bin/hostmcp, got: $output"
-    fi
-
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
-    cleanup
-}
-
-# Test 41b: no go, binary download accepted, install-dir=2 (~/go/bin) → installs there
-test_interactive_hostmcp_binary_download_success_go_bin() {
-    echo ""
-    echo "=== Test: no go, binary download accepted, install-dir=~/go/bin ==="
-
-    setup
-    local fake_home mb
-    _setup_binary_download_mocks fake_home mb
-
-    # Input: lang=1, install=1(yes), install-dir=2(~/go/bin), port=default(1)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n2\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
-
-    if echo "$output" | grep -q "installed to:"; then
-        pass "Binary install success message shown"
-    else
-        fail "Expected install success message, got: $output"
-    fi
-
-    if [ -f "$fake_home/go/bin/hostmcp" ]; then
-        pass "Binary installed to ~/go/bin when option 2 selected"
-    else
-        fail "Expected binary at $fake_home/go/bin/hostmcp, got: $output"
-    fi
-
-    if [ -f "$fake_home/.local/bin/hostmcp" ]; then
-        fail "Binary should NOT be installed to ~/.local/bin when option 2 was selected"
-    else
-        pass "Binary not installed to default ~/.local/bin when option 2 selected"
-    fi
-
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
-    cleanup
-}
-
-# Test 41c: no go, binary download accepted → install-dir prompt shows both options
-test_interactive_hostmcp_binary_download_dir_prompt_shown() {
-    echo ""
-    echo "=== Test: install-dir prompt lists both ~/go/bin and ~/.local/bin ==="
-
-    setup
-    local fake_home mb
-    _setup_binary_download_mocks fake_home mb
-
-    # Input: lang=1, install=1(yes), install-dir=default(1), port=default(1)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
-
-    if echo "$output" | grep -q "$fake_home/go/bin" && echo "$output" | grep -q "$fake_home/.local/bin"; then
-        pass "Install-dir prompt lists both ~/go/bin and ~/.local/bin"
-    else
-        fail "Expected both directory options in prompt, got: $output"
-    fi
-
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
-    cleanup
-}
-
-# Test 41d: no go, binary download succeeds → warns that a shell with a stale
-# `hash` cache should run `hash -r` (reproduces the real-world symptom where
-# `hostmcp` resolves to a since-removed path even though `which hostmcp` finds
-# the current binary).
-test_interactive_hostmcp_binary_download_warns_hash_r() {
-    echo ""
-    echo "=== Test: binary download success warns about shell hash cache ==="
-
-    setup
-    local fake_home mb
-    _setup_binary_download_mocks fake_home mb
-
-    # Input: lang=1, install=1(yes), install-dir=default(1), port=default(1)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
-
-    if echo "$output" | grep -q "hash -r"; then
-        pass "Warns to run 'hash -r' after successful binary install"
-    else
-        fail "Expected a 'hash -r' reminder after install, got: $output"
-    fi
-
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
-    cleanup
-}
-
-# Test 41e: no go, binary download explicitly to ~/go/bin (option 2) while a
-# stale binary already exists at ~/.local/bin → warns to remove the stale one.
-# NOTE: this direction only (installing to go/bin while .local/bin has the
-# leftover) is actually reachable: a leftover binary sitting at $gopath_bin
-# itself trips the earlier "already installed?" check
-# ([ -f "$gopath_bin/hostmcp" ]) and short-circuits before the download
-# branch (and its install-dir prompt) is ever reached.
-test_interactive_hostmcp_binary_download_warns_stale_other_location() {
-    echo ""
-    echo "=== Test: warns about leftover hostmcp binary at the other known location ==="
-
-    setup
-    local fake_home mb
-    _setup_binary_download_mocks fake_home mb
-
-    # Simulate a previous install left behind at ~/.local/bin
-    mkdir -p "$fake_home/.local/bin"
-    printf '#!/bin/bash\nexit 0\n' > "$fake_home/.local/bin/hostmcp"
-    chmod +x "$fake_home/.local/bin/hostmcp"
-
-    # Input: lang=1, install=1(yes), install-dir=2(~/go/bin), port=default(1)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n2\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
-
-    if echo "$output" | grep -q "$fake_home/.local/bin.*rm $fake_home/.local/bin/hostmcp\|rm $fake_home/.local/bin/hostmcp"; then
-        pass "Warns about leftover binary at the other (unselected) install location"
-    else
-        fail "Expected a warning to remove $fake_home/.local/bin/hostmcp, got: $output"
-    fi
-
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
-    cleanup
-}
-
-# Test 42: no go, binary download accepted, curl fails → download error shown
-test_interactive_hostmcp_binary_download_curl_fails() {
-    echo ""
-    echo "=== Test: no go, curl returns error → download failure message ==="
-
-    setup
-    local fake_home mb
-    _setup_binary_download_mocks fake_home mb
-
-    # Override curl to fail
-    printf '#!/bin/bash\nexit 1\n' > "$mb/curl"
-    chmod +x "$mb/curl"
-
-    # Input: lang=1, install=1(yes), install-dir=default(1)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
-
-    if echo "$output" | grep -q "Download failed"; then
-        pass "Download failure error shown when curl returns non-zero"
-    else
-        fail "Expected download failure message, got: $output"
-    fi
-
-    if echo "$output" | grep -q "hostmcp serve"; then
-        fail "Next steps should NOT appear after download failure"
-    else
-        pass "Next steps not shown after download failure"
-    fi
-
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
-    cleanup
-}
-
-# Test 43: no go, no curl, no wget → error shown
-test_interactive_hostmcp_no_curl_no_wget() {
-    echo ""
-    echo "=== Test: no go, no curl, no wget → error shown ==="
+    echo "=== Test: interactive mode shows install-hostmcp.sh hint when config is missing ==="
 
     setup
     local fake_home mb
     fake_home=$(mktemp -d)
     _isolate_hostmcp_absent mb
 
-    # Input: lang=1, install=1(yes), install-dir=default(1) — no curl/wget in PATH
+    # Input: language=1(English) — no TZ prompt in English mode; no answer
+    # left for the install prompt, so it falls through to its "N" default.
     local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb'
-        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
+    output=$(HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1' | bash '$SCRIPT' '$TEST_PROJECT'" 2>&1)
 
-    if echo "$output" | grep -q "Neither curl nor wget found"; then
-        pass "Error shown when curl/wget unavailable"
+    if echo "$output" | grep -q "install-hostmcp.sh"; then
+        pass "install-hostmcp.sh hint shown when hostmcp.yaml is missing"
     else
-        fail "Expected curl/wget error, got: $output"
+        fail "Expected install-hostmcp.sh hint, got: $output"
     fi
 
     safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
-# Test 44: version shown in install prompt when fetch succeeds
-test_interactive_hostmcp_version_shown_in_prompt() {
+# Test: the hint is suppressed once HostMCP is already configured, and never
+# printed at all in --silent mode (INTERACTIVE=false skips this block
+# entirely regardless of whether hostmcp.yaml exists).
+# テスト: HostMCP の設定ファイルが既に存在する場合は案内が表示されず、
+# --silent モードでは（INTERACTIVE=false のため）そもそもこの分岐自体が
+# 実行されないことを確認する。
+test_interactive_hint_suppressed_when_configured_or_silent() {
     echo ""
-    echo "=== Test: version fetch succeeds → version shown in install prompt ==="
+    echo "=== Test: install-hostmcp.sh hint suppressed when configured or silent ==="
 
     setup
     local fake_home mb
-    _setup_binary_download_mocks fake_home mb
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
+    mkdir -p "$TEST_PROJECT/.sandbox/config"
+    touch "$TEST_PROJECT/.sandbox/config/hostmcp.yaml"
 
-    # Input: lang=1(English), install=2(decline) — just to see the prompt text
     local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n2' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
+    output=$(HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1' | bash '$SCRIPT' '$TEST_PROJECT'" 2>&1)
 
-    if echo "$output" | grep -q "v0.0.1"; then
-        pass "Version number shown in install prompt"
+    if echo "$output" | grep -q "install-hostmcp.sh"; then
+        fail "Hint should NOT appear when hostmcp.yaml already exists, got: $output"
     else
-        fail "Expected version number (v0.0.1) in prompt, got: $output"
+        pass "Hint suppressed when hostmcp.yaml already exists"
     fi
 
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    local silent_output
+    silent_output=$(HOME="$fake_home" bash -c "export PATH='$mb'; bash '$SCRIPT' --silent '$TEST_PROJECT'" 2>&1)
+
+    if echo "$silent_output" | grep -q "install-hostmcp.sh"; then
+        fail "Hint should NOT appear in --silent mode, got: $silent_output"
+    else
+        pass "Hint suppressed in --silent mode"
+    fi
+
+    safe_rm_rf "$fake_home" "$mb"
     cleanup
 }
 
-# Test 45: version fetch fails → installs anyway using latest URL
-test_interactive_hostmcp_version_fetch_fails_installs_anyway() {
+# Test: confirming the end-of-script "install HostMCP now?" prompt hands off
+# to install-hostmcp.sh (invoked, not inlined — see init-host-env.sh header).
+# Uses a stub install-hostmcp.sh in a scratch copy of the script pair so this
+# stays a fast, offline unit test instead of driving a real install.
+# テスト: 対話モード末尾の「HostMCPを今すぐインストール・設定しますか？」に
+# yで応答すると install-hostmcp.sh に処理を引き継ぐ（呼び出すだけでインライン化
+# しない — init-host-env.sh のヘッダー参照）ことを確認する。スクリプト一式の
+# 使い捨てコピーとスタブの install-hostmcp.sh を使い、実際のインストールを
+# 走らせずに高速・オフラインな単体テストとして完結させる。
+test_interactive_confirms_install_calls_install_hostmcp() {
     echo ""
-    echo "=== Test: version fetch fails → installs anyway (latest fallback) ==="
+    echo "=== Test: confirming install prompt invokes install-hostmcp.sh ==="
 
     setup
-    local fake_home mb
-    _setup_binary_download_mocks fake_home mb
+    local fake_home mb tmp_script_dir marker
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
+    tmp_script_dir=$(mktemp -d)
+    marker="$tmp_script_dir/called.marker"
 
-    # Override curl: fail for version fetch (-o /dev/null), succeed for binary download
-    cat > "$mb/curl" << 'CURLEOF'
+    cp "$SCRIPT" "$tmp_script_dir/init-host-env.sh"
+    chmod +x "$tmp_script_dir/init-host-env.sh"
+
+    cat > "$tmp_script_dir/install-hostmcp.sh" << EOF
 #!/bin/bash
-out_file=""
-prev=""
-for arg in "$@"; do
-    [ "$prev" = "-o" ] && out_file="$arg"
-    prev="$arg"
-done
-if [ "$out_file" = "/dev/null" ]; then
-    exit 1
-fi
-if [ -n "$out_file" ]; then
-    mkdir -p "$(dirname "$out_file")"
-    printf '#!/bin/bash\nif [ "$1" = "init" ]; then ws=""; shift; while [ $# -gt 0 ]; do [ "$1" = "--workspace" ] && ws="$2"; shift; done; [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/hostmcp.yaml"; fi\nexit 0\n' > "$out_file"
-fi
-exit 0
-CURLEOF
-    chmod +x "$mb/curl"
+echo "STUB install-hostmcp.sh called with: \$*" > "$marker"
+EOF
+    chmod +x "$tmp_script_dir/install-hostmcp.sh"
 
-    # Input: lang=1, install=1(yes), install-dir=default(1), port=default(1)
-    local output
-    output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
-        echo -e '1\n1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
-    " 2>&1)
+    # Select English (1), then confirm the install prompt (y)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1\ny' | bash '$tmp_script_dir/init-host-env.sh' '$TEST_PROJECT'" > /dev/null 2>&1
 
-    if echo "$output" | grep -q "installed to:"; then
-        pass "Install succeeds even when version fetch fails"
+    if [ -f "$marker" ] && grep -q "$TEST_PROJECT" "$marker"; then
+        pass "Confirming install prompt invokes install-hostmcp.sh with project root"
     else
-        fail "Expected install success despite version fetch failure, got: $output"
+        fail "install-hostmcp.sh stub was not invoked as expected"
     fi
 
-    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    safe_rm_rf "$fake_home" "$mb" "$tmp_script_dir"
     cleanup
 }
 
-# Run all tests
-# 全テストを実行
+# Test: declining the same prompt (or leaving it at the default "N") must
+# NOT invoke install-hostmcp.sh — only print the "run it later" hint.
+# テスト: 同じプロンプトを拒否（またはデフォルトの「N」のまま）にした場合は
+# install-hostmcp.sh を呼び出さず、「後で実行してください」の案内だけを
+# 表示することを確認する。
+test_interactive_declines_install_does_not_call_install_hostmcp() {
+    echo ""
+    echo "=== Test: declining install prompt does not invoke install-hostmcp.sh ==="
+
+    setup
+    local fake_home mb tmp_script_dir marker
+    fake_home=$(mktemp -d)
+    _isolate_hostmcp_absent mb
+    tmp_script_dir=$(mktemp -d)
+    marker="$tmp_script_dir/called.marker"
+
+    cp "$SCRIPT" "$tmp_script_dir/init-host-env.sh"
+    chmod +x "$tmp_script_dir/init-host-env.sh"
+
+    cat > "$tmp_script_dir/install-hostmcp.sh" << EOF
+#!/bin/bash
+echo "STUB install-hostmcp.sh called with: \$*" > "$marker"
+EOF
+    chmod +x "$tmp_script_dir/install-hostmcp.sh"
+
+    # Select English (1), decline the install prompt (n)
+    HOME="$fake_home" bash -c "export PATH='$mb'; echo -e '1\nn' | bash '$tmp_script_dir/init-host-env.sh' '$TEST_PROJECT'" > /dev/null 2>&1
+
+    if [ -f "$marker" ]; then
+        fail "install-hostmcp.sh stub should not have been invoked when declined"
+    else
+        pass "Declining install prompt does not invoke install-hostmcp.sh"
+    fi
+
+    safe_rm_rf "$fake_home" "$mb" "$tmp_script_dir"
+    cleanup
+}
+
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -2021,38 +1024,11 @@ main() {
     test_creates_host_os_file
     test_creates_host_os_file_windows_normalized
     test_host_os_file_overwritten
-    test_interactive_hostmcp_already_installed
-    # test_interactive_hostmcp_install_accepted  # DISABLED: see _setup_hostmcp_mocks KNOWN LIMITATION
-    # test_interactive_hostmcp_install_declined  # DISABLED: see _setup_hostmcp_mocks KNOWN LIMITATION
-    test_interactive_hostmcp_no_go
-    test_interactive_hostmcp_go_install_windows_exe
-    test_interactive_hostmcp_init_default_port
-    test_interactive_hostmcp_init_custom_port
-    test_interactive_hostmcp_init_port_leading_zero_no_crash
-    test_interactive_hostmcp_init_port_leading_zero_decimal_value
-    test_interactive_hostmcp_init_already_exists
-    test_interactive_hostmcp_next_steps_shown
-    test_silent_mode_skips_hostmcp_setup
-    # test_interactive_hostmcp_install_go_install_fails  # DISABLED: see _setup_hostmcp_mocks KNOWN LIMITATION
-    # test_interactive_hostmcp_install_binary_not_found_after_install  # DISABLED: see _setup_hostmcp_mocks KNOWN LIMITATION
-    test_interactive_hostmcp_init_invalid_port_string
-    test_interactive_hostmcp_init_invalid_port_out_of_range
-    test_interactive_hostmcp_port_retry_fallback
-    test_interactive_hostmcp_gopath_empty
-    test_interactive_hostmcp_gopath_command_fails
-    test_interactive_hostmcp_next_steps_shows_absolute_path
-    test_interactive_hostmcp_init_fails_skips_next_steps
-    test_interactive_hostmcp_binary_download_declined
-    test_interactive_hostmcp_binary_download_success
-    test_interactive_hostmcp_binary_download_success_go_bin
-    test_interactive_hostmcp_binary_download_dir_prompt_shown
-    test_interactive_hostmcp_binary_download_warns_hash_r
-    test_interactive_hostmcp_binary_download_warns_stale_other_location
-    test_interactive_hostmcp_binary_download_curl_fails
-    test_interactive_hostmcp_no_curl_no_wget
-    test_interactive_hostmcp_version_shown_in_prompt
-    test_interactive_hostmcp_version_fetch_fails_installs_anyway
-
+    test_interactive_shows_install_hostmcp_hint
+    test_interactive_hint_suppressed_when_configured_or_silent
+    test_interactive_confirms_install_calls_install_hostmcp
+    test_interactive_declines_install_does_not_call_install_hostmcp
+    test_detect_os_name_stays_in_sync_with_install_hostmcp
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  Results: $TESTS_PASSED passed, $TESTS_FAILED failed"

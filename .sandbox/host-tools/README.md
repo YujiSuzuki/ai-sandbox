@@ -38,7 +38,7 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `xcode-archive.sh` | Xcode archive (for TestFlight / App Store submission) | macOS only |
 | `copy-credentials.sh` | Copy credentials | Cross-platform |
 | `mac-memory.sh` | macOS memory usage report | macOS only |
-| `run-init-host-env-tests.sh` | Run `.sandbox/host-setup/test-init-host-env.sh` | Cross-platform |
+| `run-host-setup-tests.sh` | Run all (or one, via `--test-script`) `.sandbox/host-setup/test-*.sh` files | Cross-platform |
 | `docker-compose-up.sh` | Start containers from any docker-compose file | Cross-platform |
 | `docker-compose-down.sh` | Stop containers from any docker-compose file | Cross-platform |
 | `docker-compose-build.sh` | Build images from any docker-compose file | Cross-platform |
@@ -98,12 +98,22 @@ Readable from inside the container with the Read tool.
 
 ---
 
-## run-init-host-env-tests.sh
+## run-host-setup-tests.sh
 
-Runs `.sandbox/host-setup/test-init-host-env.sh` on the host OS. Full output is also saved to:
+Runs `.sandbox/host-setup/test-*.sh` on the host OS — all of them by default, or a single
+one via `--test-script <name>`. This exists because those test suites exercise real
+network calls, a real `go`/`curl`, and real shell rc files, so they refuse to run inside
+the AI Sandbox container itself.
+
+```bash
+./run-host-setup-tests.sh
+./run-host-setup-tests.sh --test-script test-install-hostmcp.sh
+```
+
+Full output per suite is also saved to:
 
 ```
-<workspace>/.sandbox/tmp/test-init-host-env-output.log
+<workspace>/.sandbox/tmp/<test-script-name>-output.log
 ```
 
 Readable from inside the container with the Read tool.

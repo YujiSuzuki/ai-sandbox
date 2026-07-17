@@ -102,6 +102,19 @@ services:
 - `secrets/` ディレクトリ → `tmpfs` + `:ro` で空のディレクトリに
 - 両方の docker-compose.yml を同じ設定にする
 
+### カスタムドメイン（任意）
+
+プロジェクトのコンテナに `localhost` よりホスト名でアクセスしたい場合は、`.devcontainer/docker-compose.yml` と `cli_sandbox/docker-compose.yml` の両方に `extra_hosts` を追加してください（上記と同様、両ファイルの設定を揃えます）。AI Sandbox が自動的に解決します：
+
+```yaml
+services:
+  ai-sandbox:
+    extra_hosts:
+      - "yourapp.test:host-gateway"
+```
+
+ブラウザからもコンテナにアクセスできるように、ホストOS側の `/etc/hosts`（Windowsの場合は該当ファイル）にも同じエントリを追加してください。動作する具体例は [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) を参照してください。
+
 **自動検証:**
 
 起動時に以下のチェックが自動実行されます：

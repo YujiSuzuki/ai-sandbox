@@ -41,6 +41,7 @@ Files hidden by Docker volume mounts appear empty or missing. Before reporting "
 
 - **TDD:** Always write tests first. Bug fix → reproduce bug in test first. New feature → write expected behavior test first. Run all tests after to prevent regression. See [docs/ai-guide.md](docs/ai-guide.md#tdd-workflow) for detailed steps.
 - **Scaffolding logs:** Mark temporary debug logs with `// TODO: remove after debugging - scaffolding log` (or Japanese: `// TODO: デバッグ後に削除 - 足場ログ`)
+- **Comment scope:** Comments should state a durable constraint on the current code, not narrate how a change was made (that's commit-message material). Common failure mode in AI-authored refactor comments. See [docs/ai-guide.md](docs/ai-guide.md#writing-comments).
 - **Japanese documentation:** Write naturally in Japanese, don't translate directly from English. Prioritize clarity over literal accuracy.
 - **Host OS test scripts:** Display impact/risk/recovery info before execution. See [docs/ai-guide.md](docs/ai-guide.md#host-os-test-scripts).
 - **Meaningful tests:** Tests must exercise real code paths, not duplicate logic. See [docs/ai-guide.md](docs/ai-guide.md#writing-meaningful-tests).
@@ -212,6 +213,7 @@ For detailed information, read the relevant file when needed:
 | Template customization workflow | [docs/ai-guide.md → Customization](docs/ai-guide.md#customization-workflow) |
 | SandboxMCP extensions | [docs/ai-guide.md → SandboxMCP](docs/ai-guide.md#sandboxmcp-extensions) |
 | Writing meaningful tests | [docs/ai-guide.md → Tests](docs/ai-guide.md#writing-meaningful-tests) |
+| Writing comments | [docs/ai-guide.md → Comments](docs/ai-guide.md#writing-comments) |
 | Host OS test script conventions | [docs/ai-guide.md → Host Scripts](docs/ai-guide.md#host-os-test-scripts) |
 | Two environment strategy | [docs/reference.md](docs/reference.md) |
 | Security architecture details | [docs/architecture.md](docs/architecture.md) |

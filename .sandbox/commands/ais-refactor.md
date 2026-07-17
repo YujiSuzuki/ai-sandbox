@@ -329,3 +329,4 @@ For Git mode only:
 - Every suggestion MUST include concrete before/after code (not just descriptions)
 - Ensure suggested changes preserve existing behavior (no functional changes unless explicitly requested)
 - Respect the project's existing patterns and conventions
+- Any comments included in "After" code must state a durable constraint on the resulting code, not narrate the refactor's own history/process (e.g. "extracted this because X used to duplicate Y") — that belongs in the commit message, not the file. See docs/ai-guide.md#writing-comments.

@@ -15,7 +15,7 @@ This file is referenced from [CLAUDE.md](../CLAUDE.md) — read sections on dema
 
 ```bash
 # On Host OS (NOT in AI Sandbox)
-.sandbox/host-setup/init-host-env.sh   # installs hostmcp + generates config, if not already done
+.sandbox/host-setup/install-hostmcp.sh   # installs hostmcp + generates config (or offers to update it if already installed)
 hostmcp serve --workspace /path/to/your-repo
 ```
 
@@ -150,6 +150,9 @@ git log HEAD..origin/main --oneline
 
    # HostMCP (on host OS)
    go install github.com/YujiSuzuki/hostmcp@latest
+   # No Go? Re-run install-hostmcp.sh instead — it detects the existing
+   # install and offers to update it via a prebuilt binary re-download.
+   .sandbox/host-setup/install-hostmcp.sh
    ```
 
 6. **Verify** — Check SandboxMCP tools, HostMCP connection
@@ -352,6 +355,18 @@ If unsure whether a test is meaningful, ask the user before writing.
 
 ---
 
+## Writing Comments
+
+Comments should state a durable constraint on the current code, not narrate how a change was made. That narrative belongs in the commit message or PR description, not permanent code.
+
+This is a particularly common failure mode in AI-authored refactor comments: right after making a change, the assistant has the "why did I just do this" reasoning maximally active in context, and externalizes it directly into a comment — even though a future reader only needs to know what still holds true today, not the process that led here.
+
+If a sentence mixes both — history plus a live constraint (e.g. a warning against re-merging two concerns) — keep the constraint and cut the narrative rather than deleting the whole comment.
+
+`/ais-local-comment-review`'s Agent #4 (Whether It's Worth Having) checks for this.
+
+---
+
 ## Host OS Test Scripts
 
 Test scripts on the host OS (e.g., `hostmcp/scripts/`) can cause real side effects. Display before execution:
@@ -365,6 +380,12 @@ Display recovery commands in failure summary.
 **Examples:**
 - `hostmcp/scripts/server-log-test.sh` — `show_prerun_info()` / `print_summary()`
 - `.sandbox/scripts/test-advanced-features.sh` — `confirm_section()` per section
+
+**Verifying changes to scripts that can write to real host files**: Scripts under `host-setup/`/`host-tools/` can write to real locations on the developer's host machine (installed binaries, shell rc files, etc.) — e.g., a test-isolation bug that forgot to isolate `$HOME` could overwrite a developer's real, already-installed `hostmcp` binary with a test mock. Before running such a script (or its test suite) via `run_host_tool` against the real host, first verify it in an isolated copy inside the AI Sandbox container itself:
+1. Copy the script(s) to a scratch directory, preserving the surrounding `.sandbox/` directory structure (e.g. `scripts/_startup_common.sh` must remain reachable via the same relative path) — some scripts silently no-op parts of their behavior if a sourced dependency goes missing, rather than erroring.
+2. Strip the container guard (the `/.dockerenv` / `/workspace`-existence check at the top) from the copy only — never from the real file.
+3. Run the copy inside the container, and diff the container's own real file locations (e.g. `~/go/bin`, `~/.local/bin`) before/after to confirm nothing outside the script's own `mktemp -d` temp dirs was touched.
+4. Only after that passes, run the real script via `run_host_tool` on the actual host.
 
 ---
 
@@ -390,7 +411,8 @@ Display recovery commands in failure summary.
 │   │   ├── run-all-tests.sh          # Run all test scripts
 │   │   └── test-*.sh                 # Test scripts
 │   ├── host-setup/            # 🖥️ Host initialization scripts (manual execution only)
-│   │   └── init-host-env.sh          # Host-side init: env files + host OS info
+│   │   ├── init-host-env.sh          # Host-side init: language/timezone, env files, host OS info
+│   │   └── install-hostmcp.sh        # HostMCP install/config/update wizard
 │   ├── host-tools/            # 🖥️ Host-only tool scripts
 │   │   ├── copy-credentials.sh       # Export/Import home directory
 │   │   ├── mac-memory.sh             # macOS memory usage check
