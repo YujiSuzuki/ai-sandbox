@@ -185,7 +185,7 @@ security:
   exec_whitelist: {}  # No command execution
 ```
 
-For multiple instances and more, see [hostmcp/README.md "Server Startup"](../hostmcp/README.md#running-multiple-instances).
+For multiple instances and more, see [hostmcp README "Running Multiple Instances"](https://github.com/YujiSuzuki/hostmcp#running-multiple-instances).
 
 ### Host tools (optional)
 

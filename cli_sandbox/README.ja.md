@@ -4,7 +4,7 @@
 
 ターミナルからAIコーディングアシスタントを実行するための代替環境です。
 
-基本的な使い方や、この環境が存在する理由（DevContainer が壊れた場合の復旧手段）については、[ルートの README.ja.md](../README.ja.md#2つの環境) を参照してください。
+基本的な使い方や、この環境が存在する理由（DevContainer が壊れた場合の復旧手段）については、リファレンスガイドの[2つの環境](../docs/reference.ja.md#2つの環境)を参照してください。
 
 ## ファイル構成
 
@@ -37,7 +37,7 @@
   │
   ├─ run_startup_scripts()
   │    ├─ merge-claude-settings.sh    … Claude 設定のマージ
-  │    ├─ validate-secrets.sh        … シークレット隠蔽の検証
+  │    ├─ security-reminder.sh        … AI設定変更の検知
   │    ├─ compare-secret-config.sh    … DevContainer と CLI の設定差異チェック
   │    ├─ validate-secrets.sh         … 秘匿設定が機能しているか検証
   │    └─ check-secret-sync.sh        … .claude/settings.json との同期チェック
@@ -88,7 +88,7 @@ tmpfs:
   - /workspace/your-api/secrets:ro
 ```
 
-秘匿設定の追加・同期については [ルートの README.ja.md「自分のプロジェクトへの適用」](../README.ja.md#自分のプロジェクトへの適用) を参照してください。
+秘匿設定の追加・同期については [自分のプロジェクトへの適用](../docs/customization.ja.md) を参照してください。
 
 ### リソース制限
 

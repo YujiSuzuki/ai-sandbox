@@ -94,8 +94,12 @@ host_access:
 | Tool | Description |
 |------|-------------|
 | `copy-credentials.sh` | Copy home directory between DevContainer projects |
+| `mac-memory.sh` | macOS memory usage report |
+| `run-host-setup-tests.sh` | Run `.sandbox/host-setup/test-*.sh` suites on the host OS |
+| `xcode-build.sh` / `xcode-test.sh` / `xcode-archive.sh` | Xcode build / test / archive (macOS only) |
+| `docker-compose-up.sh` / `docker-compose-down.sh` / `docker-compose-build.sh` | Generic wrappers around `docker compose up` / `down` / `build` |
 
-> **Demo tools example:** `demo-build.sh`, `demo-up.sh`, `demo-down.sh` are available in [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) as a reference for writing your own host tools.
+> See [.sandbox/host-tools/README.md](../.sandbox/host-tools/README.md) for full usage details of each tool.
 
 ### Writing Your Own Host Tools
 

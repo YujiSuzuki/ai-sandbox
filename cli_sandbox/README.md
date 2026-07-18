@@ -4,7 +4,7 @@
 
 An alternative environment for running AI coding assistants from the terminal.
 
-For basic usage and why this environment exists (as a recovery tool when DevContainer breaks), see the [root README.md](../README.md#two-environments).
+For basic usage and why this environment exists (as a recovery tool when DevContainer breaks), see [Two Environments](../docs/reference.md#two-environments) in the reference guide.
 
 ## File Structure
 
@@ -88,7 +88,7 @@ tmpfs:
   - /workspace/your-api/secrets:ro
 ```
 
-For adding and syncing secret settings, see the [root README.md "Adapting to Your Own Project"](../README.md#adapting-to-your-own-project).
+For adding and syncing secret settings, see the [Customization Guide](../docs/customization.md).
 
 ### Resource Limits
 

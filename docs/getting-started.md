@@ -52,7 +52,7 @@ If you plan to use HostMCP, you'll also need:
 
 | Tool | Verify | Install |
 |------|--------|---------|
-| **Go** (1.24+) | `go version` | [go.dev](https://go.dev/dl/) |
+| **Go** (1.25+) | `go version` | [go.dev](https://go.dev/dl/) |
 
 > [!TIP]
 > **No Go on host?** No problem — `install-hostmcp.sh` (Step 4) offers to download a prebuilt `hostmcp` binary automatically, no Go required.

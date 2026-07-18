@@ -161,7 +161,7 @@ security:
       - "npm run lint"
 ```
 
-コンテナ内の機密ファイルブロック（`blocked_paths`）、Claude Code / Gemini 設定からの自動インポートなど、詳細な設定は [hostmcp/README.ja.md「設定リファレンス」](../hostmcp/README.ja.md#設定リファレンス) を参照。
+コンテナ内の機密ファイルブロック（`blocked_paths`）、Claude Code / Gemini 設定からの自動インポートなど、詳細な設定は [hostmcp README「Configuration Reference」](https://github.com/YujiSuzuki/hostmcp#configuration-reference) を参照。
 
 **実際の動作例 — クロスコンテナでのデバッグ:**
 
@@ -214,7 +214,7 @@ DATABASE_URL=postgres://user:secret123@db:5432/app
 DATABASE_URL=[MASKED]db:5432/app
 ```
 
-パスワード、APIキー、Bearerトークン、認証情報付きデータベースURLなどをデフォルトで検出します。設定方法の詳細は [hostmcp/README.ja.md「出力マスキング」](../hostmcp/README.ja.md#出力マスキング) を参照。
+パスワード、APIキー、Bearerトークン、認証情報付きデータベースURLなどをデフォルトで検出します。設定方法の詳細は [hostmcp README「Output Masking」](https://github.com/YujiSuzuki/hostmcp#output-masking) を参照。
 
 ### 5. Docker ソケットを渡さない理由
 

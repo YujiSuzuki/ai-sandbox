@@ -75,7 +75,7 @@ To catch misconfigurations, the sandbox runs **startup validation** that checks 
 HostMCP acts as a gateway between the AI sandbox and other Docker containers, with security policy enforcement:
 
 - AI can read logs, run whitelisted commands, and inspect containers
-- AI cannot start/stop containers, access blocked paths, or run arbitrary commands
+- AI cannot access blocked paths or run arbitrary commands; starting/stopping containers is disabled by default and only works if explicitly enabled in the config
 - Sensitive data (passwords, API keys, tokens) is automatically masked in output
 
 ---

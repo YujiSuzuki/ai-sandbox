@@ -185,7 +185,7 @@ security:
   exec_whitelist: {}  # コマンド実行なし
 ```
 
-複数インスタンスの起動など、詳細は [hostmcp/README.ja.md「サーバー起動」](../hostmcp/README.ja.md#複数インスタンスの起動) を参照。
+複数インスタンスの起動など、詳細は [hostmcp README「Running Multiple Instances」](https://github.com/YujiSuzuki/hostmcp#running-multiple-instances) を参照。
 
 ### ホストツール（任意）
 

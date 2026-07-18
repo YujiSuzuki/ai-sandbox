@@ -38,9 +38,10 @@ Check if tools like `list_containers`, `get_logs` are available.
 
 ### Troubleshooting
 
-1. **Verify HostMCP is running**: `curl http://localhost:18080/health` (on host OS)
-2. **Try MCP Reconnect**: `/mcp` → "Reconnect" in Claude Code
-3. **Restart VS Code completely**: Cmd+Q (macOS) / Alt+F4 (Windows/Linux)
+1. **Check VS Code Ports panel**: stop forwarding port 18080 if listed (most common cause)
+2. **Verify HostMCP is running**: `curl http://localhost:18080/health` (on host OS)
+3. **Try MCP Reconnect**: `/mcp` → "Reconnect" in Claude Code
+4. **Restart VS Code completely**: Cmd+Q (macOS) / Alt+F4 (Windows/Linux)
 
 If issues persist, verify MCP configuration:
 
@@ -223,14 +224,14 @@ tmpfs:
   - /workspace/my-api/secrets:ro
 ```
 
-### Step 4: Configure HostMCP
+### Step 3: Configure HostMCP
 
 ```bash
 hostmcp init --workspace /path/to/your-repo
 ```
 Update `allowed_containers` and `exec_whitelist` in the generated `.sandbox/config/hostmcp.yaml`.
 
-### Step 5: Update AI configuration
+### Step 4: Update AI configuration
 
 - `.claude/settings.json` — Replace demo deny patterns
 - `.aiexclude` / `.geminiignore` — Update secret patterns
@@ -238,7 +239,7 @@ Update `allowed_containers` and `exec_whitelist` in the generated `.sandbox/conf
   - Ask user about `commit-msg.sh` / `github-release.sh`: keep or remove? customize?
 - `GEMINI.md` — Same updates
 
-### Step 6: Run validation
+### Step 5: Run validation
 
 ```bash
 .sandbox/scripts/validate-secrets.sh
@@ -246,7 +247,7 @@ Update `allowed_containers` and `exec_whitelist` in the generated `.sandbox/conf
 .sandbox/scripts/check-secret-sync.sh
 ```
 
-### Step 7: Hand off to user
+### Step 6: Hand off to user
 
 Tell them to: rebuild DevContainer, start HostMCP on host OS, verify.
 
@@ -433,13 +434,10 @@ Display recovery commands in failure summary.
 │   ├── claude.sh / gemini.sh / ai_sandbox.sh
 │   └── docker-compose.yml  # ⚠️ Secret hiding configuration
 │
-├── hostmcp/                  # HostMCP MCP Server (Go)
-│   ├── cmd/hostmcp/          # Main entry point
-│   ├── internal/           # Core implementation
-│   └── configs/            # Example configurations
-│
 └── <your-project>/         # Your application code (add here)
 ```
+
+Note: `hostmcp` (https://github.com/YujiSuzuki/hostmcp) is a separate project installed independently on the host OS — it is not a subdirectory of this repo, even though some workspaces clone it alongside `ai-sandbox` for convenience.
 
 **Script icons:** 🐳 = container only, 🖥️ = host OS only
 

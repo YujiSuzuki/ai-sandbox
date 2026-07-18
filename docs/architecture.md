@@ -161,7 +161,7 @@ security:
       - "npm run lint"
 ```
 
-For container file blocking (`blocked_paths`), auto-import from Claude Code / Gemini settings, and more, see [hostmcp/README.md "Configuration Reference"](../hostmcp/README.md#configuration-reference).
+For container file blocking (`blocked_paths`), auto-import from Claude Code / Gemini settings, and more, see [hostmcp README "Configuration Reference"](https://github.com/YujiSuzuki/hostmcp#configuration-reference).
 
 **Example — Cross-container debugging:**
 
@@ -214,7 +214,7 @@ DATABASE_URL=postgres://user:secret123@db:5432/app
 DATABASE_URL=[MASKED]db:5432/app
 ```
 
-Detects passwords, API keys, Bearer tokens, database URLs with credentials, and more by default. For configuration details, see [hostmcp/README.md "Output Masking"](../hostmcp/README.md#output-masking).
+Detects passwords, API keys, Bearer tokens, database URLs with credentials, and more by default. For configuration details, see [hostmcp README "Output Masking"](https://github.com/YujiSuzuki/hostmcp#output-masking).
 
 ### 5. Why No Docker Socket Access
 

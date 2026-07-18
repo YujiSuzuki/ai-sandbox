@@ -74,13 +74,14 @@ During code review, a 3.5MB binary `.sandbox/sandbox-mcp/search-history` was fou
 
 You can also run the tool directly without asking AI.
 
-### Three Modes
+### Four Modes
 
 | Mode | Command | Description |
 |------|---------|-------------|
 | Keyword search | `go run .sandbox/tools/search-history.go "query"` | Supports regex |
 | Session list | `go run .sandbox/tools/search-history.go -list` | Sorted by last activity |
 | Session viewer | `go run .sandbox/tools/search-history.go -session <id>` | Prefix match on ID |
+| Statistics | `go run .sandbox/tools/search-history.go -stats` | Breaks down message counts by type |
 
 ### Filter Options
 
@@ -91,7 +92,9 @@ You can also run the tool directly without asking AI.
 | `-after <date>` | Only after this date | `-after 2026-02-01` |
 | `-before <date>` | Only before this date | `-before 2026-02-07` |
 | `-i` | Case-insensitive search | `-i "dockmcp"` |
+| `-human` | Only actual user input (excludes tool_result, IDE events, system reminders) | `-human -role user ".*"` |
 | `-project <name>` | Project scope (default: workspace) | `-project all` |
+| `-dir <path>` | Additional JSONL directory (e.g. to include backup data) | `-dir /path/to/backup/` |
 
 ### Display Options
 
@@ -100,6 +103,16 @@ You can also run the tool directly without asking AI.
 | `-max <n>` | Maximum number of results | 50 (0 = unlimited) |
 | `-context <n>` | Characters per entry | 200 (0 = full text) |
 | `-no-color` | Disable color output | — |
+
+### Stats Mode Options (combine with `-stats`)
+
+| Option | Description |
+|--------|-------------|
+| `-daily` | Show a day-by-day breakdown |
+| `-csv` | Output in CSV format |
+| `-tsv` | Output in TSV (tab-separated) format |
+
+Labels switch to Japanese automatically when the `LANG` environment variable contains `ja`.
 
 ### Examples
 
@@ -124,6 +137,19 @@ go run .sandbox/tools/search-history.go -list -after 2026-02-08 -before 2026-02-
 
 # View a full session (no truncation, no limit)
 go run .sandbox/tools/search-history.go -session c01514d6 -context 0 -max 0
+
+# Search only actual user input
+go run .sandbox/tools/search-history.go -human -role user -max 0 ".*"
+
+# Show message type statistics
+go run .sandbox/tools/search-history.go -stats
+
+# Daily breakdown as CSV
+go run .sandbox/tools/search-history.go -stats -daily -csv
+
+# Include backup data in the aggregation
+go run .sandbox/tools/search-history.go -stats -daily \
+  -dir /path/to/backup/.claude/projects/-workspace/
 ```
 
 ## How Date Filters Work

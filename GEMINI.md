@@ -111,7 +111,7 @@ HostMCP runs on the host OS and provides controlled container access via MCP. It
 
 ### Fallback: hostmcp client
 
-If MCP tools are unavailable, use `hostmcp client` commands via Bash. See [docs/ai-guide.md](docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
+If MCP tools are unavailable, use `hostmcp client` commands via Bash. See [docs/ai-guide.md](docs/ai-guide.md#hostmcp-client-fallback) for the full command reference.
 
 `startup.sh` installs the `hostmcp` CLI automatically (via `go install` or a prebuilt binary download), so it should already be on PATH. If `hostmcp` command is still not found, tell the user to run: `go install github.com/YujiSuzuki/hostmcp@latest`
 
@@ -129,9 +129,25 @@ If `--check` returns 1 (not registered), offer to run `setup-hostmcp.sh` for the
 If `--check` returns 2 (registered but offline), troubleshoot in this order:
 1. **Check VS Code Ports panel** — stop forwarding port 18080 if listed (most common cause)
 2. **Verify HostMCP is running on host**: `curl http://localhost:18080/health`
-3. **Restart VS Code completely** (Cmd+Q → reopen)
+3. **Try MCP Reconnect** in your AI tool's MCP panel/command
+4. **Restart VS Code completely** (Cmd+Q → reopen)
 
-For HostMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#dockmcp-setup-and-troubleshooting).
+For HostMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#hostmcp-setup-and-troubleshooting).
+
+---
+
+## SandboxMCP
+
+Runs inside the container via stdio. Its tools appear with the `mcp__sandbox-mcp__` prefix once connected — treat that live tool list (and SandboxMCP's own MCP server instructions) as the source of truth for what's available, rather than a hardcoded list here.
+
+| | SandboxMCP | HostMCP |
+|---|---|---|
+| Location | Inside container | Host OS |
+| Transport | stdio | SSE (HTTP) |
+| Purpose | Script/tool discovery | Container access |
+| Auto-start | By Gemini CLI | Manual (`hostmcp serve`) |
+
+**Use tools proactively:** When a user's request can be fulfilled by an existing tool (e.g., searching conversation history), run it via `run_tool` and show the equivalent `go run` command.
 
 ---
 
@@ -153,8 +169,8 @@ For full structure, see [docs/ai-guide.md](docs/ai-guide.md#project-structure-fu
 
 | Topic | File |
 |-------|------|
-| HostMCP setup & troubleshooting | [docs/ai-guide.md → HostMCP Setup](docs/ai-guide.md#dockmcp-setup-and-troubleshooting) |
-| HostMCP client command reference | [docs/ai-guide.md → Client Fallback](docs/ai-guide.md#dockmcp-client-fallback) |
+| HostMCP setup & troubleshooting | [docs/ai-guide.md → HostMCP Setup](docs/ai-guide.md#hostmcp-setup-and-troubleshooting) |
+| HostMCP client command reference | [docs/ai-guide.md → Client Fallback](docs/ai-guide.md#hostmcp-client-fallback) |
 | Template update procedure | [docs/ai-guide.md → Updating](docs/ai-guide.md#updating-this-template) |
 | Template customization workflow | [docs/ai-guide.md → Customization](docs/ai-guide.md#customization-workflow) |
 | Writing meaningful tests | [docs/ai-guide.md → Tests](docs/ai-guide.md#writing-meaningful-tests) |

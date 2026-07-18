@@ -34,7 +34,7 @@ HostMCP サーバー（ホスト OS）
   └── ホストコマンド             ← 新機能: ホワイトリスト登録された CLI コマンドをホストで実行
 ```
 
-ホストツールはデフォルトで有効ですが、コンテナライフサイクルとホストコマンドはデフォルトで無効です。いずれも設定フィアルで有効にできます。
+ホストツールはデフォルトで有効ですが、コンテナライフサイクルとホストコマンドはデフォルトで無効です。いずれも設定ファイルで有効にできます。
 
 ---
 
@@ -95,8 +95,12 @@ host_access:
 | ツール | 説明 |
 |--------|------|
 | `copy-credentials.sh` | DevContainer プロジェクト間でホームディレクトリをコピー |
+| `mac-memory.sh` | macOS のメモリ使用状況レポート |
+| `run-host-setup-tests.sh` | ホストOS上で `.sandbox/host-setup/test-*.sh` を実行 |
+| `xcode-build.sh` / `xcode-test.sh` / `xcode-archive.sh` | Xcode のビルド・テスト・アーカイブ（macOS専用） |
+| `docker-compose-up.sh` / `docker-compose-down.sh` / `docker-compose-build.sh` | `docker compose up` / `down` / `build` の汎用ラッパー |
 
-> **デモツールの参考例:** `demo-build.sh`・`demo-up.sh`・`demo-down.sh` は [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) に収録されています。自作ホストツールを書く際の参考にしてください。
+> 各ツールの詳しい使い方は [.sandbox/host-tools/README.ja.md](../.sandbox/host-tools/README.ja.md) を参照してください。
 
 ### 自作ホストツールの書き方
 

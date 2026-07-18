@@ -10,7 +10,7 @@ Some files appear empty due to security measures (Docker volume mounts). This is
 **Important:** If a file appears empty or missing, check whether its path is listed in the volume/tmpfs mounts in `.devcontainer/docker-compose.yml` or `cli_sandbox/docker-compose.yml`. If so, the file is sandbox-hidden. Ask the user to verify on the host OS.
 
 ### No Docker Access
-You cannot run `docker` or `docker-compose` commands. Tell users to run these on the host OS.
+You cannot run `docker` or `docker-compose` commands directly (no Docker socket). For one-off commands, tell users to run these on the host OS. For repeatable operations, prefer the host-tools bridge below so you can run them yourself.
 
 ## What AI Can and Cannot Do
 
@@ -40,11 +40,11 @@ HostMCP's tools appear with the `mcp__hostmcp__` prefix once connected — treat
 
 ### Fallback: hostmcp client
 
-If MCP tools are unavailable, use `hostmcp client` commands via Bash. See [../docs/ai-guide.md](../docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
+If MCP tools are unavailable, use `hostmcp client` commands via Bash. See [../docs/ai-guide.md](../docs/ai-guide.md#hostmcp-client-fallback) for the full command reference.
 
 `startup.sh` installs `hostmcp` automatically. If still not found, tell user: `go install github.com/YujiSuzuki/hostmcp@latest`
 
-For troubleshooting, see [../docs/ai-guide.md](../docs/ai-guide.md#dockmcp-setup-and-troubleshooting).
+For troubleshooting, see [../docs/ai-guide.md](../docs/ai-guide.md#hostmcp-setup-and-troubleshooting).
 
 ## Critical Files
 
@@ -84,7 +84,7 @@ Tests must call actual code, not duplicate logic. If unsure whether a test is me
 
 1. Never suggest bypassing security configurations
 2. Explain when files appear empty due to security
-3. Guide users to run Docker commands on host OS
+3. For one-off Docker commands, guide users to run them on the host OS; for repeatable operations, use the host-tools bridge instead
 4. Use HostMCP tools for cross-container operations
 5. Follow existing code patterns in the project
 

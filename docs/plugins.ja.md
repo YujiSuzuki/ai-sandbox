@@ -75,8 +75,8 @@ workspace/
 **マルチリポの場合:**
 ```bash
 # 各プロジェクトディレクトリで /code-review 実行が必要
-cd /workspace/your-apps && # code-review → your-apps のコードのみをレビュー
-cd /workspace/your-apps-ios && # code-review → your-apps-ios のコードのみをレビュー
+cd /workspace/your-apps && /code-review → your-apps のコードのみをレビュー
+cd /workspace/your-apps-ios && /code-review → your-apps-ios のコードのみをレビュー
 ```
 
 ## マルチリポ（独立したリポジトリ）の場合の工夫

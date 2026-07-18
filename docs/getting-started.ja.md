@@ -52,7 +52,7 @@ HostMCP も使う場合は追加で必要：
 
 | ツール | 確認コマンド | インストール先 |
 |--------|-------------|----------------|
-| **Go** (1.24 以上) | `go version` | [go.dev](https://go.dev/dl/) |
+| **Go** (1.25 以上) | `go version` | [go.dev](https://go.dev/dl/) |
 
 > [!TIP]
 > **Go がなくても大丈夫:** `install-hostmcp.sh`（ステップ 4）が、Go 不要でプレビルド済みの `hostmcp` バイナリを自動でダウンロードしてくれます。

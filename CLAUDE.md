@@ -56,7 +56,7 @@ A secure AI development environment demonstrating:
 3. **Cross-Container Access** — Interact with other containers via HostMCP
 4. **Multi-Project Workspaces** — Mobile, API, Web in one workspace
 
-**HostMCP** is an MCP server on the host OS providing controlled container access. It solves: "My API is in a separate container, how can AI help debug it?"
+**HostMCP** is an MCP server on the host OS providing controlled access to the host environment — Docker containers, host tools (approved scripts), and host OS commands. It solves problems like: "My API is in a separate container, how can AI help debug it?" and "How can AI run a host-side build/deploy script without direct Docker socket access?"
 
 ---
 
@@ -149,11 +149,11 @@ HostMCP runs on the host OS and provides controlled container access via MCP. It
 
 ### Fallback: hostmcp client
 
-If MCP tools are unavailable (connection issues, "Client not initialized" error), use `hostmcp client` commands via Bash. See [docs/ai-guide.md](docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
+If MCP tools are unavailable (connection issues, "Client not initialized" error), use `hostmcp client` commands via Bash. See [docs/ai-guide.md](docs/ai-guide.md#hostmcp-client-fallback) for the full command reference.
 
 `startup.sh` installs the `hostmcp` CLI automatically (via `go install` or a prebuilt binary download), so it should already be on PATH. If `hostmcp` command is still not found, tell the user to run: `go install github.com/YujiSuzuki/hostmcp@latest`
 
-For HostMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#dockmcp-setup-and-troubleshooting).
+For HostMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#hostmcp-setup-and-troubleshooting).
 
 ---
 
@@ -207,8 +207,8 @@ For detailed information, read the relevant file when needed:
 
 | Topic | File |
 |-------|------|
-| HostMCP setup & troubleshooting | [docs/ai-guide.md → HostMCP Setup](docs/ai-guide.md#dockmcp-setup-and-troubleshooting) |
-| HostMCP client command reference | [docs/ai-guide.md → Client Fallback](docs/ai-guide.md#dockmcp-client-fallback) |
+| HostMCP setup & troubleshooting | [docs/ai-guide.md → HostMCP Setup](docs/ai-guide.md#hostmcp-setup-and-troubleshooting) |
+| HostMCP client command reference | [docs/ai-guide.md → Client Fallback](docs/ai-guide.md#hostmcp-client-fallback) |
 | Template update procedure | [docs/ai-guide.md → Updating](docs/ai-guide.md#updating-this-template) |
 | Template customization workflow | [docs/ai-guide.md → Customization](docs/ai-guide.md#customization-workflow) |
 | SandboxMCP extensions | [docs/ai-guide.md → SandboxMCP](docs/ai-guide.md#sandboxmcp-extensions) |
