@@ -14,7 +14,8 @@
 # Options:
 #   --check       Silent check (exit code: 0=connected, 1=not registered, 2=registered but offline)
 #   --status      Human-readable status report
-#   --url <url>   Custom HostMCP URL (default: http://host.docker.internal:18080/sse)
+#   --url <url>   Custom HostMCP URL (default: detected from .sandbox/config/hostmcp.yaml's
+#                 server.port, else http://host.docker.internal:18080/sse)
 #   --unregister  Remove HostMCP from all detected AI tools
 #   --help, -h    Show this help
 #
@@ -37,7 +38,8 @@
 # オプション:
 #   --check       サイレントチェック（終了コード: 0=接続済, 1=未登録, 2=登録済だがオフライン）
 #   --status      人向けのステータスレポート
-#   --url <url>   カスタム HostMCP URL（デフォルト: http://host.docker.internal:18080/sse）
+#   --url <url>   カスタム HostMCP URL（デフォルト: .sandbox/config/hostmcp.yaml の
+#                 server.port から自動検出、失敗時は http://host.docker.internal:18080/sse）
 #   --unregister  全 AI ツールから HostMCP を削除
 #   --help, -h    ヘルプ表示
 
@@ -114,8 +116,60 @@ fi
 # ─── Constants / 定数 ──────────────────────────────────────────
 
 WORKSPACE="${WORKSPACE:-/workspace}"
-DEFAULT_URL="http://host.docker.internal:18080/sse"
 DKMCP_NAME="hostmcp"
+
+# Reads server.port from $WORKSPACE/.sandbox/config/hostmcp.yaml so DEFAULT_URL
+# matches the port `hostmcp serve` actually listens on. Prints the port and
+# returns 0 on success; returns 1 (no output) if the config is missing or the
+# port can't be determined, leaving callers to fall back to the hardcoded port.
+#
+# $WORKSPACE/.sandbox/config/hostmcp.yaml の server.port を読み取り、
+# DEFAULT_URL を `hostmcp serve` が実際にリッスンしているポートに合わせます。
+# 成功時はポート番号を出力して0を返し、configが無い・ポートが特定できない
+# 場合は出力なしで1を返します（呼び出し側はハードコードされたポートにフォールバック）。
+detect_hostmcp_port() {
+    local cfg="$WORKSPACE/.sandbox/config/hostmcp.yaml"
+    [[ -f "$cfg" ]] || return 1
+
+    local port=""
+    if command -v yq >/dev/null 2>&1; then
+        # No "eval" subcommand: this bare jq-filter form works both with
+        # mikefarah/yq (Go) and Debian's apt "yq" package (kislyuk/yq, a
+        # Python/jq wrapper), whichever happens to be installed.
+        # "eval"サブコマンドを付けない: この素のjqフィルタ形式は、mikefarah/yq
+        # （Go版）とDebianのaptパッケージ「yq」（kislyuk/yq、Python/jqラッパー）
+        # のどちらがインストールされていても動作する。
+        port=$(yq '.server.port' "$cfg" 2>/dev/null)
+        [[ "$port" == "null" ]] && port=""
+    fi
+
+    if [[ -z "$port" ]]; then
+        # Fallback: isolate the top-level "server:" block, stop at the next
+        # top-level (non-indented) key, then grab the first "port:" line inside it.
+        # フォールバック: トップレベルの"server:"ブロックのみを対象にし、次の
+        # トップレベル（非インデント）キーで走査を止め、その中の最初の"port:"行を取得。
+        port=$(awk '
+            /^server:/ { in_server=1; next }
+            in_server && /^[^ \t]/ { in_server=0 }
+            in_server && /^[ \t]+port:[ \t]*[0-9]+/ {
+                val = $0
+                sub(/^[ \t]*port:[ \t]*/, "", val)
+                sub(/[^0-9].*$/, "", val)
+                print val; exit
+            }
+        ' "$cfg")
+    fi
+
+    [[ "$port" =~ ^[0-9]+$ ]] || return 1
+    echo "$port"
+}
+
+if _detected_port=$(detect_hostmcp_port); then
+    DEFAULT_URL="http://host.docker.internal:${_detected_port}/sse"
+else
+    DEFAULT_URL="http://host.docker.internal:18080/sse"
+fi
+unset _detected_port
 
 # ─── Help / ヘルプ ─────────────────────────────────────────────
 

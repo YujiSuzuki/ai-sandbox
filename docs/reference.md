@@ -261,7 +261,8 @@ You can use the setup script inside AI Sandbox to check registration status and 
 # Register HostMCP with detected AI tools + verify connectivity
 .sandbox/scripts/setup-hostmcp.sh
 
-# Use a custom URL (if HostMCP is on a non-default port)
+# Use a custom URL (auto-detected from .sandbox/config/hostmcp.yaml's
+# server.port when possible; pass --url to override that detection)
 .sandbox/scripts/setup-hostmcp.sh --url http://host.docker.internal:9090/sse
 
 # Remove HostMCP registration from all AI tools
@@ -298,7 +299,7 @@ hostmcp client logs securenote-api
 hostmcp client exec securenote-api "npm test"
 ```
 
-> **About `--url`:** Defaults to `http://host.docker.internal:18080`. If you changed the server port in `hostmcp.yaml`, specify it explicitly via the `--url` flag or `HOSTMCP_SERVER_URL` environment variable.
+> **About `--url`:** Auto-detected from `server.port` in `hostmcp.yaml` when possible, else `http://host.docker.internal:18080`. Override with the `--url` flag or `HOSTMCP_SERVER_URL` environment variable if needed.
 > ```bash
 > hostmcp client list --url http://host.docker.internal:9090
 > # or

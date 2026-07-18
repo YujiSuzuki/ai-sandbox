@@ -31,6 +31,27 @@ RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz" | 
 ENV GOPATH="/home/node/go"
 ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
 
+# Install yq (mikefarah/yq, the Go-based YAML processor most tooling means by
+# "yq"). Required by .sandbox/scripts/setup-hostmcp.sh's detect_hostmcp_port(),
+# which reads server.port from hostmcp.yaml to compute the default HostMCP URL
+# — do not remove without checking that call site (it has an awk-based
+# fallback, but yq is the primary, more robust path). Debian's apt package
+# "yq" is a different, unrelated Python/jq wrapper (kislyuk/yq) with an
+# incompatible CLI, so this installs the pinned upstream binary directly
+# instead, downloading it straight to its final path (no archive to extract,
+# unlike the tarball-based Go install above).
+# yq（mikefarah/yq、一般的に「yq」と呼ばれるGo版のYAMLプロセッサ）をインストール。
+# .sandbox/scripts/setup-hostmcp.sh の detect_hostmcp_port() が、HostMCPの
+# デフォルトURLを求めるためhostmcp.yamlのserver.portを読み取るのに使用する。
+# 削除する場合は呼び出し箇所を必ず確認すること（awkベースのフォールバックは
+# あるが、yqがより堅牢な主経路）。Debianのaptパッケージ「yq」は別物の
+# Python/jqラッパー（kislyuk/yq）でCLIの互換性がないため、ピン留めした本家
+# バイナリを直接取得する。上のGoのtar展開とは異なり、バイナリを最終パスに
+# そのままダウンロードするだけ。
+ARG YQ_VERSION=v4.53.3
+RUN curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${TARGETARCH}" \
+    -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+
 # Install Claude Code
 # Claude Code インストール
 RUN npm install -g @anthropic-ai/claude-code

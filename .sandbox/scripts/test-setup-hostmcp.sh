@@ -313,6 +313,150 @@ EOF
     cleanup
 }
 
+# Test 8b: server.port from hostmcp.yaml is detected and used as the default URL
+# テスト8b: hostmcp.yaml の server.port が検出され、デフォルトURLに使われるか
+test_port_detected_from_config() {
+    echo ""
+    echo "=== Test: server.port detected from hostmcp.yaml ==="
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/.sandbox/config"
+    cat > "$TEST_WORKSPACE/.sandbox/config/hostmcp.yaml" << 'EOF'
+server:
+  port: 8180
+  host: "127.0.0.1"
+EOF
+
+    # Need .mcp.json.example so can_register_claude returns true without CLI
+    cat > "$TEST_WORKSPACE/.mcp.json.example" << 'EOF'
+{
+  "mcpServers": {}
+}
+EOF
+
+    WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" PATH="/usr/bin:/bin" \
+        "$SCRIPT" 2>/dev/null || true
+
+    if [ -f "$TEST_WORKSPACE/.mcp.json" ]; then
+        local url_in_file
+        url_in_file=$(jq -r '.mcpServers.hostmcp.url' "$TEST_WORKSPACE/.mcp.json" 2>/dev/null)
+        if [ "$url_in_file" = "http://host.docker.internal:8180/sse" ]; then
+            pass "Port from hostmcp.yaml is detected and used in the default URL"
+        else
+            fail "URL in .mcp.json is '$url_in_file', expected 'http://host.docker.internal:8180/sse'"
+        fi
+    else
+        fail ".mcp.json was not created"
+    fi
+
+    cleanup
+}
+
+# Test 8c: --url still overrides even when hostmcp.yaml has a server.port
+# テスト8c: hostmcp.yaml に server.port があっても --url が優先されるか
+test_url_flag_overrides_detected_port() {
+    echo ""
+    echo "=== Test: --url overrides detected port ==="
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/.sandbox/config"
+    cat > "$TEST_WORKSPACE/.sandbox/config/hostmcp.yaml" << 'EOF'
+server:
+  port: 8180
+EOF
+
+    local custom_url="http://custom-host:9999/sse"
+
+    cat > "$TEST_WORKSPACE/.mcp.json.example" << 'EOF'
+{
+  "mcpServers": {}
+}
+EOF
+
+    WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" PATH="/usr/bin:/bin" \
+        "$SCRIPT" --url "$custom_url" 2>/dev/null || true
+
+    if [ -f "$TEST_WORKSPACE/.mcp.json" ]; then
+        local url_in_file
+        url_in_file=$(jq -r '.mcpServers.hostmcp.url' "$TEST_WORKSPACE/.mcp.json" 2>/dev/null)
+        if [ "$url_in_file" = "$custom_url" ]; then
+            pass "--url still overrides the config-detected port"
+        else
+            fail "URL in .mcp.json is '$url_in_file', expected '$custom_url'"
+        fi
+    else
+        fail ".mcp.json was not created"
+    fi
+
+    cleanup
+}
+
+# Test 8d: the yq branch of detect_hostmcp_port is actually used when yq is
+# on PATH, using the bare-filter form (no "eval" subcommand). Tests 8b/8c run
+# with PATH="/usr/bin:/bin", which excludes /usr/local/bin (where the
+# Dockerfile installs yq), so they only ever exercise the awk fallback. This
+# test stubs yq with a value that differs from the real hostmcp.yaml port, so
+# the result can only match if the yq branch (not awk) produced it.
+# テスト8d: yqがPATH上にある場合、detect_hostmcp_portのyq分岐が実際に
+# （"eval"サブコマンド無しの素のフィルタ形式で）使われるか。テスト8b/8cは
+# PATH="/usr/bin:/bin"で実行されるため、yqがインストールされる/usr/local/binが
+# 除外され、awkフォールバックしか検証されていなかった。このテストでは、実際の
+# hostmcp.yamlのポートとは異なる値を返すyqスタブを使い、結果がその値と一致する
+# ことでyq分岐（awkではなく）が使われたことを証明する。
+test_yq_branch_is_used_when_available() {
+    echo ""
+    echo "=== Test: yq branch of detect_hostmcp_port is used when yq is available ==="
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/.sandbox/config"
+    cat > "$TEST_WORKSPACE/.sandbox/config/hostmcp.yaml" << 'EOF'
+server:
+  port: 8180
+EOF
+
+    # Stub yq: only responds to the exact bare-filter invocation
+    # `yq '.server.port' "$cfg"` (no "eval" subcommand), and returns a port
+    # distinct from the real config's 8180 so its use is unambiguous.
+    local stub_dir="$TEST_WORKSPACE/bin"
+    mkdir -p "$stub_dir"
+    cat > "$stub_dir/yq" << 'STUB'
+#!/bin/bash
+if [[ "$1" == ".server.port" ]]; then
+    echo "9321"
+    exit 0
+fi
+exit 1
+STUB
+    chmod +x "$stub_dir/yq"
+
+    # Need .mcp.json.example so can_register_claude returns true without CLI
+    cat > "$TEST_WORKSPACE/.mcp.json.example" << 'EOF'
+{
+  "mcpServers": {}
+}
+EOF
+
+    WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" PATH="$stub_dir:/usr/bin:/bin" \
+        "$SCRIPT" 2>/dev/null || true
+
+    if [ -f "$TEST_WORKSPACE/.mcp.json" ]; then
+        local url_in_file
+        url_in_file=$(jq -r '.mcpServers.hostmcp.url' "$TEST_WORKSPACE/.mcp.json" 2>/dev/null)
+        if [ "$url_in_file" = "http://host.docker.internal:9321/sse" ]; then
+            pass "yq branch is used (stub's port reached the URL) when yq is on PATH"
+        else
+            fail "URL in .mcp.json is '$url_in_file', expected 'http://host.docker.internal:9321/sse' (stub yq's port)"
+        fi
+    else
+        fail ".mcp.json was not created"
+    fi
+
+    cleanup
+}
+
 # Test 9: --status shows tool status and connectivity
 # テスト9: --status がツール状態と接続情報を表示するか
 test_status_output() {
@@ -652,6 +796,9 @@ main() {
     test_register_preserves_existing_entries
     test_unregister_removes_hostmcp
     test_custom_url
+    test_port_detected_from_config
+    test_url_flag_overrides_detected_port
+    test_yq_branch_is_used_when_available
     test_status_output
     test_no_tools_found
     test_detect_claude_user_scope
