@@ -15,4 +15,5 @@ jobs:
       - name: Run test suite
         env:
           WORKSPACE: ${{ github.workspace }}
+          SANDBOX_ENV: devcontainer
         run: .sandbox/scripts/run-all-tests.sh
