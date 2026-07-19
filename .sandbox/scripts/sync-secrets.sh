@@ -5,8 +5,7 @@
 # This script finds files blocked in Claude settings that are not hidden in docker-compose.yml,
 # and offers to add them interactively. Updates both DevContainer and CLI Sandbox configs.
 #
-# IMPORTANT: Must run inside AI Sandbox container (not on host OS). Auto-detects which
-# environment to use ($SANDBOX_ENV: devcontainer, cli_claude, cli_gemini, cli_ai_sandbox).
+# IMPORTANT: Must run inside AI Sandbox container (not on host OS).
 # @env: container
 # ---
 # .claude/settings.json から docker-compose.yml へ秘匿ファイルを同期する対話式スクリプト
@@ -39,6 +38,8 @@ if [[ -z "${SANDBOX_ENV:-}" ]] && [[ ! -f "/.dockerenv" ]]; then
 fi
 
 WORKSPACE="${WORKSPACE:-/workspace}"
+# Escaped for safe use inside a bash =~ regex (tmpfs-line detection below)
+WORKSPACE_RE=$(printf '%s' "$WORKSPACE" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source common startup functions for sync-ignore support
@@ -275,7 +276,7 @@ add_dir_to_compose() {
             in_tmpfs=true
             continue
         fi
-        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*/workspace ]]; then
+        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*$WORKSPACE_RE ]]; then
             last_tmpfs_line=$line_num
         fi
         if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*[a-z_]+: && ! "$line" =~ ^[[:space:]]*- ]]; then

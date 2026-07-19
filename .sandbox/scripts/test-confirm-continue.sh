@@ -7,20 +7,34 @@
 # Usage: ./test-confirm-continue.sh
 # 使用方法: ./test-confirm-continue.sh
 #
-# Environment: AI Sandbox (requires /workspace)
-# 実行環境: AI Sandbox（/workspace が必要）
+# Environment: Host OS (must NOT run inside AI Sandbox)
+# 実行環境: ホスト OS（AI Sandbox 内では実行しないこと）
+#
+# confirm_continue_after_failure is called only from cli_sandbox/claude.sh,
+# gemini.sh, and ai_sandbox.sh -- the host-side launchers -- never from
+# inside a running AI Sandbox container. Sourcing _common.sh also runs
+# init-host-env.sh unconditionally, which itself refuses to run inside the
+# container (see .sandbox/host-setup/init-host-env.sh), so this test cannot
+# work there either way.
+# confirm_continue_after_failure は cli_sandbox/claude.sh, gemini.sh,
+# ai_sandbox.sh というホスト側の起動スクリプトからのみ呼ばれ、実行中の
+# AI Sandbox コンテナ内から呼ばれることはない。_common.sh を source すると
+# init-host-env.sh も無条件に実行されるが、そちらもコンテナ内での実行を
+# 拒否するため（.sandbox/host-setup/init-host-env.sh 参照）、いずれにせよ
+# このテストはコンテナ内では動作しない。
 
 set -e
 
-# Verify running in AI Sandbox
-# AI Sandbox 内での実行を確認
-if [ ! -d "/workspace" ]; then
-    echo "Error: This test is designed to run inside AI Sandbox"
-    echo "エラー: このテストは AI Sandbox 内での実行を想定しています"
+# Verify running on host OS (not inside AI Sandbox)
+# ホスト OS 上での実行を確認（AI Sandbox 内ではない）
+if [ -d "/workspace" ]; then
+    echo "Error: This test must be run on the host OS, not inside AI Sandbox"
+    echo "エラー: このテストはホスト OS 上で実行する必要があります（AI Sandbox 内では実行できません）"
     exit 1
 fi
 
-WORKSPACE_DIR="/workspace"
+WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export WORKSPACE_DIR
 
 # Colors for output
 # 出力用の色定義
@@ -205,8 +219,8 @@ test_japanese_locale() {
         SCRIPT_NAME="test"
         COMPOSE_PROJECT_NAME="cli-test"
         SANDBOX_ENV="cli_test"
-        cd /workspace
-        source /workspace/cli_sandbox/_common.sh
+        cd "$WORKSPACE_DIR"
+        source "$WORKSPACE_DIR/cli_sandbox/_common.sh"
         export LANG=ja_JP.UTF-8 LC_ALL=ja_JP.UTF-8
         echo "y" | confirm_continue_after_failure
     ' 2>&1)
@@ -229,8 +243,8 @@ test_english_locale() {
         SCRIPT_NAME="test"
         COMPOSE_PROJECT_NAME="cli-test"
         SANDBOX_ENV="cli_test"
-        cd /workspace
-        source /workspace/cli_sandbox/_common.sh
+        cd "$WORKSPACE_DIR"
+        source "$WORKSPACE_DIR/cli_sandbox/_common.sh"
         export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
         echo "y" | confirm_continue_after_failure
     ' 2>&1)
@@ -249,6 +263,23 @@ main() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  confirm_continue_after_failure Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Impact / 影響範囲:"
+    echo "  Sources cli_sandbox/_common.sh, which runs .sandbox/host-setup/init-host-env.sh"
+    echo "  --silent and overwrites .sandbox/.host-os with this host's OS/arch info."
+    echo "  cli_sandbox/_common.sh を source するため、.sandbox/host-setup/init-host-env.sh"
+    echo "  --silent が実行され、.sandbox/.host-os がこのホストのOS/アーキテクチャ情報で上書きされます。"
+    echo ""
+    echo "Risk / リスク:"
+    echo "  Low -- .sandbox/.host-os is a gitignored, generated file scoped to this repo"
+    echo "  checkout; no other host state is touched."
+    echo "  低 -- .sandbox/.host-os はgitignore対象の生成ファイルでこのリポジトリ内に閉じており、"
+    echo "  他のホスト状態には影響しません。"
+    echo ""
+    echo "Recovery / 復旧方法:"
+    echo "  Re-run .sandbox/host-setup/init-host-env.sh to regenerate it."
+    echo "  .sandbox/host-setup/init-host-env.sh を再実行すれば再生成されます。"
+    echo ""
 
     source_common
 
@@ -271,6 +302,9 @@ main() {
     echo ""
 
     if [ "$TESTS_FAILED" -gt 0 ]; then
+        echo "Recovery: Re-run .sandbox/host-setup/init-host-env.sh to regenerate .sandbox/.host-os."
+        echo "復旧方法: .sandbox/host-setup/init-host-env.sh を再実行すれば .sandbox/.host-os が再生成されます。"
+        echo ""
         exit 1
     fi
 }

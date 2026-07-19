@@ -6,19 +6,8 @@
 #
 # Usage: ./test-sync-compose-secrets.sh
 # 使用方法: ./test-sync-compose-secrets.sh
-#
-# Environment: AI Sandbox (requires /workspace)
-# 実行環境: AI Sandbox（/workspace が必要）
 
 set -e
-
-# Verify running in AI Sandbox
-# AI Sandbox 内での実行を確認
-if [ ! -d "/workspace" ]; then
-    echo "Error: This test is designed to run inside AI Sandbox"
-    echo "エラー: このテストは AI Sandbox 内での実行を想定しています"
-    exit 1
-fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPT="$SCRIPT_DIR/sync-compose-secrets.sh"
@@ -90,69 +79,69 @@ trap cleanup EXIT
 # Create matching docker-compose files (no sync needed)
 # 一致する docker-compose ファイルを作成（同期不要）
 create_matching_configs() {
-    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << EOF
 services:
   ai-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 
-    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
 services:
   cli-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=1g
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 }
 
 # Create mismatched configs (DevContainer has extra volume)
 # 不一致の設定を作成（DevContainer に追加のボリュームがある）
 create_dc_extra_volume() {
-    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << EOF
 services:
   ai-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
-      - /dev/null:/workspace/another-app/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/another-app/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 
-    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
 services:
   cli-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 }
 
 # Create mismatched configs (CLI has extra tmpfs)
 # 不一致の設定を作成（CLI に追加の tmpfs がある）
 create_cli_extra_tmpfs() {
-    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << EOF
 services:
   ai-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 
-    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
 services:
   cli-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
-      - /workspace/another-app/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/another-app/secrets:ro
 EOF
 }
 
@@ -411,11 +400,11 @@ test_missing_dc_config() {
 
     setup
     # Only create CLI config
-    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
 services:
   cli-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
 EOF
 
     if WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" > /dev/null 2>&1; then
@@ -435,11 +424,11 @@ test_missing_cli_config() {
 
     setup
     # Only create DevContainer config
-    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << EOF
 services:
   ai-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
 EOF
 
     if WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" > /dev/null 2>&1; then
@@ -487,24 +476,24 @@ test_bidirectional_sync() {
     setup
 
     # DevContainer has extra volume, CLI has extra tmpfs
-    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << EOF
 services:
   ai-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
-      - /dev/null:/workspace/dc-only-app/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/dc-only-app/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 
-    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
 services:
   cli-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
-      - /workspace/cli-only-app/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/cli-only-app/secrets:ro
 EOF
 
     # Run with "sync all" option (1)
@@ -557,24 +546,24 @@ test_multiple_entries_sync() {
     setup
 
     # DevContainer has multiple extra entries
-    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << EOF
 services:
   ai-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
-      - /dev/null:/workspace/app-one/.env:ro
-      - /dev/null:/workspace/app-two/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/app-one/.env:ro
+      - /dev/null:$TEST_WORKSPACE/app-two/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 
-    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
 services:
   cli-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 
     # Run with "sync all" option (1)
@@ -743,24 +732,24 @@ test_summary_shows_multiple_entries() {
     setup
 
     # DevContainer has multiple extra entries
-    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/.devcontainer/docker-compose.yml" << EOF
 services:
   ai-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
-      - /dev/null:/workspace/app-alpha/.env:ro
-      - /dev/null:/workspace/app-beta/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/app-alpha/.env:ro
+      - /dev/null:$TEST_WORKSPACE/app-beta/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 
-    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << 'EOF'
+    cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
 services:
   cli-sandbox:
     volumes:
-      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - /workspace/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
 EOF
 
     # Run with "sync all" option (1) and capture output

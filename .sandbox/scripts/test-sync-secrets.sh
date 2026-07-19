@@ -9,19 +9,8 @@
 #
 # Note: sync-secrets.sh is interactive, so tests focus on detection logic
 # 注意: sync-secrets.sh は対話式なので、テストは検出ロジックに焦点を当てます
-#
-# Environment: AI Sandbox (requires /workspace)
-# 実行環境: AI Sandbox（/workspace が必要）
 
 set -e
-
-# Verify running in AI Sandbox
-# AI Sandbox 内での実行を確認
-if [ ! -d "/workspace" ]; then
-    echo "Error: This test is designed to run inside AI Sandbox"
-    echo "エラー: このテストは AI Sandbox 内での実行を想定しています"
-    exit 1
-fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPT="$SCRIPT_DIR/sync-secrets.sh"

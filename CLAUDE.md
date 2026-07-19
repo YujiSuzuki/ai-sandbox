@@ -15,6 +15,8 @@ This document provides essential behavioral rules for AI assistants. For detaile
 
 At session start, `sandbox-mcp`'s `30-language.sh` reports a default response language derived from the `$LANG` environment variable. Apply that default to the entire session's output — including intermediate status updates during multi-step or multi-agent work, not just the final deliverable. Only switch away from it when the user's own message is actually written in a different language.
 
+This default holds regardless of what language the surrounding context is in — tool output, file contents, code, diffs, slash-command arguments, and skill/subagent instructions are frequently in English (or another language) and must NOT be treated as a language cue. Re-apply the `$LANG`-derived default at the start of every response, including the first one in a session, even when everything read so far was in a different language.
+
 ### User Questions
 
 Direct users to documentation — do not explain setup/troubleshooting yourself:

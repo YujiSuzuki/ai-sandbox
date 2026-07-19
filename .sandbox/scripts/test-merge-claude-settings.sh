@@ -6,19 +6,8 @@
 #
 # Usage: ./test-merge-claude-settings.sh
 # 使用方法: ./test-merge-claude-settings.sh
-#
-# Environment: AI Sandbox (requires /workspace)
-# 実行環境: AI Sandbox（/workspace が必要）
 
 set -e
-
-# Verify running in AI Sandbox
-# AI Sandbox 内での実行を確認
-if [ ! -d "/workspace" ]; then
-    echo "Error: This test is designed to run inside AI Sandbox"
-    echo "エラー: このテストは AI Sandbox 内での実行を想定しています"
-    exit 1
-fi
 
 # Check if jq is available
 if ! command -v jq &> /dev/null; then
@@ -344,6 +333,74 @@ EOF
     cleanup
 }
 
+# Test 7: Preserve non-permissions keys (e.g. hooks) across re-merge
+# テスト7: 再マージ時に permissions 以外のキー（hooksなど）を保持する
+test_preserve_other_keys_on_remerge() {
+    info "Test 7: Preserve non-permissions keys (e.g. hooks) across re-merge, without disabling future auto-merge"
+    info "テスト7: 再マージ時にpermissions以外のキー（hooksなど）を保持し、以降の自動マージも無効化しない"
+
+    setup
+
+    # Create project with settings
+    mkdir -p "$TEST_WORKSPACE/project-a/.claude"
+    cat > "$TEST_WORKSPACE/project-a/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "deny": ["Read(.env)"]
+  }
+}
+EOF
+
+    # First run creates workspace settings + backup (Case 1)
+    "$SCRIPT" > /dev/null 2>&1
+
+    # Simulate another startup step adding a hooks key after the merge
+    # (e.g. setup-language-hook.sh), without touching permissions.
+    merged=$(jq '.hooks.UserPromptSubmit = [{"hooks":[{"type":"command","command":"echo hi"}]}]' \
+        "$TEST_WORKSPACE/.claude/settings.json")
+    echo "$merged" | jq '.' > "$TEST_WORKSPACE/.claude/settings.json"
+
+    # Add a second project so a real re-merge has something new to pull in
+    mkdir -p "$TEST_WORKSPACE/project-b/.claude"
+    cat > "$TEST_WORKSPACE/project-b/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "deny": ["Read(*.key)"]
+  }
+}
+EOF
+
+    # Second run: the file now differs from the backup only because of the
+    # added hooks key (permissions themselves are untouched). This must
+    # still be treated as a safe re-merge (Case 2), not "manual changes"
+    # (Case 3) -- otherwise a hook-setup step would permanently disable
+    # this workspace's permission auto-merge as a side effect.
+    output=$("$SCRIPT" 2>&1)
+
+    if echo "$output" | grep -q "Manual changes detected\|手動変更が検出されました"; then
+        fail "hooks-only diff was misdetected as a manual change (auto-merge would be disabled)"
+        echo "Output: $output"
+    else
+        pass "hooks-only diff did not trigger manual-change detection"
+    fi
+
+    if jq -e '.hooks.UserPromptSubmit' "$TEST_WORKSPACE/.claude/settings.json" > /dev/null 2>&1; then
+        pass "hooks key preserved across re-merge"
+    else
+        fail "hooks key was dropped by merge-claude-settings.sh"
+        cat "$TEST_WORKSPACE/.claude/settings.json"
+    fi
+
+    if jq -e '.permissions.deny | index("Read(*.key)")' "$TEST_WORKSPACE/.claude/settings.json" > /dev/null 2>&1; then
+        pass "project-b's permissions were merged in on top of the hooks key"
+    else
+        fail "project-b's permissions were not merged (auto-merge silently stopped working)"
+        cat "$TEST_WORKSPACE/.claude/settings.json"
+    fi
+
+    cleanup
+}
+
 # ========================================
 # Run all tests / 全テストの実行
 # ========================================
@@ -361,6 +418,7 @@ test_remerge_no_changes
 test_skip_on_manual_changes
 test_skip_without_backup
 test_merge_multiple_projects
+test_preserve_other_keys_on_remerge
 
 echo ""
 echo "=========================================="

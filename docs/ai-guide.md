@@ -289,11 +289,20 @@ Place shell scripts in `.sandbox/scripts/`. Auto-discovered via `list_scripts`, 
 #!/bin/bash
 # my-script.sh
 # English description
+# @advertise: true    # optional — see "Header tags" below
 # ---
 # Japanese description (optional, not parsed)
 ```
 
 Since scripts can call other languages, you can build tools in any language.
+
+**Header tags** (all optional; parsed by `sandbox-mcp` — see the "Adding Scripts and Tools" section of
+[sandbox-mcp's README.md](https://raw.githubusercontent.com/YujiSuzuki/sandbox-mcp/refs/heads/main/README.md)
+for the authoritative reference):
+- `@advertise: true` — the script is listed in `<system-reminder>` at the start of every conversation, so the AI knows about it without calling `list_scripts` first.
+- `@hidden: true` — excludes the script from `list_scripts` (e.g. a human-facing CLI entry point not meant to be run by the AI). Default `false`. Scripts with a `_` prefix (e.g. `_common.sh`) are treated as libraries and excluded automatically, without needing this tag.
+- `@env: container` — marks the script as container-only. Default `any` (runnable anywhere); `@env: any` can be written explicitly too.
+- `@category: test` / `@category: utility` — overrides the filename-based category (`test-` prefix → `test`, everything else → `utility`).
 
 ### Manual Registration
 

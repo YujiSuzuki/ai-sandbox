@@ -34,6 +34,8 @@ if [[ -z "${SANDBOX_ENV:-}" ]] && [[ ! -f "/.dockerenv" ]]; then
 fi
 
 WORKSPACE="${WORKSPACE:-/workspace}"
+# Escaped for safe use inside a bash =~ regex (tmpfs-line detection below)
+WORKSPACE_RE=$(printf '%s' "$WORKSPACE" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
 
 # Source common functions (backup utilities, etc.)
 # 共通関数を読み込み（バックアップユーティリティなど）
@@ -136,8 +138,8 @@ extract_devnull_mounts() {
         sort || true
 }
 
-# Extract tmpfs mounts (/workspace paths with :ro)
-# tmpfs マウントを抽出（/workspace パスで :ro 付き）
+# Extract tmpfs mounts ($WORKSPACE paths with :ro)
+# tmpfs マウントを抽出（$WORKSPACE パスで :ro 付き）
 extract_tmpfs_mounts() {
     local file="$1"
     local in_tmpfs=false
@@ -151,7 +153,7 @@ extract_tmpfs_mounts() {
             in_tmpfs=false
             continue
         fi
-        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*/workspace && "$line" =~ :ro($|[[:space:]]) ]]; then
+        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*$WORKSPACE_RE && "$line" =~ :ro($|[[:space:]]) ]]; then
             echo "$line" | sed -E 's/^[[:space:]]*-[[:space:]]*//'
         fi
     done < "$file" | sort -u
@@ -192,7 +194,7 @@ add_tmpfs_mount() {
             in_tmpfs=true
             continue
         fi
-        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*/workspace ]]; then
+        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*$WORKSPACE_RE ]]; then
             last_tmpfs_line=$line_num
         fi
         if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*[a-z_]+: && ! "$line" =~ ^[[:space:]]*- ]]; then

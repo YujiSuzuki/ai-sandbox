@@ -12,6 +12,8 @@
 set -e
 
 WORKSPACE="${WORKSPACE:-/workspace}"
+# Escaped for safe use inside a bash =~ regex (extract_tmpfs_mounts below)
+WORKSPACE_RE=$(printf '%s' "$WORKSPACE" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
 
 # Source common startup functions
 # 共通起動関数を読み込み
@@ -82,9 +84,9 @@ extract_devnull_mounts() {
 }
 
 # Extract tmpfs mounts (secret directory hiding)
-# Only /workspace paths with :ro are considered secrets
+# Only $WORKSPACE paths with :ro are considered secrets
 # tmpfs マウントを抽出（秘匿ディレクトリ）
-# /workspace で始まり :ro で終わるもののみを秘匿とみなす
+# $WORKSPACE で始まり :ro で終わるもののみを秘匿とみなす
 extract_tmpfs_mounts() {
     local file="$1"
     local in_tmpfs=false
@@ -104,11 +106,11 @@ extract_tmpfs_mounts() {
             continue
         fi
 
-        # If in tmpfs section, extract /workspace paths with :ro (read-only = secrets)
-        # tmpfs セクション内で /workspace パスを :ro 付きで抽出（読み取り専用 = 秘匿）
-        # Must start with /workspace and end with :ro
-        # /workspace で始まり :ro で終わる必要がある
-        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*/workspace && "$line" =~ :ro($|[[:space:]]) ]]; then
+        # If in tmpfs section, extract $WORKSPACE paths with :ro (read-only = secrets)
+        # tmpfs セクション内で $WORKSPACE パスを :ro 付きで抽出（読み取り専用 = 秘匿）
+        # Must start with $WORKSPACE and end with :ro
+        # $WORKSPACE で始まり :ro で終わる必要がある
+        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*$WORKSPACE_RE && "$line" =~ :ro($|[[:space:]]) ]]; then
             echo "$line" | sed -E 's/^[[:space:]]*-[[:space:]]*//'
         fi
     done < "$file" | sort -u

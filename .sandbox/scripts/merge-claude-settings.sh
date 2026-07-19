@@ -66,7 +66,7 @@ if ! command -v jq &> /dev/null; then
     exit 0
 fi
 
-# Find all .claude/settings.json in subprojects (max depth 2)
+# Find all .claude/settings.json in subprojects (max depth 3)
 find_project_settings() {
     find "$WORKSPACE_ROOT" -maxdepth 3 -path "*/.claude/settings.json" -type f 2>/dev/null | \
         grep -v "^$WORKSPACE_ROOT/.claude/settings.json$" | sort || true
@@ -145,16 +145,30 @@ if [ ! -f "$BACKUP_FILE" ]; then
     exit 0
 fi
 
-# Both workspace settings and backup exist - check for changes
-if diff -q "$WORKSPACE_SETTINGS" "$BACKUP_FILE" > /dev/null 2>&1; then
-    # Case 2: No changes - re-merge and update backup
+# Both workspace settings and backup exist - check for changes.
+# Only the .permissions subtree is compared: this script owns permissions
+# merging exclusively, so other top-level keys (e.g. hooks added by other
+# startup steps) must never trigger a false "manual changes" detection.
+# .permissionsサブツリーのみを比較する: このスクリプトはpermissionsのマージのみを
+# 担当するため、他のトップレベルキー（他の起動ステップが追加するhooksなど）が
+# 誤って「手動変更」と判定されてはならない。
+if jq -e -s '.[0].permissions == .[1].permissions' "$WORKSPACE_SETTINGS" "$BACKUP_FILE" > /dev/null 2>&1; then
+    # Case 2: No permissions changes - re-merge and update backup
     merged=$(merge_permissions)
 
     if [ -z "$merged" ] || [ "$merged" = '{"permissions":{}}' ]; then
         exit 0
     fi
 
-    echo "$merged" | jq '.' > "$WORKSPACE_SETTINGS"
+    # Merge onto the existing file (jq's `*` deep-merges objects but lets
+    # the right side replace array values), preserving any other top-level
+    # keys already present while fully replacing .permissions with the
+    # freshly recomputed set.
+    # 既存ファイルにマージする（jqの`*`はオブジェクトを再帰的にマージしつつ、
+    # 配列は右側で置き換える）。他のトップレベルキーは保持しつつ、
+    # .permissionsだけを最新の値で完全に置き換える。
+    jq -s '.[0] * .[1]' "$WORKSPACE_SETTINGS" <(echo "$merged") > "$WORKSPACE_SETTINGS.tmp" \
+        && mv "$WORKSPACE_SETTINGS.tmp" "$WORKSPACE_SETTINGS"
     cp "$WORKSPACE_SETTINGS" "$BACKUP_FILE"
 
     # Count sources for summary

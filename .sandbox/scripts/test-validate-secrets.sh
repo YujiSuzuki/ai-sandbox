@@ -6,19 +6,8 @@
 #
 # Usage: ./test-validate-secrets.sh
 # 使用方法: ./test-validate-secrets.sh
-#
-# Environment: AI Sandbox (requires /workspace)
-# 実行環境: AI Sandbox（/workspace が必要）
 
 set -e
-
-# Verify running in AI Sandbox
-# AI Sandbox 内での実行を確認
-if [ ! -d "/workspace" ]; then
-    echo "Error: This test is designed to run inside AI Sandbox"
-    echo "エラー: このテストは AI Sandbox 内での実行を想定しています"
-    exit 1
-fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPT="$SCRIPT_DIR/validate-secrets.sh"
@@ -61,9 +50,11 @@ setup() {
     # Create temporary directories
     # 一時ディレクトリを作成
     TEST_COMPOSE_DIR=$(mktemp -d)
-    # Must be under /workspace because validate-secrets.sh only checks /workspace paths in tmpfs
-    # validate-secrets.sh が tmpfs で /workspace パスのみチェックするため /workspace 配下に作成
-    TEST_SECRET_DIR=$(mktemp -d /workspace/.test-secrets-XXXXXX)
+    # Must be under $TEST_COMPOSE_DIR because validate-secrets.sh (run with
+    # WORKSPACE="$TEST_COMPOSE_DIR" below) only checks paths under $WORKSPACE in tmpfs
+    # validate-secrets.sh（下記で WORKSPACE="$TEST_COMPOSE_DIR" として実行）は
+    # tmpfs で $WORKSPACE 配下のパスのみチェックするため、$TEST_COMPOSE_DIR 配下に作成
+    TEST_SECRET_DIR=$(mktemp -d "$TEST_COMPOSE_DIR/.test-secrets-XXXXXX")
 
     mkdir -p "$TEST_COMPOSE_DIR/.devcontainer"
     mkdir -p "$TEST_COMPOSE_DIR/.sandbox/scripts"

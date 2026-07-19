@@ -248,7 +248,7 @@ EOF
         CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script" --auto-update) 2>/dev/null )
     exit_code=$?
 
-    if echo "$stdout_output" | grep -q "updated to: v0.2.0"; then
+    if echo "$stdout_output" | grep -q "updated to: v0.2.0\|を更新しました: v0.2.0"; then
         pass "Reports successful update to v0.2.0 via go install"
     else
         fail "Should report update success, got: '$stdout_output'"
@@ -293,7 +293,7 @@ EOF
         CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script" --auto-update) 2>/dev/null )
     exit_code=$?
 
-    if echo "$stdout_output" | grep -q "Auto-update failed"; then
+    if echo "$stdout_output" | grep -q "Auto-update failed\|自動更新に失敗しました"; then
         pass "Reports auto-update failure when go install itself fails"
     else
         fail "Should report auto-update failure, got: '$stdout_output'"
@@ -360,13 +360,13 @@ EOF
     stdout_output=$( (HOME="$fake_home" PATH="$FAKE_BIN_DIR:/usr/bin:/bin" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
         CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script" --auto-update) 2>/dev/null )
 
-    if echo "$stdout_output" | grep -q "Go not found"; then
+    if echo "$stdout_output" | grep -q "Go not found\|Go が見つかりません"; then
         pass "Falls back to binary download when go is not on PATH"
     else
         fail "Should report Go not found, got: '$stdout_output'"
     fi
 
-    if echo "$stdout_output" | grep -q "updated to: v0.2.0"; then
+    if echo "$stdout_output" | grep -q "updated to: v0.2.0\|を更新しました: v0.2.0"; then
         pass "Reports successful update to v0.2.0 via binary download"
     else
         fail "Should report update success via binary download, got: '$stdout_output'"
@@ -429,7 +429,7 @@ EOF
         fail "--auto-update should bypass throttle, got no output"
     fi
 
-    if echo "$stdout_output" | grep -q "updated to:"; then
+    if echo "$stdout_output" | grep -q "updated to:\|を更新しました:"; then
         pass "--auto-update actually attempts the update despite the throttle interval"
     else
         fail "--auto-update should attempt update, got: '$stdout_output'"

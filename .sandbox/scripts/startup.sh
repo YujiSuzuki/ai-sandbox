@@ -30,6 +30,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_COMPARE_FAILED="⚠️  設定比較に失敗しましたが、続行します..."
     MSG_VALIDATE_FAILED="⚠️  秘匿検証に失敗しましたが、続行します..."
     MSG_SYNC_CHECK_FAILED="⚠️  秘匿同期チェックに失敗しましたが、続行します..."
+    MSG_LANG_HOOK_FAILED="⚠️  言語リマインダーフックの設定に失敗しましたが、続行します..."
     MSG_REGISTERING="📦 SandboxMCP 登録"
     MSG_FETCHING="  📥 sandbox-mcp を取得中..."
     MSG_ALREADY_INSTALLED="  ✅ sandbox-mcp は既にインストール済みです（更新: go install github.com/YujiSuzuki/sandbox-mcp@latest）"
@@ -58,6 +59,7 @@ else
     MSG_COMPARE_FAILED="⚠️  Config comparison failed, but continuing..."
     MSG_VALIDATE_FAILED="⚠️  Secret validation failed, but continuing..."
     MSG_SYNC_CHECK_FAILED="⚠️  Secret sync check failed, but continuing..."
+    MSG_LANG_HOOK_FAILED="⚠️  Language reminder hook setup failed, but continuing..."
     MSG_REGISTERING="📦 Registering SandboxMCP"
     MSG_FETCHING="  📥 Fetching sandbox-mcp..."
     MSG_ALREADY_INSTALLED="  ✅ sandbox-mcp already installed (to update: go install github.com/YujiSuzuki/sandbox-mcp@latest)"
@@ -239,6 +241,15 @@ else
         echo ""
     }
 fi
+
+# 10. Register the Japanese response-language reminder hook (Japanese
+# locale only; no-op and no output for any other locale)
+# 日本語応答リマインダーフックの登録（日本語ロケール限定。それ以外の
+# ロケールでは何もせず、出力もしない）
+"$WORKSPACE/.sandbox/scripts/setup-language-hook.sh" || {
+    echo "$MSG_LANG_HOOK_FAILED"
+    echo ""
+}
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
