@@ -191,6 +191,15 @@ exit 0
 STUB
     chmod +x "$TEST_DIR/bin/sandbox-mcp"
 
+    # step 8 (hostmcp CLI install) independently calls `go install` when
+    # hostmcp isn't on PATH, unrelated to the SandboxMCP step under test.
+    # Stub it as already-installed so step 8 doesn't hit the go stub below.
+    cat > "$TEST_DIR/bin/hostmcp" << 'STUB'
+#!/bin/bash
+exit 0
+STUB
+    chmod +x "$TEST_DIR/bin/hostmcp"
+
     # Make go stub fail if called (should be skipped)
     cat > "$TEST_DIR/bin/go" << 'STUB'
 #!/bin/bash

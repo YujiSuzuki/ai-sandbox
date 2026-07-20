@@ -389,12 +389,12 @@ unregister_gemini() {
 mode_check() {
     local registered=false
 
-    if can_register_claude; then
-        is_claude_registered && registered=true
-    fi
-    if can_register_gemini; then
-        is_gemini_registered && registered=true
-    fi
+    # Registration state is read from config files directly, so it must be
+    # checked regardless of whether the claude/gemini CLI is on PATH right
+    # now (e.g. CI runners without the CLI installed still have a
+    # ~/.claude.json with hostmcp registered).
+    is_claude_registered && registered=true
+    is_gemini_registered && registered=true
 
     if [[ "$registered" == false ]]; then
         exit 1
