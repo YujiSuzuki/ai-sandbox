@@ -7,7 +7,7 @@
 #   - Go available: go install
 #   - Go unavailable: download prebuilt binary from GitHub Releases (success/failure)
 #
-# Tests the step 8 (HostMCP) behavior:
+# Tests the step 9 (HostMCP) behavior:
 #   - Registered + connected: one-liner summary
 #   - Registered but offline: one-liner warning
 #   - Not registered: full registration output
@@ -25,7 +25,7 @@
 #   - Go がある: go install
 #   - Go がない: GitHub Releases からビルド済みバイナリをダウンロード（成功/失敗）
 #
-# ステップ8（HostMCP）の動作をテスト:
+# ステップ9（HostMCP）の動作をテスト:
 #   - 登録済み＋接続OK: 1行サマリー
 #   - 登録済みだがオフライン: 1行警告
 #   - 未登録: フル登録出力
@@ -218,18 +218,73 @@ STUB
 }
 
 
-# Helper: remove the default go stub and add a mock curl for binary-download tests
-# デフォルトの go スタブを削除し、バイナリダウンロードテスト用のモック curl を追加
-_setup_sandboxmcp_binary_download_mocks() {
+# Build a PATH dir with symlinks to every real binary except go/gofmt/claude/
+# gemini/curl, so "no go" tests behave the same regardless of where this host
+# installs Go (e.g. /usr/local/go/bin on a devcontainer vs. /usr/bin on CI
+# images that apt-install golang-go). Without this, appending the raw system
+# dirs (/usr/bin:/bin) to PATH can leak a real `go`, so `command -v go` in
+# startup.sh unexpectedly succeeds for real and the script takes the go-install
+# branch instead of the binary-download branch this test means to exercise —
+# and a real `go install` then actually runs, hitting the network and leaving
+# a read-only Go module cache that later trips up plain `rm -rf` cleanup.
+# claude/gemini are excluded too: a real one under /usr/local/bin would
+# otherwise shadow this test's own fake stubs in $TEST_DIR/bin, since $mb is
+# listed before $TEST_DIR/bin in the PATH these tests construct.
+# 実際のgoバイナリがこのホストのどこにインストールされているかによらず
+# 「goがない」テストが同じ結果になるよう、go/gofmt/claude/gemini/curl以外の
+# 実バイナリへのシンボリックリンクを持つPATH用ディレクトリを作る（例:
+# devcontainerでは/usr/local/go/bin、golang-goをaptで入れる一部のCIイメージ
+# では/usr/bin）。これがないと、生のシステムディレクトリ(/usr/bin:/bin)を
+# PATHに追加した際に本物のgoが漏れてしまい、startup.sh内の`command -v go`が
+# 本当に成功してしまう結果、このテストが検証したいバイナリダウンロード分岐
+# ではなくgo installの分岐を通ってしまう — そして本物の`go install`が実際に
+# ネットワークにアクセスして実行され、読み取り専用のGoモジュールキャッシュが
+# 残り、後の`rm -rf`によるクリーンアップが失敗する原因になる。
+# claude/geminiも除外対象に含める: これらのテストが組み立てるPATHでは$mbが
+# $TEST_DIR/binより前に来るため、除外しないと/usr/local/bin配下の実バイナリ
+# がこのテスト自身の偽スタブ($TEST_DIR/bin)を覆い隠してしまう。
+_isolate_go_absent() {
     local _mb_var="$1"
     local _mb
     _mb=$(mktemp -d)
     eval "$_mb_var='$_mb'"
 
+    local dir base f
+    for dir in /bin /usr/bin /usr/local/bin /opt/homebrew/bin; do
+        [ -d "$dir" ] || continue
+        for f in "$dir"/*; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            case "$base" in
+                go|gofmt|claude|gemini|curl) continue ;;
+            esac
+            [ -e "$_mb/$base" ] && continue
+            ln -sf "$f" "$_mb/$base" 2>/dev/null
+        done
+    done
+}
+
+# Helper: remove the default go stub and add a mock curl for binary-download tests
+# デフォルトの go スタブを削除し、バイナリダウンロードテスト用のモック curl を追加
+#
+# Named _new_mb (not _mb) so it doesn't collide with _isolate_go_absent's own
+# internal `local _mb` — eval-assigning through a same-named local would
+# silently write to the helper's local instead of this function's variable
+# (same hazard as _setup_binary_download_mocks in test-install-hostmcp.sh).
+# _isolate_go_absent 内部の `local _mb` と衝突しないよう _mb ではなく _new_mb と
+# いう名前にしている — 同名の local だと eval 代入がこの関数の変数ではなく
+# ヘルパー側のローカル変数に対して行われてしまう
+# （test-install-hostmcp.sh の _setup_binary_download_mocks と同じ問題）。
+_setup_sandboxmcp_binary_download_mocks() {
+    local _mb_var="$1"
+    local _new_mb
+    _isolate_go_absent _new_mb
+    eval "$_mb_var='$_new_mb'"
+
     rm -f "$TEST_DIR/bin/go"
 
     # Fake curl: writes a stub file to the -o target path
-    cat > "$_mb/curl" << 'CURLEOF'
+    cat > "$_new_mb/curl" << 'CURLEOF'
 #!/bin/bash
 out=""
 prev=""
@@ -243,7 +298,7 @@ if [ -n "$out" ]; then
 fi
 exit 0
 CURLEOF
-    chmod +x "$_mb/curl"
+    chmod +x "$_new_mb/curl"
 }
 
 # Test: no go, curl succeeds → binary downloaded and registration proceeds
@@ -259,7 +314,7 @@ test_sandboxmcp_no_go_binary_download_success() {
 
     local output
     output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:$TEST_DIR/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb:$TEST_DIR/bin'
         bash '$TEST_DIR/workspace/.sandbox/scripts/startup.sh'
     " 2>&1)
 
@@ -302,7 +357,7 @@ test_sandboxmcp_no_go_binary_download_failure() {
 
     local output
     output=$(HOME="$fake_home" bash -c "
-        export PATH='$mb:$TEST_DIR/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb:$TEST_DIR/bin'
         bash '$TEST_DIR/workspace/.sandbox/scripts/startup.sh'
     " 2>&1)
 

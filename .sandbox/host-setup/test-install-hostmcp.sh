@@ -312,7 +312,7 @@ test_interactive_hostmcp_no_go() {
 
     setup
     local mb fake_home
-    mb=$(mktemp -d)
+    _isolate_hostmcp_absent mb
     fake_home=$(mktemp -d)
 
     # Fake curl (decline install so download isn't attempted)
@@ -322,7 +322,7 @@ test_interactive_hostmcp_no_go() {
     # Input: install=2(decline)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '2' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1032,14 +1032,20 @@ DEOF
 # Set up mocks for binary download scenario: no go, fake curl that writes a hostmcp stub
 _setup_binary_download_mocks() {
     local _home_var="$1" _mb_var="$2"
-    local _home _mb
+    # Named _new_mb (not _mb) so it doesn't collide with _isolate_hostmcp_absent's
+    # own internal `local _mb` — eval-assigning through a same-named local would
+    # silently write to the helper's local instead of this function's variable.
+    # _isolate_hostmcp_absent 内部の `local _mb` と衝突しないよう _mb ではなく
+    # _new_mb という名前にしている — 同名の local だと eval 代入がこの関数の
+    # 変数ではなくヘルパー側のローカル変数に対して行われてしまう。
+    local _home _new_mb
     _home=$(mktemp -d)
-    _mb=$(mktemp -d)
+    _isolate_hostmcp_absent _new_mb
     eval "$_home_var='$_home'"
-    eval "$_mb_var='$_mb'"
+    eval "$_mb_var='$_new_mb'"
 
     # Fake curl: handles both version fetch (-o /dev/null) and binary download (-o <path>)
-    cat > "$_mb/curl" << 'CURLEOF'
+    cat > "$_new_mb/curl" << 'CURLEOF'
 #!/bin/bash
 out_file=""
 prev=""
@@ -1057,7 +1063,7 @@ if [ -n "$out_file" ]; then
 fi
 exit 0
 CURLEOF
-    chmod +x "$_mb/curl"
+    chmod +x "$_new_mb/curl"
 }
 
 _cleanup_binary_download_mocks() {
@@ -1079,7 +1085,7 @@ test_interactive_hostmcp_binary_download_declined() {
     # Input: install=2(decline)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '2' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1111,7 +1117,7 @@ test_interactive_hostmcp_binary_download_success() {
     # Input: install=1(yes), install-dir=default(1, now ~/.local/bin), port=default(1)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1155,7 +1161,7 @@ test_interactive_hostmcp_binary_download_success_go_bin() {
     # Input: install=1(yes), install-dir=2(~/go/bin), port=default(1)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '1\n2\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1193,7 +1199,7 @@ test_interactive_hostmcp_binary_download_dir_prompt_shown() {
     # Input: install=1(yes), install-dir=default(1), port=default(1)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1222,7 +1228,7 @@ test_interactive_hostmcp_binary_download_warns_hash_r() {
     # Input: install=1(yes), install-dir=default(1), port=default(1)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1259,7 +1265,7 @@ test_interactive_hostmcp_binary_download_warns_stale_other_location() {
     # Input: install=1(yes), install-dir=2(~/go/bin), port=default(1)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '1\n2\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1289,7 +1295,7 @@ test_interactive_hostmcp_binary_download_curl_fails() {
     # Input: install=1(yes), install-dir=default(1)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1348,7 +1354,7 @@ test_interactive_hostmcp_version_shown_in_prompt() {
     # Input: install=2(decline) — just to see the prompt text
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '2' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1394,7 +1400,7 @@ CURLEOF
     # Input: install=1(yes), install-dir=default(1), port=default(1)
     local output
     output=$(HOME="$fake_home" LANG=C bash -c "
-        export PATH='$mb:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb'
         echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 
@@ -1713,7 +1719,7 @@ test_update_check_accept_binary_redownload() {
     setup
     local fp mb
     _setup_versioned_hostmcp_mock fp "v1.0.0"
-    mb=$(mktemp -d)
+    _isolate_hostmcp_absent mb
     # Fake curl: version-check URL resolution + binary download, no `go` in PATH
     cat > "$mb/curl" << CURLEOF
 #!/bin/bash
@@ -1735,17 +1741,17 @@ exit 0
 CURLEOF
     chmod +x "$mb/curl"
 
-    # Deliberately excludes `go` (and any dir where a real `go` might live) so
-    # the script takes the binary-download branch, while still including
-    # standard system dirs so basic commands (bash, sed, chmod, ...) work —
-    # same convention as the ported tests above (e.g. test_interactive_hostmcp_no_go).
-    # `go`（や実際の go が置かれていそうなディレクトリ）を意図的に除外し、
-    # スクリプトがバイナリダウンロード分岐を通るようにする。一方で bash/sed/chmod
-    # など基本コマンドは動くよう標準ディレクトリは含める — 上記の移植済みテスト
-    # （例: test_interactive_hostmcp_no_go）と同じ規約。
+    # _isolate_hostmcp_absent (see its definition above) excludes go/gofmt from
+    # $mb regardless of where a real `go` binary actually lives on this host,
+    # so the script reliably takes the binary-download branch, while standard
+    # system commands (bash, sed, chmod, ...) remain available via symlink.
+    # _isolate_hostmcp_absent（上記の定義参照）は、実際の go バイナリが
+    # このホストのどこにあるかによらず $mb から go/gofmt を除外するため、
+    # スクリプトは確実にバイナリダウンロード分岐を通る。一方 bash/sed/chmod
+    # など標準コマンドはシンボリックリンク経由で利用可能なまま。
     local output
     output=$(MOCK_LATEST_VERSION="v2.0.0" LANG=C bash -c "
-        export PATH='$mb:$fp/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+        export PATH='$mb:$fp/bin'
         echo -e '1' | bash '$SCRIPT' '$TEST_PROJECT'
     " 2>&1)
 

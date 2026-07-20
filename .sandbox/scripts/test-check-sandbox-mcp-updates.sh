@@ -47,6 +47,25 @@ teardown() {
     [ -n "$TEST_TMP_DIR" ] && rm -rf "$TEST_TMP_DIR"
 }
 
+# Build a "/usr/bin:/bin"-like PATH suffix with the real `go` binary's directory
+# excluded, so tests simulating "go not installed" work regardless of where this
+# host happens to install Go (e.g. /usr/local/go/bin locally vs. /usr/bin on
+# some CI images that apt-install golang-go).
+# 実際の `go` バイナリのディレクトリを除外した "/usr/bin:/bin" 相当の PATH を組み立てる。
+# ホストによって Go の設置場所が異なる（ローカルは /usr/local/go/bin、apt で
+# golang-go を入れる一部の CI イメージでは /usr/bin など）ため、
+# 「go 未インストール」を模擬するテストがどの環境でも成立するようにする。
+path_without_real_go() {
+    local base="/usr/bin:/bin"
+    local real_go real_go_dir
+    real_go=$(command -v go 2>/dev/null) || true
+    if [ -n "$real_go" ]; then
+        real_go_dir=$(dirname "$real_go")
+        base=$(echo "$base" | tr ':' '\n' | grep -vxF "$real_go_dir" | paste -sd: -)
+    fi
+    echo "$base"
+}
+
 # Create a fake `sandbox-mcp` executable that prints a fixed version
 # 固定バージョンを出力するフェイク sandbox-mcp 実行ファイルを作成
 make_fake_sandbox_mcp() {
@@ -175,9 +194,9 @@ test_different_version_notifies() {
     fi
 
     # Re-checking immediately after (interval elapsed via CHECK_INTERVAL_HOURS=0) should notify again,
-    # since ground truth (installed version) still differs -- unlike the template check's dedup.
+    # since ground truth (installed version) still differs -- unlike check-upstream-updates.sh's dedup.
     # インターバル経過後（CHECK_INTERVAL_HOURS=0）は再度通知される。インストール済みバージョンが
-    # 実際にまだ古いままなので、テンプレート版のような重複排除は行わない。
+    # 実際にまだ古いままなので、check-upstream-updates.sh のような重複排除は行わない。
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
         CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script") 2>/dev/null )
     if echo "$stdout_output" | grep -q "v0.1.0"; then
@@ -357,7 +376,7 @@ EOF
     rm -f "$mock_state"
 
     local stdout_output
-    stdout_output=$( (HOME="$fake_home" PATH="$FAKE_BIN_DIR:/usr/bin:/bin" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
+    stdout_output=$( (HOME="$fake_home" PATH="$FAKE_BIN_DIR:$(path_without_real_go)" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
         CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script" --auto-update) 2>/dev/null )
 
     if echo "$stdout_output" | grep -q "Go not found\|Go が見つかりません"; then
