@@ -47,23 +47,37 @@ teardown() {
     [ -n "$TEST_TMP_DIR" ] && rm -rf "$TEST_TMP_DIR"
 }
 
-# Build a "/usr/bin:/bin"-like PATH suffix with the real `go` binary's directory
-# excluded, so tests simulating "go not installed" work regardless of where this
-# host happens to install Go (e.g. /usr/local/go/bin locally vs. /usr/bin on
-# some CI images that apt-install golang-go).
-# 実際の `go` バイナリのディレクトリを除外した "/usr/bin:/bin" 相当の PATH を組み立てる。
-# ホストによって Go の設置場所が異なる（ローカルは /usr/local/go/bin、apt で
-# golang-go を入れる一部の CI イメージでは /usr/bin など）ため、
-# 「go 未インストール」を模擬するテストがどの環境でも成立するようにする。
+# Build a directory of symlinks to every real binary except go/gofmt, so tests
+# simulating "go not installed" work regardless of where this host's go binary
+# lives -- including hosts with more than one copy installed at once (e.g.
+# both /usr/local/go/bin and an apt-installed golang-go under /usr/bin, as
+# seen on some CI images). Every candidate directory must be scanned
+# directly, since a single `command -v go` lookup only reports one location
+# and would leave any other real `go` on PATH reachable.
+# go/gofmt 以外の全実行ファイルへのシンボリックリンクを集めたディレクトリを作る。
+# 「go 未インストール」を模擬するテストが、このホストの go の設置場所によらず、
+# go が複数箇所（例: /usr/local/go/bin と、apt で golang-go を入れる一部の
+# CI イメージにある /usr/bin の両方）に入っていても成立するようにするため。
+# `command -v go` は1箇所しか報告しないため、候補ディレクトリそれぞれを
+# 直接スキャンする必要がある（さもないと他の場所にある本物の go が
+# PATH 上に残ってしまう）。
 path_without_real_go() {
-    local base="/usr/bin:/bin"
-    local real_go real_go_dir
-    real_go=$(command -v go 2>/dev/null) || true
-    if [ -n "$real_go" ]; then
-        real_go_dir=$(dirname "$real_go")
-        base=$(echo "$base" | tr ':' '\n' | grep -vxF "$real_go_dir" | paste -sd: -)
-    fi
-    echo "$base"
+    local iso_dir="$TEST_TMP_DIR/go-isolated-bin"
+    mkdir -p "$iso_dir"
+    local dir f base
+    for dir in /bin /usr/bin /usr/local/bin /opt/homebrew/bin; do
+        [ -d "$dir" ] || continue
+        for f in "$dir"/*; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            case "$base" in
+                go|gofmt) continue ;;
+            esac
+            [ -e "$iso_dir/$base" ] && continue
+            ln -sf "$f" "$iso_dir/$base" 2>/dev/null
+        done
+    done
+    echo "$iso_dir"
 }
 
 # Create a fake `sandbox-mcp` executable that prints a fixed version
