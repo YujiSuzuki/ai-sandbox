@@ -67,6 +67,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 - [ホストツール一覧](.sandbox/host-tools/README.ja.md) — 同梱ホストツールの詳しい使い方
 - [HostMCP 設計思想](https://github.com/YujiSuzuki/hostmcp#design-philosophy) — 段階的アクセスモデルとAI・人の役割分担
 - [プラグインガイド](docs/plugins.ja.md) — マルチリポ構成でのClaude Codeプラグイン活用
+- [付属カスタムコマンド一覧](.sandbox/commands/README.ja.md) — code-reviewプラグイン代替コマンドのインストール方法と一覧
 - [デモアプリガイド](https://github.com/YujiSuzuki/ai-sandbox-demo) — SecureNoteデモの実行方法（別リポジトリ）
 - [CLI Sandbox ガイド](cli_sandbox/README.ja.md) — ターミナルベースのサンドボックス
 - [会話履歴検索ツール](docs/search-history.ja.md) — search-history の詳しい使い方

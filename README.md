@@ -64,6 +64,7 @@ This project is designed for local development environments and is not intended 
 - [Host Tools List](.sandbox/host-tools/README.md) — Detailed usage of bundled host tools
 - [HostMCP Design Philosophy](https://github.com/YujiSuzuki/hostmcp#design-philosophy) — Graduated access model and AI-human responsibility separation
 - [Plugin Guide](docs/plugins.md) — Claude Code plugins for multi-repo setups
+- [Bundled Custom Commands List](.sandbox/commands/README.md) — Installation and list of code-review plugin alternative commands
 - [Demo App Guide](https://github.com/YujiSuzuki/ai-sandbox-demo) — Running the SecureNote demo (separate repository)
 - [CLI Sandbox Guide](cli_sandbox/README.md) — Terminal-based sandbox
 - [Conversation History Search Tool](docs/search-history.md) — Detailed usage of search-history

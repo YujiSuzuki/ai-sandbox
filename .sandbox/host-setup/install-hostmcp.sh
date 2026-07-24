@@ -348,7 +348,7 @@ _check_hostmcp_update() {
 
     if [ "$installed_version" = "$latest_version" ]; then
         msg "hostmcp is up to date ($installed_version)." \
-            "hostmcp は最新です（$installed_version）。"
+            "hostmcp は最新です（${installed_version}）。"
         return 0
     fi
 
