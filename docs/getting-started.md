@@ -179,6 +179,9 @@ Adding `--sync` enables host tools — scripts in `.sandbox/host-tools/` (for bu
 hostmcp serve --workspace /path/to/your-repo --sync
 ```
 
+> [!TIP]
+> On macOS, `install-hostmcp.sh` (Step 4) also created `hostmcp-serve.command` and `hostmcp-sync.command` in your project root — double-click `hostmcp-serve.command` any time instead of retyping the command above. `hostmcp-sync.command` is for later, when the AI tells you newly staged host tools need approval — see [Host Tools](host-access.md#host-tools).
+
 ### Expected Result
 
 ```
@@ -238,7 +241,7 @@ Try asking the AI:
 
 - See [Troubleshooting](reference.md#troubleshooting)
 - Verify the HostMCP server is running (Step 5)
-- Check if port 18080 is being forwarded in VS Code's Ports panel — if so, stop it
+- Check if the configured port (`server.port` in `.sandbox/config/hostmcp.yaml`, defaults to 18080) is being forwarded in VS Code's Ports panel — if so, stop it
 
 ---
 
@@ -300,10 +303,11 @@ With setup complete, continue based on what you want to do.
 
 ### Can't connect to HostMCP
 
-1. Verify the HostMCP server is running: `curl http://localhost:18080/health`
-2. Check if port 18080 is being forwarded in VS Code's Ports panel — if so, stop it
-3. Try `/mcp` → "Reconnect"
-4. Restart VS Code completely (`Cmd+Q` → reopen)
+1. Find the configured port — read `server.port` from `.sandbox/config/hostmcp.yaml` (defaults to 18080 if unset)
+2. Check if that port is being forwarded in VS Code's Ports panel — if so, stop it
+3. Verify the HostMCP server is running: `curl http://localhost:<port>/health`
+4. Try `/mcp` → "Reconnect"
+5. Restart VS Code completely (`Cmd+Q` → reopen)
 
 For more details, see [Troubleshooting](reference.md#troubleshooting).
 

@@ -134,10 +134,11 @@ If HostMCP MCP tools (`mcp__hostmcp__*`) are not available, proactively check re
 
 If `--check` returns 1 (not registered), offer to run `setup-hostmcp.sh` for the user.
 If `--check` returns 2 (registered but offline), troubleshoot in this order:
-1. **Check VS Code Ports panel** — stop forwarding port 18080 if listed (most common cause)
-2. **Verify HostMCP is running on host**: `curl http://localhost:18080/health`
-3. **Try `/mcp` → "Reconnect"** in Claude Code
-4. **Restart VS Code completely** (Cmd+Q → reopen)
+1. **Find the configured port** — read `server.port` from `.sandbox/config/hostmcp.yaml` (defaults to 18080 if unset)
+2. **Check VS Code Ports panel** — stop forwarding that port if listed (most common cause)
+3. **Verify HostMCP is running on host**: `curl http://localhost:<port>/health` (using the port from step 1)
+4. **Try `/mcp` → "Reconnect"** in Claude Code
+5. **Restart VS Code completely** (Cmd+Q → reopen)
 
 ### 6. Creating a release
 

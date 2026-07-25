@@ -1826,6 +1826,305 @@ test_update_check_empty_installed_version_skips() {
     cleanup
 }
 
+# ─── macOS launcher tests ───────────────────────────────────────────────────
+# Fake `uname` reporting a fixed `-s` value, so the Darwin/non-Darwin branch
+# in _create_macos_launcher is deterministic regardless of the machine
+# actually running this test suite. Other invocations (e.g. `uname -m`, only
+# reached via the binary-download branch which these tests don't exercise)
+# fall through to the real uname, since only `-s` needs faking here.
+# `-s` に固定値を返す偽の `uname`。これにより _create_macos_launcher 内の
+# Darwin/非Darwin分岐が、このテストスイートを実際に実行しているマシンに
+# よらず決定的になる。他の呼び出し（例: `uname -m`。バイナリダウンロード分岐
+# 経由のみで、これらのテストでは通らない）は本物の uname にフォールバックする
+# — ここで固定が必要なのは `-s` だけのため。
+_mock_uname_s() {
+    local mb="$1" os_name="$2"
+    cat > "$mb/uname" << UNAMEEOF
+#!/bin/bash
+if [ "\$1" = "-s" ]; then
+    echo "$os_name"
+    exit 0
+fi
+exec /usr/bin/uname "\$@"
+UNAMEEOF
+    chmod +x "$mb/uname"
+}
+
+# Test: on macOS (uname -s == Darwin), install-hostmcp.sh creates a
+# double-clickable hostmcp-serve.command in the project root with the
+# absolute workspace path and the resolved hostmcp binary baked in, and
+# mentions it in the next-steps output.
+# テスト: macOS（uname -s が Darwin）では、プロジェクトルートに
+# hostmcp-serve.command が作成され、絶対パスのワークスペースと解決済みの
+# hostmcp バイナリパスが埋め込まれ、次ステップの案内にも記載されることを確認する。
+test_macos_launcher_created_with_correct_content() {
+    echo ""
+    echo "=== Test: macOS (Darwin) → hostmcp-serve.command created with correct content ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+    _mock_uname_s "$mb" "Darwin"
+
+    local output
+    output=$(LANG=C bash "$SCRIPT" "$TEST_PROJECT" < /dev/null 2>&1)
+
+    local launcher="$TEST_PROJECT/hostmcp-serve.command"
+    if [ -f "$launcher" ]; then
+        pass "hostmcp-serve.command created on Darwin"
+    else
+        fail "Expected $launcher to be created, got output: $output"
+        _cleanup_mocks "$fp" "$mb"; cleanup; return
+    fi
+
+    if [ -x "$launcher" ]; then
+        pass "hostmcp-serve.command is executable"
+    else
+        fail "Expected hostmcp-serve.command to be executable"
+    fi
+
+    if grep -q "serve" "$launcher" && grep -q -- "--workspace" "$launcher" && grep -q "$TEST_PROJECT" "$launcher"; then
+        pass "hostmcp-serve.command bakes in 'serve --workspace <absolute path>'"
+    else
+        fail "Expected serve/--workspace/$TEST_PROJECT in launcher, got: $(cat "$launcher")"
+    fi
+
+    if echo "$output" | grep -q "hostmcp-serve.command"; then
+        pass "Next steps mention hostmcp-serve.command on Darwin"
+    else
+        fail "Expected next steps to mention hostmcp-serve.command, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test: on macOS (uname -s == Darwin), install-hostmcp.sh also creates a
+# double-clickable hostmcp-sync.command that bakes in `tools sync
+# --workspace <path>`, for the ongoing "AI says newly staged host tools need
+# approval" case (distinct from hostmcp-serve.command, which is for initial
+# setup / keeping the server running).
+# テスト: macOS（uname -s が Darwin）では、`tools sync --workspace <パス>` を
+# 埋め込んだ hostmcp-sync.command も作成されることを確認する
+# （初期セットアップ・サーバー起動用の hostmcp-serve.command とは別に、
+# 「AIから新しいホストツールの承認が必要と言われた」という継続的な用途向け）。
+test_macos_sync_launcher_created_with_correct_content() {
+    echo ""
+    echo "=== Test: macOS (Darwin) → hostmcp-sync.command created with correct content ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+    _mock_uname_s "$mb" "Darwin"
+
+    local output
+    output=$(LANG=C bash "$SCRIPT" "$TEST_PROJECT" < /dev/null 2>&1)
+
+    local launcher="$TEST_PROJECT/hostmcp-sync.command"
+    if [ -f "$launcher" ]; then
+        pass "hostmcp-sync.command created on Darwin"
+    else
+        fail "Expected $launcher to be created, got output: $output"
+        _cleanup_mocks "$fp" "$mb"; cleanup; return
+    fi
+
+    if [ -x "$launcher" ]; then
+        pass "hostmcp-sync.command is executable"
+    else
+        fail "Expected hostmcp-sync.command to be executable"
+    fi
+
+    if grep -q "tools" "$launcher" && grep -q "sync" "$launcher" && grep -q -- "--workspace" "$launcher" && grep -q "$TEST_PROJECT" "$launcher"; then
+        pass "hostmcp-sync.command bakes in 'tools sync --workspace <absolute path>'"
+    else
+        fail "Expected tools/sync/--workspace/$TEST_PROJECT in launcher, got: $(cat "$launcher")"
+    fi
+
+    if echo "$output" | grep -q "hostmcp-sync.command"; then
+        pass "Next steps mention hostmcp-sync.command on Darwin"
+    else
+        fail "Expected next steps to mention hostmcp-sync.command, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test: on non-macOS (uname -s == Linux), no .command launcher (serve or
+# sync) is created and neither is mentioned in the next-steps output, since
+# Linux/Windows have no `.command` double-click convention.
+# テスト: 非macOS（uname -s が Linux）では、.commandランチャー（serve/syncとも）は
+# 作成されず、次ステップの案内にも言及されない（Linux/Windowsには`.command`
+# ダブルクリックの慣習がないため）。
+test_macos_launcher_not_created_on_non_darwin() {
+    echo ""
+    echo "=== Test: non-Darwin (Linux) → no hostmcp-{serve,sync}.command created ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+    _mock_uname_s "$mb" "Linux"
+
+    local output
+    output=$(LANG=C bash "$SCRIPT" "$TEST_PROJECT" < /dev/null 2>&1)
+
+    if [ -f "$TEST_PROJECT/hostmcp-serve.command" ] || [ -f "$TEST_PROJECT/hostmcp-sync.command" ]; then
+        fail "No .command launcher should be created on non-Darwin"
+    else
+        pass "No hostmcp-{serve,sync}.command created on non-Darwin"
+    fi
+
+    if echo "$output" | grep -qE "hostmcp-serve\.command|hostmcp-sync\.command"; then
+        fail "Next steps should NOT mention any .command launcher on non-Darwin, got: $output"
+    else
+        pass "Next steps do not mention any .command launcher on non-Darwin"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test: re-running on Darwin (e.g. after a workspace move or a config that
+# already exists) overwrites the launcher rather than erroring out or leaving
+# a stale one, per _create_macos_launcher's "always overwrite" behavior.
+# テスト: Darwin上で再実行した場合（ワークスペース移動後や設定ファイルが
+# 既に存在する場合など）、_create_macos_launcher の「常に上書き」仕様どおり、
+# エラーにならず、古い内容が残らないことを確認する。
+test_macos_launcher_overwritten_on_rerun() {
+    echo ""
+    echo "=== Test: re-running on Darwin overwrites an existing hostmcp-serve.command ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+    _mock_uname_s "$mb" "Darwin"
+
+    local launcher="$TEST_PROJECT/hostmcp-serve.command"
+    echo "#!/bin/bash
+echo stale" > "$launcher"
+    chmod +x "$launcher"
+
+    bash "$SCRIPT" "$TEST_PROJECT" < /dev/null > /dev/null 2>&1
+
+    if [ -f "$launcher" ] && grep -q "serve" "$launcher" && ! grep -q "stale" "$launcher"; then
+        pass "Stale hostmcp-serve.command overwritten with current content"
+    else
+        fail "Expected launcher to be overwritten, got: $(cat "$launcher" 2>/dev/null)"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Test: re-running on Darwin overwrites an existing hostmcp-sync.command too,
+# same "always overwrite" behavior as hostmcp-serve.command above.
+# テスト: hostmcp-serve.command と同様、hostmcp-sync.command についても
+# Darwin上で再実行した際に「常に上書き」されることを確認する。
+test_macos_sync_launcher_overwritten_on_rerun() {
+    echo ""
+    echo "=== Test: re-running on Darwin overwrites an existing hostmcp-sync.command ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+    _mock_uname_s "$mb" "Darwin"
+
+    local launcher="$TEST_PROJECT/hostmcp-sync.command"
+    echo "#!/bin/bash
+echo stale" > "$launcher"
+    chmod +x "$launcher"
+
+    bash "$SCRIPT" "$TEST_PROJECT" < /dev/null > /dev/null 2>&1
+
+    if [ -f "$launcher" ] && grep -q "sync" "$launcher" && ! grep -q "stale" "$launcher"; then
+        pass "Stale hostmcp-sync.command overwritten with current content"
+    else
+        fail "Expected launcher to be overwritten, got: $(cat "$launcher" 2>/dev/null)"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+# Regression test for the A2-1 code-review finding: on a machine with a
+# customized GOPATH (not under $HOME/go), if `command -v hostmcp` doesn't
+# resolve either (e.g. this shell's PATH hasn't picked up a `go install`
+# that just happened), _resolve_hostmcp_bin must still find the binary via
+# its $(go env GOPATH)/bin fallback — otherwise _create_macos_launcher /
+# _create_macos_sync_launcher would silently skip launcher creation with no
+# warning. Pre-creates .sandbox/config/hostmcp.yaml so the run takes the
+# "config already exists" path and never needs to invoke the bare `hostmcp`
+# command (which is deliberately absent from this test's isolated PATH).
+# コードレビュー指摘 A2-1 の回帰テスト: $HOME/go 配下ではないカスタム GOPATH
+# のマシンで、`command -v hostmcp` も解決できない場合（例: 直前の
+# `go install` をこのシェルのPATHがまだ拾っていない）でも、
+# _resolve_hostmcp_bin は $(go env GOPATH)/bin へのフォールバックで
+# バイナリを見つけられなければならない — そうでなければ
+# _create_macos_launcher / _create_macos_sync_launcher が無警告で
+# ランチャー生成をスキップしてしまう。
+# .sandbox/config/hostmcp.yaml を事前に作成し、「設定ファイルは既に存在する」
+# 経路を通らせることで、このテストの隔離されたPATHに意図的に置いていない
+# 素の `hostmcp` コマンドを一切呼ばずに済むようにしている。
+test_macos_launcher_resolves_custom_gopath() {
+    echo ""
+    echo "=== Test: macOS launcher resolves hostmcp via custom \$(go env GOPATH)/bin (A2-1) ==="
+
+    setup
+    local mb extra fake_home custom_gopath
+    _isolate_hostmcp_absent mb
+    fake_home=$(mktemp -d)
+    custom_gopath=$(mktemp -d)
+
+    # hostmcp lives only under the custom GOPATH's bin dir — not on PATH,
+    # not under $HOME/go/bin, not under $HOME/.local/bin.
+    mkdir -p "$custom_gopath/bin"
+    touch "$custom_gopath/bin/hostmcp"
+    chmod +x "$custom_gopath/bin/hostmcp"
+
+    # A separate, empty dir ahead of $mb on PATH for the `go` and `uname`
+    # mocks: $mb already has a real-uname symlink from _isolate_hostmcp_absent
+    # (uname isn't in that helper's exclusion list), and writing a mock
+    # directly over a symlinked path there would redirect through the
+    # symlink and try to overwrite the real system uname binary.
+    extra=$(mktemp -d)
+
+    cat > "$extra/go" << GOEOF
+#!/bin/bash
+if [ "\$1" = "env" ] && [ "\$2" = "GOPATH" ]; then
+    echo "$custom_gopath"
+fi
+GOEOF
+    chmod +x "$extra/go"
+
+    _mock_uname_s "$extra" "Darwin"
+
+    # Skip `hostmcp init` entirely (its bare `hostmcp` call would fail: the
+    # isolated PATH here has no hostmcp on it by design).
+    mkdir -p "$TEST_PROJECT/.sandbox/config"
+    touch "$TEST_PROJECT/.sandbox/config/hostmcp.yaml"
+
+    local output
+    output=$(HOME="$fake_home" LANG=C bash -c "
+        export PATH='$extra:$mb'
+        bash '$SCRIPT' '$TEST_PROJECT' < /dev/null
+    " 2>&1)
+
+    local launcher="$TEST_PROJECT/hostmcp-serve.command"
+    if [ -f "$launcher" ] && grep -q "$custom_gopath/bin/hostmcp" "$launcher"; then
+        pass "hostmcp-serve.command resolves hostmcp via custom GOPATH"
+    else
+        fail "Expected hostmcp-serve.command to bake in $custom_gopath/bin/hostmcp, got: $(cat "$launcher" 2>/dev/null || echo '<not created>') (output: $output)"
+    fi
+
+    safe_rm_rf "$mb" "$extra" "$fake_home" "$custom_gopath"
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -1876,6 +2175,12 @@ main() {
     test_update_check_accept_binary_redownload
     test_update_check_fetch_failure_skips_silently
     test_update_check_empty_installed_version_skips
+    test_macos_launcher_created_with_correct_content
+    test_macos_sync_launcher_created_with_correct_content
+    test_macos_launcher_not_created_on_non_darwin
+    test_macos_launcher_overwritten_on_rerun
+    test_macos_sync_launcher_overwritten_on_rerun
+    test_macos_launcher_resolves_custom_gopath
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

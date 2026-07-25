@@ -433,13 +433,14 @@ AI アシスタントは `list_scripts` でスクリプトを発見し、`get_sc
 
 ### 起動時コンテキスト注入
 
-`.sandbox/sandbox-mcp-setup/` にシェルスクリプトを置くと、AIの起動時instructionsにカスタムコンテキストを注入できます。SandboxMCP起動時にアルファベット順（各5秒タイムアウト）で実行され、その標準出力がMCPの `instructions`（Claude Codeでは `<system-reminder>` として表示）に追記されます。
+[`.sandbox/sandbox-mcp-setup/`](../.sandbox/sandbox-mcp-setup/) にシェルスクリプトを置くと、AIの起動時instructionsにカスタムコンテキストを注入できます。SandboxMCP起動時にアルファベット順（各5秒タイムアウト）で実行され、その標準出力がMCPの `instructions`（Claude Codeでは `<system-reminder>` として表示）に追記されます。
 
 ```
 .sandbox/sandbox-mcp-setup/
-├── 10-sandbox-env.sh       ← $SANDBOX_ENV を報告
-├── 20-git-uncommitted.sh   ← ネストしたgitリポジトリの未コミット変更を報告
-└── 30-language.sh          ← $LANG から導出した応答言語を報告
+├── 10-sandbox-env.sh              ← $SANDBOX_ENV を報告
+├── 20-git-uncommitted.sh          ← ネストしたgitリポジトリの未コミット変更を報告
+├── 30-language.sh                 ← $LANG から導出した応答言語を報告
+└── 40-hostmcp-host-tools-hint.sh  ← HostMCP未接続時に.sandbox/host-tools/のスクリプトの存在をヒント表示
 ```
 
 これにより、現在のサンドボックス環境の種類やネストしたリポジトリの状態などを、毎回説明しなくてもAIが把握できるようになります。

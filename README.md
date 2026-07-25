@@ -209,7 +209,7 @@ If you also want AI to check logs and run tests in other containers:
 .sandbox/host-setup/install-hostmcp.sh
 ```
 
-This walks you through installation and config setup interactively. When it's done, follow the printed instructions to run `hostmcp serve --workspace '<path>'` (add `--sync` to enable host tools — see below; keep this terminal open). Running it again after installation also checks for updates.
+This walks you through installation and config setup interactively. When it's done, follow the printed instructions to run `hostmcp serve --workspace '<path>'` (add `--sync` to enable host tools — see below; keep this terminal open). On macOS, it also creates double-clickable `hostmcp-serve.command` / `hostmcp-sync.command` launchers in your project root, with the workspace path already baked in — no need to retype it in Terminal. Running it again after installation also checks for updates.
 
 <details markdown="1">
 <summary>Manual installation</summary>

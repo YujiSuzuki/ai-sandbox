@@ -433,13 +433,14 @@ AI assistants can use `list_scripts` to find them, `get_script_info` to read usa
 
 ### Startup Context Injection
 
-Place shell scripts in `.sandbox/sandbox-mcp-setup/` to inject custom context into the AI's startup instructions. They run in alphabetical order (5s timeout each) when SandboxMCP starts, and their stdout is appended to the MCP `instructions` (shown as `<system-reminder>` in Claude Code).
+Place shell scripts in [`.sandbox/sandbox-mcp-setup/`](../.sandbox/sandbox-mcp-setup/) to inject custom context into the AI's startup instructions. They run in alphabetical order (5s timeout each) when SandboxMCP starts, and their stdout is appended to the MCP `instructions` (shown as `<system-reminder>` in Claude Code).
 
 ```
 .sandbox/sandbox-mcp-setup/
-├── 10-sandbox-env.sh       ← reports $SANDBOX_ENV
-├── 20-git-uncommitted.sh   ← reports uncommitted changes in nested git repos
-└── 30-language.sh          ← reports the response language derived from $LANG
+├── 10-sandbox-env.sh              ← reports $SANDBOX_ENV
+├── 20-git-uncommitted.sh          ← reports uncommitted changes in nested git repos
+├── 30-language.sh                 ← reports the response language derived from $LANG
+└── 40-hostmcp-host-tools-hint.sh  ← hints that .sandbox/host-tools/ scripts exist when HostMCP isn't connected
 ```
 
 This is how the AI learns things like the current sandbox environment type or nested-repo status without being told every session.

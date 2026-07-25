@@ -60,6 +60,9 @@ Tools proposed by AI or developers go through a two-stage process:
 
 Only the approved copy is executed. If the staging version changes, `hostmcp tools sync` detects the difference and prompts for re-approval.
 
+> [!TIP]
+> On macOS, `install-hostmcp.sh` creates a double-clickable `hostmcp-sync.command` launcher (with `--workspace` already baked in) in your project root — double-click it whenever the AI says newly staged host tools need approval, instead of retyping the command above in a terminal.
+
 ### Directory Layout
 
 ```

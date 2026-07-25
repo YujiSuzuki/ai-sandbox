@@ -30,6 +30,8 @@ If HostMCP server is restarted, SSE connections drop. Inform user to run `/mcp` 
 claude mcp add --transport sse --scope user hostmcp http://host.docker.internal:18080/sse
 ```
 
+18080 is the default port; if `.sandbox/config/hostmcp.yaml`'s `server.port` was customized (or `hostmcp serve --port` was passed a different value in Step 1), use that port instead.
+
 After adding, restart VS Code for it to connect.
 
 **Step 3: Verify**
@@ -38,16 +40,17 @@ Check if tools like `list_containers`, `get_logs` are available.
 
 ### Troubleshooting
 
-1. **Check VS Code Ports panel**: stop forwarding port 18080 if listed (most common cause)
-2. **Verify HostMCP is running**: `curl http://localhost:18080/health` (on host OS)
-3. **Try MCP Reconnect**: `/mcp` → "Reconnect" in Claude Code
-4. **Restart VS Code completely**: Cmd+Q (macOS) / Alt+F4 (Windows/Linux)
+1. **Find the configured port**: read `server.port` from `.sandbox/config/hostmcp.yaml` (defaults to 18080 if unset)
+2. **Check VS Code Ports panel**: stop forwarding that port if listed (most common cause)
+3. **Verify HostMCP is running**: `curl http://localhost:<port>/health` (on host OS, using the port from step 1)
+4. **Try MCP Reconnect**: `/mcp` → "Reconnect" in Claude Code
+5. **Restart VS Code completely**: Cmd+Q (macOS) / Alt+F4 (Windows/Linux)
 
 If issues persist, verify MCP configuration:
 
 ```bash
 cat ~/.claude.json | jq '.mcpServers.hostmcp'
-# Should show: "url": "http://host.docker.internal:18080/sse"
+# Should show: "url": "http://host.docker.internal:<port>/sse" (using the port from step 1)
 ```
 
 **"Client not initialized" error:** Even when `/mcp` shows "connected", MCP tools may fail. This is caused by VS Code extension session management timing issues. Try:

@@ -675,6 +675,136 @@ setup_hostmcp_init() {
     show_hostmcp_next_steps "$abs_project_root"
 }
 
+# Locate the hostmcp binary as an absolute path, for embedding in the macOS
+# launcher below. `command -v hostmcp` only succeeds if PATH was already
+# updated in this shell (true right after _download_hostmcp_binary, which
+# exports PATH itself, but NOT after a `go install` install/upgrade, since
+# that path only relies on $gopath_bin already being on the user's PATH
+# from a previous shell — so it can be missing here even though `go install`
+# just succeeded). Fall back to the two default install directories, then to
+# $(go env GOPATH)/bin for a customized (non-default) GOPATH.
+# 下記のmacOS用ランチャーに埋め込むため、hostmcpバイナリの絶対パスを特定する。
+# `command -v hostmcp` が成功するのは、このシェル内で既にPATHが更新されている
+# 場合のみ（_download_hostmcp_binary の直後は自身がPATHをexportするため該当するが、
+# `go install` によるインストール/更新の直後は該当しない — こちらは $gopath_bin が
+# 過去のシェルで既にユーザーのPATHに含まれていることに依存するだけなので、
+# `go install` が今まさに成功した直後でも、ここでは見つからないことがある）。
+# 見つからない場合はデフォルトの2つのインストール先ディレクトリにフォールバックし、
+# それでも見つからなければカスタム（デフォルト以外の）GOPATH向けに
+# $(go env GOPATH)/bin を試す。
+_resolve_hostmcp_bin() {
+    local found
+    if found="$(command -v hostmcp 2>/dev/null)" && [ -n "$found" ]; then
+        printf '%s' "$found"
+        return 0
+    fi
+    local candidate
+    for candidate in "$HOME/go/bin/hostmcp" "$HOME/.local/bin/hostmcp"; do
+        if [ -x "$candidate" ]; then
+            printf '%s' "$candidate"
+            return 0
+        fi
+    done
+    # Neither hardcoded fallback covers a customized (non-default) GOPATH —
+    # mirror setup_hostmcp_install's own `go env GOPATH` lookup as a last resort.
+    if command -v go > /dev/null 2>&1; then
+        local gopath_bin
+        if gopath_bin="$(go env GOPATH 2>/dev/null)" && [ -n "$gopath_bin" ]; then
+            candidate="$gopath_bin/bin/hostmcp"
+            if [ -x "$candidate" ]; then
+                printf '%s' "$candidate"
+                return 0
+            fi
+        fi
+    fi
+    return 1
+}
+
+# Shared body for the macOS .command launchers below: writes a script that
+# runs the given command in the foreground and pauses before the window
+# closes. The pause matters even for a command that exits on its own (like
+# `tools sync`), not just for one that blocks forever (like `serve`):
+# Terminal.app's default "close if the shell exited cleanly" preference would
+# otherwise close the window right after a clean exit, before the user can
+# read the output.
+# 下記2つのmacOS用 .command ランチャーに共通の本体。指定コマンドをフォアグラウンドで
+# 実行し、ウィンドウが閉じる前に一時停止するスクリプトを書き出す。この一時停止は、
+# ブロッキングし続ける `serve` だけでなく、自然に終了する `tools sync` のような
+# コマンドでも重要: Terminal.appのデフォルト設定「シェルが正常終了したら閉じる」により、
+# 正常終了直後にウィンドウが閉じてしまい、出力を読む前に消えてしまうため。
+_write_macos_command_launcher() {
+    local launcher_path="$1"
+    shift
+
+    local close_prompt
+    close_prompt="$(msg "Press any key to close this window..." "このウィンドウを閉じるには何かキーを押してください...")"
+
+    {
+        echo "#!/bin/bash"
+        printf '%q ' "$@"
+        echo
+        echo 'echo ""'
+        printf 'read -n 1 -p %q\n' "$close_prompt"
+    } > "$launcher_path"
+    chmod +x "$launcher_path"
+}
+
+# Create a double-clickable macOS launcher (Terminal.app opens in the
+# foreground and keeps showing live logs, since `hostmcp serve` blocks) with
+# the workspace path already baked in. No-op on non-macOS, since
+# Linux/Windows have no `.command` double-click convention. Overwritten
+# every time the binary resolves, so a workspace that moves (or a hostmcp
+# reinstalled to a different directory) doesn't leave a stale path behind —
+# if `_resolve_hostmcp_bin` fails below, this returns early and leaves any
+# existing launcher file untouched.
+# ダブルクリックで起動できるmacOS用ランチャーを作成する（`hostmcp serve` は
+# ブロッキングして動き続けるため、Terminal.appがフォアグラウンドで開いたまま
+# ログが流れ続ける）。ワークスペースパスをあらかじめ埋め込む。macOS以外では
+# 何もしない（Linux/Windowsには`.command`ダブルクリックの慣習がないため）。
+# バイナリが解決できた場合は毎回上書きする — ワークスペースを移動した場合や
+# hostmcpを別ディレクトリに再インストールした場合に古いパスが残らないようにするため。
+# 下記の `_resolve_hostmcp_bin` が失敗した場合はここで早期returnし、既存の
+# ランチャーファイルはそのまま変更しない。
+_create_macos_launcher() {
+    [ "$(uname -s)" = "Darwin" ] || return 0
+
+    local workspace_path="$1"
+    local hostmcp_bin
+    if ! hostmcp_bin="$(_resolve_hostmcp_bin)"; then
+        return 0
+    fi
+
+    _write_macos_command_launcher "$workspace_path/hostmcp-serve.command" \
+        "$hostmcp_bin" serve --workspace "$workspace_path"
+
+    msg "  (macOS: double-click hostmcp-serve.command in this folder to do the same)" \
+        "  （macOS: このフォルダ内の hostmcp-serve.command をダブルクリックしても同じことができます）"
+}
+
+# Create a double-clickable macOS launcher for `hostmcp tools sync`, the
+# interactive review/approval step for host tools staged under
+# .sandbox/host-tools/ (see hostmcp's README "Host Tools Management
+# Commands"). Unlike `serve`, `sync` exits once the review is done.
+# .sandbox/host-tools/ 配下にステージングされたホストツールをレビュー・承認する
+# 対話コマンド `hostmcp tools sync` 用の、ダブルクリックで起動できるmacOS用
+# ランチャーを作成する（hostmcpのREADME「Host Tools Management Commands」参照）。
+# `serve` と異なり、レビューが終われば終了する。
+_create_macos_sync_launcher() {
+    [ "$(uname -s)" = "Darwin" ] || return 0
+
+    local workspace_path="$1"
+    local hostmcp_bin
+    if ! hostmcp_bin="$(_resolve_hostmcp_bin)"; then
+        return 0
+    fi
+
+    _write_macos_command_launcher "$workspace_path/hostmcp-sync.command" \
+        "$hostmcp_bin" tools sync --workspace "$workspace_path"
+
+    msg "  (macOS: whenever the AI says newly staged host tools need approval, double-click hostmcp-sync.command in this folder)" \
+        "  （macOS: AIから「新しいホストツールの承認が必要です」と言われたら、このフォルダ内の hostmcp-sync.command をダブルクリック）"
+}
+
 # Show next steps after hostmcp setup / hostmcp セットアップ後の次ステップ案内
 show_hostmcp_next_steps() {
     local workspace_path="$1"
@@ -696,6 +826,12 @@ show_hostmcp_next_steps() {
     echo ""
     msg "1. Start HostMCP (keep this terminal open):" "1. HostMCP を起動（このターミナルは開いたままにしてください）:"
     echo "     hostmcp serve --workspace '$workspace_path'"
+    _create_macos_launcher "$workspace_path"
+    echo ""
+    msg "   To approve newly staged host tools later, run (in another terminal):" \
+        "   後から新しいホストツールを承認するには（別のターミナルで）:"
+    echo "     hostmcp tools sync --workspace '$workspace_path'"
+    _create_macos_sync_launcher "$workspace_path"
     echo ""
     msg "2. Open this folder in VS Code:" "2. VS Code でこのフォルダを開く:"
     echo "     cd '$workspace_path' && code ."

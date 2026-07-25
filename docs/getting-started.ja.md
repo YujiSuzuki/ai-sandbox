@@ -188,6 +188,9 @@ hostmcp serve --workspace /path/to/your-repo
 hostmcp serve --workspace /path/to/your-repo --sync
 ```
 
+> [!TIP]
+> macOSの場合、ステップ4の `install-hostmcp.sh` がプロジェクトルートに `hostmcp-serve.command` と `hostmcp-sync.command` も作成しています。上記コマンドを打ち直す代わりに `hostmcp-serve.command` をダブルクリックできます。`hostmcp-sync.command` は後で、AIから「新しくステージングされたホストツールの承認が必要です」と言われたときに使います — [ホストツール](host-access.ja.md#ホストツール) を参照してください。
+
 ### 期待される結果
 
 ```
@@ -247,7 +250,7 @@ Claude Code で `/mcp` を実行すると、`hostmcp` が **connected** と表�
 
 - [トラブルシューティング](reference.ja.md#トラブルシューティング) を参照
 - HostMCP サーバーが起動しているか確認（ステップ 5）
-- VS Code のポートパネルで 18080 がフォワードされていたら停止
+- 設定済みポート（`.sandbox/config/hostmcp.yaml` の `server.port`、未設定時は 18080）が VS Code のポートパネルでフォワードされていたら停止
 
 ---
 
@@ -309,10 +312,11 @@ AI Sandbox 内の Claude Code（または Gemini）で、以下を試してみ�
 
 ### HostMCP に接続できない
 
-1. HostMCP サーバーが起動中か確認: `curl http://localhost:18080/health`
-2. VS Code のポートパネルで 18080 がフォワードされていたら停止
-3. `/mcp` → 「Reconnect」を試す
-4. VS Code を完全に再起動（`Cmd+Q` → 再度開く）
+1. 設定済みポートを確認 — `.sandbox/config/hostmcp.yaml` の `server.port`（未設定時は 18080）
+2. そのポートが VS Code のポートパネルでフォワードされていたら停止
+3. HostMCP サーバーが起動中か確認: `curl http://localhost:<ポート番号>/health`
+4. `/mcp` → 「Reconnect」を試す
+5. VS Code を完全に再起動（`Cmd+Q` → 再度開く）
 
 詳しくは [トラブルシューティング](reference.ja.md#トラブルシューティング) を参照。
 
