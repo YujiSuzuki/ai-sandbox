@@ -25,6 +25,8 @@ hostmcp tools sync
 
 SHA256 ハッシュで変更を検知するため、**編集のたびに再承認が必要**です。
 
+スクリプトが独自のタイムアウトを宣言している場合（ヘッダーの `# @timeout: <秒数>` 行。例: `xcode-test.sh`）、`hostmcp tools sync` は承認を求める前に必ずその宣言を表示します。`y` と入力する前にそこで確認してください。
+
 詳細: [docs/host-access.md](../../docs/host-access.md)
 
 ---

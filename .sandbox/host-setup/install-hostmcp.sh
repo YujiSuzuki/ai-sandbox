@@ -7,7 +7,7 @@
 # silent-mode variant here. Always interactive.
 #
 # Usage:
-#   install-hostmcp.sh [project_root]
+#   install-hostmcp.sh [-v|--verbose] [project_root]
 #
 # Must run on the host OS — refuses to run inside the AI Sandbox container
 # (see guard below), for the same reason as init-host-env.sh: it writes/reads
@@ -21,7 +21,7 @@
 # （HostMCP自体が自動起動されることはないため）。常に対話モード。
 #
 # 使用法:
-#   install-hostmcp.sh [project_root]
+#   install-hostmcp.sh [-v|--verbose] [project_root]
 #
 # ホストOS上で実行する必要があります — init-host-env.sh と同じ理由で、AI Sandbox
 # コンテナ内では実行を拒否します（下記ガード参照）。Goツールチェーン・PATH・シェル
@@ -47,14 +47,21 @@ fi
 
 # Parse arguments / 引数のパース
 PROJECT_ROOT="."
+VERBOSE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
-            echo "Usage: install-hostmcp.sh [project_root]"
-            echo "  project_root  Project root directory (default: current directory)"
-            echo "                プロジェクトルート（デフォルト: カレントディレクトリ）"
+            echo "Usage: install-hostmcp.sh [-v|--verbose] [project_root]"
+            echo "  -v, --verbose  Show both installed and latest version, even when up to date"
+            echo "                 バージョンが最新の場合もインストール済み/最新の両方を表示"
+            echo "  project_root   Project root directory (default: current directory)"
+            echo "                 プロジェクトルート（デフォルト: カレントディレクトリ）"
             exit 0
+            ;;
+        -v|--verbose)
+            VERBOSE=true
+            shift
             ;;
         *)
             PROJECT_ROOT="$1"
@@ -326,12 +333,23 @@ _offer_path_append() {
 # 妨げたり不安にさせたりすべきではないため。
 _check_hostmcp_update() {
     local gopath_bin="$1"
-    local installed_version latest_version
+    local installed_version latest_version hostmcp_path
 
     installed_version=$(hostmcp version 2>/dev/null) || installed_version=""
     if [ -z "$installed_version" ]; then
         return 0
     fi
+
+    # Path of the binary that just answered `hostmcp version` above, shown only
+    # in --verbose output. Resolved via _resolve_hostmcp_bin (defined further
+    # down in this file) rather than a plain `command -v`, since that helper
+    # also covers the GOPATH/~/.local/bin fallback cases `command -v` alone
+    # would miss right after a `go install` (see that function's own comment).
+    # 直前の `hostmcp version` に応答したバイナリのパス。--verbose 時のみ表示。
+    # 単純な `command -v` ではなく _resolve_hostmcp_bin（本ファイル下方で定義）で
+    # 解決する。こちらは `go install` 直後など `command -v` だけでは拾えない
+    # GOPATH/~/.local/bin へのフォールバックも考慮しているため（同関数のコメント参照）。
+    hostmcp_path=$(_resolve_hostmcp_bin) || hostmcp_path="?"
 
     # Test seam: same convention as check-sandbox-mcp-updates.sh's MOCK_LATEST_VERSION,
     # so tests don't depend on a real network call or a faked curl+JSON response.
@@ -347,14 +365,24 @@ _check_hostmcp_update() {
     fi
 
     if [ "$installed_version" = "$latest_version" ]; then
-        msg "hostmcp is up to date ($installed_version)." \
-            "hostmcp は最新です（${installed_version}）。"
+        if [ "$VERBOSE" = true ]; then
+            msg "hostmcp is up to date (installed: $installed_version, latest: $latest_version, path: $hostmcp_path)." \
+                "hostmcp は最新です（インストール済み: ${installed_version}、最新: ${latest_version}、パス: ${hostmcp_path}）。"
+        else
+            msg "hostmcp is up to date ($installed_version)." \
+                "hostmcp は最新です（${installed_version}）。"
+        fi
         return 0
     fi
 
     echo ""
-    msg "hostmcp update available: $installed_version -> $latest_version" \
-        "hostmcp の更新があります: $installed_version -> $latest_version"
+    if [ "$VERBOSE" = true ]; then
+        msg "hostmcp update available: $installed_version -> $latest_version (path: $hostmcp_path)" \
+            "hostmcp の更新があります: $installed_version -> ${latest_version}（パス: ${hostmcp_path}）"
+    else
+        msg "hostmcp update available: $installed_version -> $latest_version" \
+            "hostmcp の更新があります: $installed_version -> $latest_version"
+    fi
     msg "  1) Yes, update now" "  1) はい、今すぐ更新する"
     msg "  2) No (default)" "  2) いいえ（デフォルト）"
     echo ""

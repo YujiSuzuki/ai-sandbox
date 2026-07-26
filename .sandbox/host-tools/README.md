@@ -25,6 +25,8 @@ Scripts are only executed from the approved copy at `~/.hostmcp/host-tools/<proj
 
 Changes are detected via SHA256 hash, so **re-approval is required after every edit**.
 
+If a script declares its own timeout (`# @timeout: <seconds>` in its header — see `xcode-test.sh`), `hostmcp tools sync` always shows that declaration before asking for approval, so review it there before typing `y`.
+
 Details: [docs/host-access.md](../../docs/host-access.md)
 
 ---

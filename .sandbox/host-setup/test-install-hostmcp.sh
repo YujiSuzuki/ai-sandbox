@@ -1598,6 +1598,69 @@ test_update_check_new_version_prompt_shown() {
     cleanup
 }
 
+test_update_check_verbose_shows_path_when_up_to_date() {
+    echo ""
+    echo "=== Test: -v/--verbose shows installed binary path when up to date ==="
+
+    setup
+    local fp
+    _setup_versioned_hostmcp_mock fp "v1.0.0"
+
+    local output
+    output=$(MOCK_LATEST_VERSION="v1.0.0" LANG=C bash "$SCRIPT" -v "$TEST_PROJECT" < /dev/null 2>&1)
+
+    if echo "$output" | grep -q "path: $fp/bin/hostmcp"; then
+        pass "-v shows the resolved hostmcp binary path in the up-to-date message"
+    else
+        fail "Expected 'path: $fp/bin/hostmcp' in verbose up-to-date output, got: $output"
+    fi
+
+    safe_rm_rf "$fp"
+    cleanup
+}
+
+test_update_check_verbose_shows_path_when_update_available() {
+    echo ""
+    echo "=== Test: -v/--verbose shows installed binary path when an update is available ==="
+
+    setup
+    local fp
+    _setup_versioned_hostmcp_mock fp "v1.0.0"
+
+    local output
+    output=$(MOCK_LATEST_VERSION="v2.0.0" LANG=C bash "$SCRIPT" --verbose "$TEST_PROJECT" < /dev/null 2>&1)
+
+    if echo "$output" | grep -q "path: $fp/bin/hostmcp"; then
+        pass "--verbose shows the resolved hostmcp binary path in the update-available message"
+    else
+        fail "Expected 'path: $fp/bin/hostmcp' in verbose update-available output, got: $output"
+    fi
+
+    safe_rm_rf "$fp"
+    cleanup
+}
+
+test_update_check_non_verbose_omits_path() {
+    echo ""
+    echo "=== Test: without -v/--verbose, the binary path is not shown ==="
+
+    setup
+    local fp
+    _setup_versioned_hostmcp_mock fp "v1.0.0"
+
+    local output
+    output=$(MOCK_LATEST_VERSION="v1.0.0" LANG=C bash "$SCRIPT" "$TEST_PROJECT" < /dev/null 2>&1)
+
+    if echo "$output" | grep -q "path:"; then
+        fail "Did not expect 'path:' in non-verbose output, got: $output"
+    else
+        pass "Non-verbose output omits the binary path"
+    fi
+
+    safe_rm_rf "$fp"
+    cleanup
+}
+
 test_update_check_decline_no_upgrade() {
     echo ""
     echo "=== Test: update declined → go install NOT called ==="
@@ -2169,6 +2232,9 @@ main() {
     test_update_check_queries_stable_channel_only
     test_update_check_same_version_no_prompt
     test_update_check_new_version_prompt_shown
+    test_update_check_verbose_shows_path_when_up_to_date
+    test_update_check_verbose_shows_path_when_update_available
+    test_update_check_non_verbose_omits_path
     test_update_check_decline_no_upgrade
     test_update_check_default_declines
     test_update_check_accept_go_install

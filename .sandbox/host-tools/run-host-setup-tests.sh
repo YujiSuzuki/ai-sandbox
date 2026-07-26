@@ -1,5 +1,6 @@
 #!/bin/bash
 # run-host-setup-tests.sh
+# @timeout: 300
 # .sandbox/host-setup/test-*.sh をホスト OS 上で実行する（汎用ランナー）。
 # HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #

@@ -440,7 +440,8 @@ Place shell scripts in [`.sandbox/sandbox-mcp-setup/`](../.sandbox/sandbox-mcp-s
 ├── 10-sandbox-env.sh              ← reports $SANDBOX_ENV
 ├── 20-git-uncommitted.sh          ← reports uncommitted changes in nested git repos
 ├── 30-language.sh                 ← reports the response language derived from $LANG
-└── 40-hostmcp-host-tools-hint.sh  ← hints that .sandbox/host-tools/ scripts exist when HostMCP isn't connected
+├── 40-hostmcp-host-tools-hint.sh  ← hints that .sandbox/host-tools/ scripts exist when HostMCP isn't connected
+└── 50-mcp-tool-timeout.sh         ← reports Claude Code's own MCP tool-call timeout (MCP_TOOL_TIMEOUT or the 60s default)
 ```
 
 This is how the AI learns things like the current sandbox environment type or nested-repo status without being told every session.

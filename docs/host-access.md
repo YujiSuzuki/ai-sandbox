@@ -89,8 +89,11 @@ host_access:
       - ".sandbox/host-tools"
     common: true
     allowed_extensions: [".sh", ".go", ".py"]
-    timeout: 60  # seconds
+    timeout: 60  # seconds; used for tools that don't declare their own timeout
+    max_tool_timeout: 1800  # seconds; ceiling for a tool's own declared timeout
 ```
+
+A tool that regularly needs more time than the global `timeout` (e.g. `xcode-test.sh`, which declares `# @timeout: 600` in its own header) can declare its own timeout instead of raising the default for every tool. See the "Per-Tool Timeout Declaration" section of [HostMCP's README](https://raw.githubusercontent.com/YujiSuzuki/hostmcp/refs/heads/main/README.md) for the exact syntax. The declared value only takes effect once approved via `hostmcp tools sync`, and is clamped to `max_tool_timeout` if it exceeds it.
 
 ### Included Tools
 
@@ -121,6 +124,15 @@ Place a script in `.sandbox/host-tools/` with a description header:
 ```
 
 The header is parsed by HostMCP and shown to AI via `list_host_tools` and `get_host_tool_info`.
+
+If the tool regularly needs more than the global `timeout` (60s by default), declare its own timeout instead of raising the default for every tool, by adding an `@timeout:` line to the header — see [Configuration](#configuration) above and `xcode-test.sh` for a real example:
+
+```bash
+#!/bin/bash
+# my-slow-tool.sh
+# @timeout: 600
+# Short description of what this tool does
+```
 
 ---
 
@@ -282,7 +294,7 @@ hostmcp client host-exec --dangerously "git pull"
 
 - **Approval required** — Tools must be explicitly approved before execution. The staging directory (inside workspace) is writable by AI, but the approved directory (`~/.hostmcp/host-tools/`) is not.
 - **Change detection** — SHA256 hashing detects modifications. Changed tools require re-approval.
-- **Timeout** — Tool execution has a configurable timeout (default: 60s) to prevent runaway scripts.
+- **Timeout** — Tool execution has a configurable timeout (default: 60s) to prevent runaway scripts. A tool can declare its own longer timeout in its header (`# @timeout: <seconds>`), but that value only takes effect once approved via `hostmcp tools sync` — the approval prompt always shows any `@timeout:` declaration before asking for confirmation, so a human reviewer cannot approve one without seeing it. A declared value is also clamped to `max_tool_timeout`, which only an administrator can raise by editing `hostmcp.yaml` — a script cannot escape the ceiling just by declaring a larger number.
 - **Extension whitelist** — Only `.sh`, `.go`, `.py` files can be registered as tools.
 
 ### Container Lifecycle

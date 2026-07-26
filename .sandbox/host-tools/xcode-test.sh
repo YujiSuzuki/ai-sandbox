@@ -1,5 +1,6 @@
 #!/bin/bash
 # xcode-test.sh
+# @timeout: 600
 # Xcode テストをホスト OS（macOS）上で実行する。
 # HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #
@@ -25,8 +26,13 @@
 #   ./xcode-test.sh --only "MyFeatureTests/test_something"
 #   ./xcode-test.sh --only "MyAppTests/MyFeatureTests"  # TargetName/ClassName 形式でも可
 #
-# Note: タイムアウトは hostmcp.yaml の host_access.host_tools.timeout で設定する（デフォルト 600 秒）。
-#   AI（MCP 経由）が run_host_tool を呼び出す際は per-call でのタイムアウト変更不可。
+# Note: このスクリプトはヘッダーの「@timeout: 600」で自身のタイムアウトを
+#   600秒に宣言している（hostmcp.yamlのグローバル既定値は host_access.host_tools.timeout
+#   で60秒。全ツール共通のこの既定値を上げる代わりに、このツールだけ個別に延長する
+#   仕組み）。この宣言は `hostmcp tools sync` で承認されて初めて有効になり、
+#   hostmcp.yamlの host_access.host_tools.max_tool_timeout（既定1800秒）を超える
+#   宣言はクランプされる。AI（MCP経由）がrun_host_tool呼び出し時にper-callで
+#   タイムアウトを変更する手段は無い。
 #
 # ⚠️ --only に指定するのはファイル名ではなく Swift の struct 名（@Suite に対応する型名）。
 #   ファイル名と struct 名が異なる場合、--only でテストが 0 件になる（エラーにはならない）。
@@ -38,6 +44,13 @@
 #   推奨: ファイル名と同名の外枠 struct を作り、内部 struct を入れ子にする（.sandbox/host-tools/README.md 参照）
 #
 # コマンドラインからの使用例
+#
+# 下記の `hostmcp client --timeout 600` は、上記のヘッダー宣言「@timeout: 600」とは
+# 別レイヤーの設定である点に注意。`--timeout` はクライアントがHTTP応答を待つ時間
+# （hostmcp本体の実装: internal/cli/client.go）で、ホスト側でツールを強制終了する
+# 実行時間制限（ヘッダーの@timeout宣言が対象とするもの）とは独立している。
+# サーバー側を@timeout宣言で延ばしても、クライアント側の--timeoutが短いままだと
+# クライアントが先に応答待ちを諦めてしまうため、両方を揃えて600程度にする必要がある。
 # hostmcp client --timeout 600 --url http://host.docker.internal:8888 host-tools run xcode-test.sh
 #   オプションを渡す時
 # hostmcp client --timeout 600 --url http://host.docker.internal:8888 host-tools run xcode-test.sh -- --only MyFeatureTests

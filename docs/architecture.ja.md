@@ -440,7 +440,8 @@ AI アシスタントは `list_scripts` でスクリプトを発見し、`get_sc
 ├── 10-sandbox-env.sh              ← $SANDBOX_ENV を報告
 ├── 20-git-uncommitted.sh          ← ネストしたgitリポジトリの未コミット変更を報告
 ├── 30-language.sh                 ← $LANG から導出した応答言語を報告
-└── 40-hostmcp-host-tools-hint.sh  ← HostMCP未接続時に.sandbox/host-tools/のスクリプトの存在をヒント表示
+├── 40-hostmcp-host-tools-hint.sh  ← HostMCP未接続時に.sandbox/host-tools/のスクリプトの存在をヒント表示
+└── 50-mcp-tool-timeout.sh         ← Claude Code自身のMCPツール呼び出しタイムアウト（MCP_TOOL_TIMEOUTまたは既定60秒）を報告
 ```
 
 これにより、現在のサンドボックス環境の種類やネストしたリポジトリの状態などを、毎回説明しなくてもAIが把握できるようになります。
