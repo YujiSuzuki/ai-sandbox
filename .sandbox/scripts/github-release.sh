@@ -103,8 +103,10 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_TAG_CREATED="タグ %s を作成しました"
     MSG_TAG_PUSHED="タグ %s を origin に push しました"
     MSG_GH_CREATED="GitHub Release を作成しました"
-    MSG_GH_FAILED="gh release create に失敗しました。"
+    MSG_GH_FAILED="gh release create に失敗しました（GitHub 未認証の可能性があります。gh auth status で確認してください）。"
     MSG_GH_NOT_FOUND="gh CLI が見つかりません。"
+    MSG_GH_NOT_FOUND_PREFLIGHT="gh CLI が見つかりません。タグの作成・push は行えますが、GitHub Release の作成は手動になります。"
+    MSG_GH_NOT_AUTHENTICATED="gh CLI は認証されていません（gh auth login で認証できます）。タグの作成・push は行えますが、GitHub Release の作成は手動になります。"
     MSG_MANUAL_RELEASE="手動でリリースを作成してください:"
     MSG_PASTE_NOTES="リリースノートを貼り付けてください:"
     MSG_RELEASE_COMPLETE="リリース %s 完了！ 🎉"
@@ -112,6 +114,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_NO_RELEASES="リリースが見つかりません。"
     MSG_VERSION_REQUIRED="バージョン引数が必要です。使用法: github-release.sh <version> [--notes-file <file>]"
     MSG_REQUIRES_GH="gh CLI または curl + jq が必要です。"
+    MSG_PREV_MANUAL_HINT="以下の URL で直接確認できます:"
     MSG_NO_REPO="git remote から GitHub リポジトリを検出できません。"
 else
     MSG_RELEASE_TITLE="🚀 Release:"
@@ -136,8 +139,10 @@ else
     MSG_TAG_CREATED="Tag %s created"
     MSG_TAG_PUSHED="Tag %s pushed to origin"
     MSG_GH_CREATED="GitHub Release created"
-    MSG_GH_FAILED="gh release create failed."
+    MSG_GH_FAILED="gh release create failed (this may be due to a GitHub authentication issue — check with 'gh auth status')."
     MSG_GH_NOT_FOUND="gh CLI not found."
+    MSG_GH_NOT_FOUND_PREFLIGHT="gh CLI not found. Tag creation and push will still work, but GitHub Release creation will require manual steps."
+    MSG_GH_NOT_AUTHENTICATED="gh CLI is not authenticated (run 'gh auth login'). Tag creation and push will still work, but GitHub Release creation will require manual steps."
     MSG_MANUAL_RELEASE="Create the release manually:"
     MSG_PASTE_NOTES="Paste the release notes from:"
     MSG_RELEASE_COMPLETE="Release %s complete! 🎉"
@@ -145,6 +150,7 @@ else
     MSG_NO_RELEASES="No releases found."
     MSG_VERSION_REQUIRED="Version argument required. Usage: github-release.sh <version> [--notes-file <file>]"
     MSG_REQUIRES_GH="Requires gh CLI or curl + jq."
+    MSG_PREV_MANUAL_HINT="You can check directly at:"
     MSG_NO_REPO="Could not detect GitHub repository from git remote."
 fi
 
@@ -161,6 +167,13 @@ get_github_repo() {
     local remote_url
     remote_url=$(git remote get-url origin 2>/dev/null || echo "")
     echo "$remote_url" | sed -E 's|.*github\.com[:/]||;s|\.git$||'
+}
+
+# Get GitHub web URL from git remote (SSH or HTTPS) / git remote から GitHub Web URL を取得（SSH・HTTPS 両対応）
+get_github_web_url() {
+    local remote_url
+    remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+    echo "$remote_url" | sed -E 's|git@github\.com:|https://github.com/|;s|\.git$||'
 }
 
 show_help() {
@@ -220,8 +233,12 @@ if [[ -n "$REPO" ]]; then
     # Resolve NOTES_FILE to absolute path before cd (relative paths would otherwise
     # resolve inside REPO after cd, not in the caller's working directory)
     if [[ -n "$NOTES_FILE" ]] && [[ "$NOTES_FILE" != /* ]]; then
-        NOTES_FILE="$(cd "$(dirname "$NOTES_FILE")" 2>/dev/null && pwd)/$(basename "$NOTES_FILE")" \
-            || NOTES_FILE="$(pwd)/$NOTES_FILE"
+        notes_dir="$(cd "$(dirname "$NOTES_FILE")" 2>/dev/null && pwd)" || true
+        if [[ -n "$notes_dir" ]]; then
+            NOTES_FILE="${notes_dir}/$(basename "$NOTES_FILE")"
+        else
+            NOTES_FILE="$(pwd)/$NOTES_FILE"
+        fi
     fi
     cd "$REPO"
 fi
@@ -246,9 +263,9 @@ if [[ "$SHOW_PREV" == true ]]; then
             warn "$MSG_NO_RELEASES"
         fi
     elif command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-        REPO=$(get_github_repo)
-        if [[ -n "$REPO" ]]; then
-            LATEST=$(curl -s "https://api.github.com/repos/${REPO}/releases" | jq -r '.[0]' 2>/dev/null || echo "")
+        GH_REPO=$(get_github_repo)
+        if [[ -n "$GH_REPO" ]]; then
+            LATEST=$(curl -s "https://api.github.com/repos/${GH_REPO}/releases" | jq -r '.[0]' 2>/dev/null || echo "")
             if [[ -n "$LATEST" && "$LATEST" != "null" ]]; then
                 TAG=$(echo "$LATEST" | jq -r '.tag_name')
                 NAME=$(echo "$LATEST" | jq -r '.name')
@@ -266,7 +283,15 @@ if [[ "$SHOW_PREV" == true ]]; then
             die "$MSG_NO_REPO"
         fi
     else
-        die "$MSG_REQUIRES_GH"
+        warn "$MSG_REQUIRES_GH"
+        WEB_URL=$(get_github_web_url)
+        if [[ -n "$WEB_URL" ]]; then
+            echo ""
+            echo -e "  ${MSG_PREV_MANUAL_HINT}"
+            echo -e "  ${CYAN}${WEB_URL}/releases${NC}"
+        fi
+        echo ""
+        exit 1
     fi
     echo ""
     exit 0
@@ -328,6 +353,19 @@ else
 fi
 echo ""
 
+# Check gh availability / auth status ahead of time (publish mode only) — informational only,
+# tag creation and push below don't require gh so this doesn't block anything
+# gh の有無・認証状態を事前チェック（publishモードのみ）。tag作成・push は gh 不要なので処理は止めない
+if [[ -n "$NOTES_FILE" ]]; then
+    if ! command -v gh >/dev/null 2>&1; then
+        warn "$MSG_GH_NOT_FOUND_PREFLIGHT"
+        echo ""
+    elif ! gh auth status >/dev/null 2>&1; then
+        warn "$MSG_GH_NOT_AUTHENTICATED"
+        echo ""
+    fi
+fi
+
 # ─── Generate release notes / リリースノート生成 ────────────────
 
 generate_notes() {
@@ -343,7 +381,7 @@ generate_notes() {
         # Classify: docs first (more specific), then fixes, then features
         # 分類: docs を先に判定（より具体的）、次に fixes、最後に features
         case "$msg" in
-            *README*|*doc*|*Doc*|*CLAUDE.md*|*GEMINI.md*|*documentation*)
+            *README*|*docs*|*Docs*|*CLAUDE.md*|*GEMINI.md*|*documentation*)
                 docs+=("$entry") ;;
             Fix*|Resolve*|Correct*)
                 fixes+=("$entry") ;;
@@ -386,12 +424,9 @@ generate_notes() {
     fi
 
     # Detect GitHub repo URL for Full Changelog link / GitHub リポジトリ URL から変更履歴リンクを生成
-    local remote_url
-    remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-    if [[ -n "$remote_url" ]]; then
-        # Convert SSH or HTTPS URL to web URL / SSH・HTTPS の URL を Web URL に変換
-        local web_url
-        web_url=$(echo "$remote_url" | sed -E 's|git@github\.com:|https://github.com/|;s|\.git$||')
+    local web_url
+    web_url=$(get_github_web_url)
+    if [[ -n "$web_url" ]]; then
         if [[ "$FIRST_RELEASE" == true ]]; then
             echo "**Full Changelog**: ${web_url}/commits/${VERSION}"
         else
@@ -426,12 +461,18 @@ if [[ -z "$NOTES_FILE" ]]; then
     REPO_FLAG=""
     [[ -n "$REPO" ]] && REPO_FLAG=" --repo $(pwd)"
 
+    # With --repo, DRAFT_FILE was written inside the repo dir (we already cd'd there).
+    # Use an absolute path in the hint so it resolves correctly even if the suggested
+    # command is run from the caller's original working directory.
+    DRAFT_FILE_HINT="$DRAFT_FILE"
+    [[ -n "$REPO" ]] && DRAFT_FILE_HINT="$(pwd)/$DRAFT_FILE"
+
     echo -e "  ${BOLD}${MSG_NEXT_STEPS}${NC}"
     echo -e "    ${MSG_STEP1}"
     echo -e "      ${CYAN}.sandbox/scripts/github-release.sh --prev${REPO_FLAG}${NC}"
     echo -e "    ${MSG_STEP2}"
     echo -e "    ${MSG_STEP3}"
-    echo -e "      ${CYAN}.sandbox/scripts/github-release.sh ${VERSION} --notes-file ${DRAFT_FILE}${REPO_FLAG}${NC}"
+    echo -e "      ${CYAN}.sandbox/scripts/github-release.sh ${VERSION} --notes-file ${DRAFT_FILE_HINT}${REPO_FLAG}${NC}"
     echo ""
     exit 0
 fi
@@ -453,7 +494,9 @@ echo ""
 # shellcheck disable=SC2059
 printf -v confirm_msg "$MSG_CONFIRM_TAG" "$VERSION"
 echo -ne "${YELLOW}${confirm_msg} [y/N]: ${NC}"
-read -r confirm
+# Non-interactive/closed stdin returns EOF (read fails); treat that as "no" instead of
+# letting `set -e` kill the script silently right after the notes were printed.
+read -r confirm || confirm=""
 if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
     info "$MSG_CANCELLED"
     exit 0
@@ -478,10 +521,8 @@ ok "$(printf "$MSG_TAG_PUSHED" "$VERSION")"
 # ─── GitHub Release / GitHub Release 作成 ───────────────────────
 
 show_manual_release_url() {
-    local remote_url
-    remote_url=$(git remote get-url origin 2>/dev/null || echo "")
     local web_url
-    web_url=$(echo "$remote_url" | sed -E 's|git@github\.com:|https://github.com/|;s|\.git$||')
+    web_url=$(get_github_web_url)
 
     info "$MSG_MANUAL_RELEASE"
     echo ""
