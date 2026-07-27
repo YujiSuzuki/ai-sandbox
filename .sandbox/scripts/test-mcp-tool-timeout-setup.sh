@@ -163,6 +163,27 @@ test_mentions_escape_hatch() {
 }
 
 # ============================================================
+# Test: Output tells the AI to pass client_timeout_seconds to run_host_tool
+# ============================================================
+test_mentions_client_timeout_seconds() {
+    echo ""
+    echo "=== Testing output mentions client_timeout_seconds ==="
+
+    local output_unset output_set
+    output_unset=$(env -u MCP_TOOL_TIMEOUT bash "$TARGET_SCRIPT")
+    output_set=$(MCP_TOOL_TIMEOUT=300000 bash "$TARGET_SCRIPT")
+
+    # hostmcp's run_host_tool now refuses to run a tool whose own timeout
+    # exceeds its global default unless client_timeout_seconds is passed --
+    # the AI needs this value (in seconds) from this hint script to supply it.
+    if echo "$output_unset" | grep -q "client_timeout_seconds" && echo "$output_set" | grep -q "client_timeout_seconds"; then
+        pass "Both branches mention client_timeout_seconds"
+    else
+        fail "Expected both branches to mention client_timeout_seconds, got unset: '$output_unset' / set: '$output_set'"
+    fi
+}
+
+# ============================================================
 # Main
 # ============================================================
 main() {
@@ -176,6 +197,7 @@ main() {
     test_malformed_value_falls_back_to_default
     test_leading_zero_parsed_as_base_10
     test_mentions_escape_hatch
+    test_mentions_client_timeout_seconds
 
     echo ""
     echo "========================================"
