@@ -68,6 +68,10 @@ Follow these steps precisely.
    ```
    If it fails (no git repository found), skip this step.
 
+6. Scan the spec document(s) for explicit path references to source code — absolute paths (e.g. `/workspace/...`), `file://` links, or prose that names a specific project directory (e.g. "対象は `/workspace/mainte/sandbox-mcp`"). Collect the distinct top-level project directories referenced this way as `<referenced-repos>`.
+   **Important**: a spec document commonly lives in one repository (or a shared planning location like `claude-data/plans/`) while describing changes to a *different* repository — do not assume `<referenced-repos>` equals `<project-root>` from point 5 above; they are frequently not the same, and using the wrong one would point verification at the wrong codebase entirely.
+   If the spec only uses bare relative paths (e.g. `server.go`, no directory), record that `<referenced-repos>` is empty/ambiguous for that citation — Step 4 agents will need to search for it (e.g. under `/workspace`) rather than assume a location.
+
 ### Step 2: Context Input
 
 If a valid doc path was found in Step 1 (the 1st argument) and the 2nd argument onwards is provided, use it as context and skip AskUserQuestion.
@@ -97,6 +101,8 @@ Launch 5 parallel Sonnet agents. Pass to each agent:
 - Document type classification from Step 3
 - Output language detected in Step 3 (instruct agents: "Output all results in <language>")
 - False Positives criteria (full text of the "False Positives" section at the end of this document)
+- `<referenced-repos>` collected in Step 1 point 6 (or a note that none were found / citations were relative-only)
+- This instruction, verbatim, regardless of which category (Agent #1–#5) the agent is reviewing: "If the spec explicitly names source files, line numbers, function/API signatures, or test names, open and verify them against the actual repository before judging any issue that depends on that claim. This extends Step 1 point 4's read permission (explicitly named + necessary to judge an issue) to cover these citation forms too, not just bare filenames — do not read unrelated files, but do not skip verification of what the spec itself cites either. Resolve the correct location from `<referenced-repos>`: the repository to verify against is often NOT the one containing this spec document (e.g. a plan stored under `claude-data/plans/` describing changes to `mainte/sandbox-mcp`) — never assume co-location. If a citation is a bare relative path, search under `/workspace` to locate it. Only verify claims about code that should already exist — the current state, or the result of an earlier phase/commit the spec describes as already done. Do NOT flag a proposed identifier, file, or signature the spec itself says it will newly create in this or a later phase/commit as 'missing from the repository'; for those, judge only the internal consistency of the proposal, not its present existence. When you do open a repository file to verify a claim, record the exact file:line and quoted text you read in the 'Source excerpt' field of your report (see Report format) so Step 6 can independently re-check it rather than trust your quote at face value."
 
 ---
 
@@ -123,6 +129,7 @@ Report format:
 - Impact: Critical / High / Medium / Low
 - Category: Accuracy
 - Excerpt: <verbatim quote of the relevant text, 1–5 lines — **REQUIRED**; write "N/A" if no specific text exists>
+- Source excerpt: <verbatim quote from the actual repository file you opened to verify a claim, with file:line — write "N/A" if this issue doesn't depend on a repository-verified claim>
 ```
 
 ---
@@ -235,12 +242,14 @@ For each issue scoring >= 75 in Step 5, launch a **single Sonnet agent** to re-v
 The validation agent receives:
 - The filtered list of issues (those scoring >= 75)
 - The relevant spec document excerpts for each issue
+- The Source excerpt (repository file:line quote) for each issue that has one, plus `<referenced-repos>` from Step 1
 - The original agent's reasoning
 
 For each issue, the validation agent must:
-1. Re-read the relevant excerpts provided
-2. Determine whether the issue is genuine or a false positive (see False Positives section below)
-3. Return exactly `ISSUE-N: CONFIRMED` or `ISSUE-N: REJECTED — <one-line reason>`
+1. Re-read the relevant spec excerpts provided
+2. If the issue has a Source excerpt, independently re-open that repository file/line yourself and confirm the quote is accurate — do not take the reporting agent's Source excerpt at face value; this step exists specifically to catch a fabricated or misremembered repository citation
+3. Determine whether the issue is genuine or a false positive (see False Positives section below)
+4. Return exactly `ISSUE-N: CONFIRMED` or `ISSUE-N: REJECTED — <one-line reason>`
 
 Remove REJECTED issues from the final report.
 
