@@ -400,6 +400,12 @@ Display recovery commands in failure summary.
 3. Run the copy inside the container, and diff the container's own real file locations (e.g. `~/go/bin`, `~/.local/bin`) before/after to confirm nothing outside the script's own `mktemp -d` temp dirs was touched.
 4. Only after that passes, run the real script via `run_host_tool` on the actual host.
 
+### macOS bash 3.2 Compatibility
+
+Host-side scripts (`.sandbox/host-setup/`, `.sandbox/host-tools/`) run under whatever bash the host provides. On macOS that's bash 3.2 — Apple ships this ancient GPLv2 release and never updates it, so bash 4+ features (`${var,,}`, `mapfile`, associative arrays, etc.) will fail there. Check the host OS/arch before assuming a newer feature is available: `.sandbox/.host-os` (written by `init-host-env.sh` on the host) or the "Host OS: ..." line sandbox-mcp reports at session start.
+
+A specific bash 3.2 pitfall: a bare `$var` immediately followed by a non-ASCII character (e.g. Japanese text, no space or punctuation in between) can be misparsed as part of the variable name under some locales, producing an `unbound variable` error under `set -u` even though the variable is set. Always wrap the variable in braces (`${var}`) when non-ASCII text follows it directly.
+
 ---
 
 ## Project Structure (Full)

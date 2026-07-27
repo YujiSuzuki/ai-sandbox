@@ -438,6 +438,7 @@ Place shell scripts in [`.sandbox/sandbox-mcp-setup/`](../.sandbox/sandbox-mcp-s
 ```
 .sandbox/sandbox-mcp-setup/
 ├── 10-sandbox-env.sh              ← reports $SANDBOX_ENV
+├── 15-host-os.sh                  ← reports the host OS/arch from .sandbox/.host-os
 ├── 20-git-uncommitted.sh          ← reports uncommitted changes in nested git repos
 ├── 30-language.sh                 ← reports the response language derived from $LANG
 ├── 40-hostmcp-host-tools-hint.sh  ← hints that .sandbox/host-tools/ scripts exist when HostMCP isn't connected
