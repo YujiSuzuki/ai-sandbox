@@ -12,6 +12,7 @@ This template creates a Docker-based development environment where:
 - **Code is fully accessible** — AI can read and edit all source code across multiple projects
 - **Other containers are reachable** — With HostMCP, AI can check logs and run tests in other containers safely
 - **Helper scripts and tools are discoverable** — Via SandboxMCP, AI automatically discovers and runs scripts and tools in `.sandbox/`
+- **AI is briefed the moment it starts** — Git status and nested repo layout are shared automatically at startup, no explaining required — it always starts from the right directory
 - **AI reaches beyond the sandbox** — Approve host tools once, and AI can run host operations like `docker compose up` on your behalf
 - **Code review and test generation in one command** — Built-in slash commands let AI handle reviews, refactoring, and test generation (Claude Code)
 
