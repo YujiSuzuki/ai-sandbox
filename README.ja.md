@@ -573,3 +573,12 @@ A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられま�
 ## ライセンス
 
 MIT License - [LICENSE](LICENSE) を参照
+
+
+## コンサルティング / お仕事のご依頼
+
+MCPサーバーのセキュリティおよびAIエージェントのサンドボックス設計に関するコンサルティングを承っています。
+
+- GitHub: https://github.com/YujiSuzuki
+- LinkedIn: https://www.linkedin.com/in/yuji-suzuki-dev
+

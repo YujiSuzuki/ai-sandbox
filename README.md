@@ -565,3 +565,11 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 ## License
 
 MIT License - See [LICENSE](LICENSE)
+
+
+## Consulting / Hire Me
+
+Open to consulting on MCP server security and AI agent sandbox design.
+
+- GitHub: https://github.com/YujiSuzuki
+- LinkedIn: https://www.linkedin.com/in/yuji-suzuki-dev
