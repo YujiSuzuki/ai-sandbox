@@ -162,14 +162,7 @@ For HostMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#h
 
 ## SandboxMCP
 
-Runs inside the container via stdio. Its tools appear with the `mcp__sandbox-mcp__` prefix once connected — treat that live tool list (and SandboxMCP's own MCP server instructions) as the source of truth for what's available, rather than a hardcoded list here.
-
-| | SandboxMCP | HostMCP |
-|---|---|---|
-| Location | Inside container | Host OS |
-| Transport | stdio | SSE (HTTP) |
-| Purpose | Script/tool discovery | Container access |
-| Auto-start | By Claude Code | Manual (`hostmcp serve`) |
+Runs inside the container via stdio. Its tools appear with the `mcp__sandbox-mcp__` prefix once connected — treat that live tool list (and SandboxMCP's own MCP server instructions, which also cover how it compares to HostMCP) as the source of truth for what's available, rather than a hardcoded table here.
 
 **Use tools proactively:** When a user's request can be fulfilled by an existing tool (e.g., searching conversation history), run it via `run_tool` and show the equivalent `go run` command.
 
