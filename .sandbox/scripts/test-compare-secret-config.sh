@@ -13,6 +13,16 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPT="$SCRIPT_DIR/compare-secret-config.sh"
 TEST_WORKSPACE=""
 
+# compare-secret-config.sh now refuses to run unless $SANDBOX_ENV is set or
+# /.dockerenv exists. Default it here so this test suite still runs outside
+# the container (plain checkout, CI without a devcontainer) -- the host-OS
+# guard test below overrides it inline per-invocation.
+# compare-secret-config.sh は $SANDBOX_ENV か /.dockerenv が無いと実行を
+# 拒否するようになった。コンテナ外（素のチェックアウトやdevcontainer無しの
+# CI）でもこのテストスイートが動くよう既定値を設定する。下のホストOSガード
+# テストは呼び出しごとにインラインで上書きする。
+export SANDBOX_ENV="${SANDBOX_ENV:-devcontainer}"
+
 # Colors for output
 # 出力用の色定義
 RED='\033[0;31m'
@@ -285,6 +295,59 @@ EOF
     cleanup
 }
 
+# Test: host-OS guard blocks execution when neither SANDBOX_ENV nor a
+# docker-marker file is present, and allows it when either one is (the
+# guard's OR logic). Runs against a copy of the script with the hardcoded
+# "/.dockerenv" path swapped for a controllable one via sed, since the real
+# path can't be safely faked away inside this container test run itself --
+# see docs/ai-guide.md "Host OS Test Scripts" for the copy-and-patch pattern.
+# テスト: SANDBOX_ENVもDockerマーカーファイルも無い場合にホストOSガードが
+# 実行をブロックし、どちらか一方があれば通す（ガードのOR条件）ことを確認する。
+# このコンテナ内のテスト実行中は実際の"/.dockerenv"を安全に消せないため、
+# ハードコードされたパスをsedで差し替え可能にしたスクリプトのコピーに対して
+# 実行する（docs/ai-guide.mdの「Host OS Test Scripts」節のコピー＆パッチ方式を参照）。
+test_host_os_guard() {
+    echo ""
+    echo "=== Test: host-OS guard blocks/allows based on SANDBOX_ENV / docker-marker ==="
+
+    setup
+    create_matching_configs
+
+    local patched_script="$TEST_WORKSPACE/compare-secret-config-patched.sh"
+    local fake_marker="$TEST_WORKSPACE/no-such-dockerenv"
+    sed "s#/\.dockerenv#$fake_marker#" "$SCRIPT" > "$patched_script"
+    chmod +x "$patched_script"
+
+    local output exit_code
+
+    # Neither SANDBOX_ENV nor the docker marker present -> blocked
+    output=$(env -u SANDBOX_ENV WORKSPACE="$TEST_WORKSPACE" "$patched_script" 2>&1) && exit_code=0 || exit_code=$?
+    if [ "$exit_code" -ne 0 ] && echo "$output" | grep -q "cannot be run on the host OS\|ホストOSでは実行できません"; then
+        pass "Blocks with host-OS error when neither SANDBOX_ENV nor docker marker is present"
+    else
+        fail "Should block with host-OS error, got exit=$exit_code output: $output"
+    fi
+
+    # SANDBOX_ENV set, docker marker still absent -> allowed through
+    output=$(env -u SANDBOX_ENV WORKSPACE="$TEST_WORKSPACE" SANDBOX_ENV=devcontainer "$patched_script" 2>&1) && exit_code=0 || exit_code=$?
+    if ! echo "$output" | grep -q "cannot be run on the host OS\|ホストOSでは実行できません"; then
+        pass "Allows execution when SANDBOX_ENV is set, even without the docker marker"
+    else
+        fail "Should not block when SANDBOX_ENV is set, got: $output"
+    fi
+
+    # SANDBOX_ENV unset, docker marker present -> allowed through
+    touch "$fake_marker"
+    output=$(env -u SANDBOX_ENV WORKSPACE="$TEST_WORKSPACE" "$patched_script" 2>&1) && exit_code=0 || exit_code=$?
+    if ! echo "$output" | grep -q "cannot be run on the host OS\|ホストOSでは実行できません"; then
+        pass "Allows execution when the docker marker is present, even without SANDBOX_ENV"
+    else
+        fail "Should not block when docker marker is present, got: $output"
+    fi
+
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -299,6 +362,7 @@ main() {
     test_mismatched_tmpfs
     test_missing_devcontainer_config
     test_missing_cli_config
+    test_host_os_guard
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

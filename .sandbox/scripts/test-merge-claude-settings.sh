@@ -401,6 +401,39 @@ EOF
     cleanup
 }
 
+# Test 8: Merge subproject nested more than one level deep
+# テスト8: 1階層より深くネストしたサブプロジェクトもマージする
+test_merge_deeply_nested_project() {
+    info "Test 8: Merge subproject nested more than one level deep"
+    info "テスト8: 1階層より深くネストしたサブプロジェクトもマージする"
+
+    setup
+
+    # e.g. a template repo checked out under a subdirectory, with a project
+    # added/migrated into it afterwards (matches real ai-sandbox-demo layout:
+    # <workspace>/mainte/ai-sandbox-demo/demo-apps-ios/.claude/settings.json)
+    mkdir -p "$TEST_WORKSPACE/group/project-c/.claude"
+    cat > "$TEST_WORKSPACE/group/project-c/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "deny": ["Read(*.mobileprovision)"]
+  }
+}
+EOF
+
+    # Run script
+    "$SCRIPT" > /dev/null 2>&1
+
+    if jq -e '.permissions.deny | index("Read(*.mobileprovision)")' "$TEST_WORKSPACE/.claude/settings.json" > /dev/null 2>&1; then
+        pass "Deeply nested project settings were merged"
+    else
+        fail "Deeply nested project settings were NOT merged (blind spot)"
+        cat "$TEST_WORKSPACE/.claude/settings.json" 2>/dev/null || echo "(no workspace settings.json created)"
+    fi
+
+    cleanup
+}
+
 # ========================================
 # Run all tests / 全テストの実行
 # ========================================
@@ -419,6 +452,7 @@ test_skip_on_manual_changes
 test_skip_without_backup
 test_merge_multiple_projects
 test_preserve_other_keys_on_remerge
+test_merge_deeply_nested_project
 
 echo ""
 echo "=========================================="

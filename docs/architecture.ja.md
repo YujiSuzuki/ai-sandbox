@@ -413,7 +413,7 @@ AI アシスタントは `list_tools` でツールを発見し、`get_tool_info`
 
 | 環境 | 対象スクリプト |
 |---|---|
-| `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh` |
+| `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.sh`, `check-undeclared-secrets.sh` |
 | `any`（どちらでも可） | 上記以外のすべて |
 
 ```
@@ -437,12 +437,20 @@ AI アシスタントは `list_scripts` でスクリプトを発見し、`get_sc
 
 ```
 .sandbox/sandbox-mcp-setup/
-├── 10-sandbox-env.sh              ← $SANDBOX_ENV を報告
-├── 15-host-os.sh                  ← .sandbox/.host-os からホストOS/アーキテクチャを報告
-├── 20-git-uncommitted.sh          ← ネストしたgitリポジトリの未コミット変更を報告
-├── 30-language.sh                 ← $LANG から導出した応答言語を報告
-├── 40-hostmcp-host-tools-hint.sh  ← HostMCP未接続時に.sandbox/host-tools/のスクリプトの存在をヒント表示
-└── 50-mcp-tool-timeout.sh         ← Claude Code自身のMCPツール呼び出しタイムアウト（MCP_TOOL_TIMEOUTまたは既定60秒）を報告
+├── 05-sandbox-mcp-purpose.sh       ← SandboxMCPの役割とHostMCPとの違いを自己説明
+├── 10-sandbox-env.sh               ← $SANDBOX_ENV を報告
+├── 15-host-os.sh                   ← .sandbox/.host-os からホストOS/アーキテクチャを報告
+├── 20-git-uncommitted.sh           ← ネストしたgitリポジトリの未コミット変更を報告
+├── 25-undeclared-secrets-diff.sh   ← 未申告シークレットらしきファイルの新規検出を報告
+├── 30-language.sh                  ← $LANG から導出した応答言語を報告
+├── 40-hostmcp-host-tools-hint.sh   ← HostMCP未接続時に.sandbox/host-tools/のスクリプトの存在をヒント表示
+└── 50-mcp-tool-timeout.sh          ← Claude Code自身のMCPツール呼び出しタイムアウト（MCP_TOOL_TIMEOUTまたは既定60秒）を報告
 ```
 
 これにより、現在のサンドボックス環境の種類やネストしたリポジトリの状態などを、毎回説明しなくてもAIが把握できるようになります。
+
+上記のスクリプトは実際にはすべて `# @output: file` ヘッダーを使い、標準出力を `instructions` に直接埋め込まずファイルへ書き出しています。`instructions` にはバイト数の上限があり、超過するとMCPクライアント側で無音のまま切り詰められるため（何が削られたか手がかりが残らない）、その回避策です。仕組みの詳細は [sandbox-mcp の README](https://github.com/YujiSuzuki/sandbox-mcp/blob/main/README.ja.md#セットアップスクリプトsandboxsandbox-mcp-setup)を参照してください。
+
+ファイルへ書き出した後も `instructions` には1行のポインタが残りますが、他のsystem-reminderに埋もれて見落とされやすい問題が残ります。これを解消するため、ai-sandbox独自のUserPromptSubmitフック（[.sandbox/hooks/setup-output-reminder.sh](../.sandbox/hooks/setup-output-reminder.sh)、`startup.sh` が自動登録）が、接続開始時点のsetup-outputディレクトリごとに一度だけ、ファイルの中身そのものを`additionalContext`として次のプロンプト送信時に埋め込みます。パスの再掲ではなく内容そのものを載せるため、読み飛ばす余地がありません。
+
+この「1回だけ」は単なるFYI情報には十分ですが、AIに実際の対応を求める内容（例: [25-undeclared-secrets-diff.sh](../.sandbox/sandbox-mcp-setup/25-undeclared-secrets-diff.sh) — 検出結果を最初の返信でユーザーに必ず伝える必要がある）には不十分です。7件の単純FYIファイルと一緒くたに1回しか出されないと、本来対応が必要な項目でもAIが丸ごと見落としてしまうことがあります。スクリプトのヘッダーコメントに `# @output: file` と並べて `# @notify: persistent` を追加すると、この一括ダンプの対象から外れ、代わりに独立した、より目立つブロックとして毎ターン繰り返し通知されるようになります。これはsandbox-mcp側には存在しない、`setup-output-reminder.sh` 自身が解釈するai-sandbox独自の規約です（sandbox-mcpはこのタグを一切認識しません）。通知はAIが対応済みマーカー（案内された`<name>.resolved`パスに対して`touch`を実行）を作成するか、上限回数（デフォルト5回、`PERSISTENT_NOTIFY_CAP`環境変数で変更可）に達するまで続きます。

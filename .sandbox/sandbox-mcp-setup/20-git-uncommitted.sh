@@ -1,4 +1,5 @@
 #!/bin/bash
+# @output: file  (see https://github.com/YujiSuzuki/sandbox-mcp/blob/main/README.md#setup-scripts-sandboxsandbox-mcp-setup)
 # Show uncommitted changes in nested git repos (outer repo is shown by VSCode gitStatus)
 
 WORKSPACE="${WORKSPACE:-/workspace}"

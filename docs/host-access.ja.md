@@ -94,7 +94,7 @@ host_access:
     max_tool_timeout: 1800  # 秒。ツール自身が宣言するタイムアウトの上限
 ```
 
-グローバルな `timeout` より長い時間を常に必要とするツール（例: 自身のヘッダーに `# @timeout: 600` を宣言している `xcode-test.sh`）は、全ツール共通のデフォルト値を引き上げる代わりに、個別にタイムアウトを宣言できます。正確な構文は [HostMCPのREADME](https://raw.githubusercontent.com/YujiSuzuki/hostmcp/refs/heads/main/README.ja.md) の「ツール別タイムアウト宣言」節を参照してください。宣言した値は `hostmcp tools sync` で承認されて初めて有効になり、`max_tool_timeout` を超える場合はクランプされます。
+グローバルな `timeout` より長い時間を常に必要とするツール（例: 自身のヘッダーに `# @timeout: 600` を宣言している `xcode-test.sh`）は、全ツール共通のデフォルト値を引き上げる代わりに、個別にタイムアウトを宣言できます。正確な構文は [HostMCPのREADME](https://github.com/YujiSuzuki/hostmcp/blob/main/README.ja.md#ツール別タイムアウト宣言) の「ツール別タイムアウト宣言」節を参照してください。宣言した値は `hostmcp tools sync` で承認されて初めて有効になり、`max_tool_timeout` を超える場合はクランプされます。
 
 ### 付属のツール
 

@@ -4,12 +4,47 @@
 #
 # This script checks if both docker-compose.yml files have the same
 # secret hiding configuration (volumes with /dev/null and tmpfs mounts)
+#
+# Container-only: extract_tmpfs_mounts() below only picks up tmpfs entries
+# that start with the literal $WORKSPACE path, but docker-compose.yml always
+# declares them against the fixed in-container path /workspace/<path>. That
+# filter only matches anything when $WORKSPACE is actually /workspace (i.e.
+# running inside the container where that path is the live mount root) --
+# otherwise the tmpfs half of the comparison silently sees nothing on both
+# sides and reports a false "match".
+# @env: container
 # ---
 # DevContainer と CLI Sandbox の秘匿設定を比較
 # 両方の docker-compose.yml で秘匿設定（/dev/null volumes と tmpfs マウント）が
 # 同じであることを確認します
+#
+# コンテナ専用: 下記の extract_tmpfs_mounts() は、$WORKSPACE で始まる
+# tmpfsエントリのみを抽出するが、docker-compose.yml側は常にコンテナ内の
+# 固定パス /workspace/<path> で宣言されている。このフィルタが機能するのは
+# $WORKSPACE が実際に /workspace であるとき（＝コンテナ内で、そのパスが
+# 実マウントのルートであるとき）のみで、そうでない場合は tmpfs側の比較が
+# 両方とも無検出になり「一致」と誤判定される。
 
 set -e
+
+# Check if running on host OS (not in container)
+# ホストOSで実行されていないかチェック
+if [[ -z "${SANDBOX_ENV:-}" ]] && [[ ! -f "/.dockerenv" ]]; then
+    if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
+        echo "❌ このスクリプトはホストOSでは実行できません。"
+        echo ""
+        echo "以下のいずれかの環境で実行してください："
+        echo "  • AI Sandbox のターミナル"
+        echo "  • cli_sandbox/ai_sandbox.sh"
+    else
+        echo "❌ This script cannot be run on the host OS."
+        echo ""
+        echo "Please run in one of these environments:"
+        echo "  • AI Sandbox terminal"
+        echo "  • cli_sandbox/ai_sandbox.sh"
+    fi
+    exit 1
+fi
 
 WORKSPACE="${WORKSPACE:-/workspace}"
 # Escaped for safe use inside a bash =~ regex (extract_tmpfs_mounts below)

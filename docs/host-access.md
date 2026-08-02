@@ -93,7 +93,7 @@ host_access:
     max_tool_timeout: 1800  # seconds; ceiling for a tool's own declared timeout
 ```
 
-A tool that regularly needs more time than the global `timeout` (e.g. `xcode-test.sh`, which declares `# @timeout: 600` in its own header) can declare its own timeout instead of raising the default for every tool. See the "Per-Tool Timeout Declaration" section of [HostMCP's README](https://raw.githubusercontent.com/YujiSuzuki/hostmcp/refs/heads/main/README.md) for the exact syntax. The declared value only takes effect once approved via `hostmcp tools sync`, and is clamped to `max_tool_timeout` if it exceeds it.
+A tool that regularly needs more time than the global `timeout` (e.g. `xcode-test.sh`, which declares `# @timeout: 600` in its own header) can declare its own timeout instead of raising the default for every tool. See the "Per-Tool Timeout Declaration" section of [HostMCP's README](https://github.com/YujiSuzuki/hostmcp#per-tool-timeout-declaration) for the exact syntax. The declared value only takes effect once approved via `hostmcp tools sync`, and is clamped to `max_tool_timeout` if it exceeds it.
 
 ### Included Tools
 

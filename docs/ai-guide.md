@@ -301,7 +301,8 @@ Since scripts can call other languages, you can build tools in any language.
 
 **Header tags** (all optional; parsed by `sandbox-mcp` — see the "Adding Scripts and Tools" section of
 [sandbox-mcp's README.md](https://raw.githubusercontent.com/YujiSuzuki/sandbox-mcp/refs/heads/main/README.md)
-for the authoritative reference):
+for the authoritative reference; raw URL because this guide is AI-facing — human-facing docs like README.md
+should link `github.com/<owner>/<repo>#<anchor>` instead):
 - `@advertise: true` — the script is listed in `<system-reminder>` at the start of every conversation, so the AI knows about it without calling `list_scripts` first.
 - `@hidden: true` — excludes the script from `list_scripts` (e.g. a human-facing CLI entry point not meant to be run by the AI). Default `false`. Scripts with a `_` prefix (e.g. `_common.sh`) are treated as libraries and excluded automatically, without needing this tag.
 - `@env: container` — marks the script as container-only. Default `any` (runnable anywhere); `@env: any` can be written explicitly too.
@@ -422,11 +423,12 @@ A specific bash 3.2 pitfall: a bare `$var` immediately followed by a non-ASCII c
 │   │   ├── help.sh                   # Show script list with descriptions
 │   │   ├── _startup_common.sh        # Common functions for startup scripts
 │   │   ├── validate-secrets.sh       # 🐳 Secret hiding verification
-│   │   ├── compare-secret-config.sh  # DevContainer/CLI config diff check
-│   │   ├── check-secret-sync.sh      # Check if Claude deny files are hidden
+│   │   ├── compare-secret-config.sh  # 🐳 DevContainer/CLI config diff check
+│   │   ├── check-secret-sync.sh      # 🐳 Check if Claude deny files are hidden
 │   │   ├── sync-secrets.sh           # 🐳 Interactive secret sync tool
 │   │   ├── sync-compose-secrets.sh   # 🐳 Sync between DevContainer/CLI compose
 │   │   ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
+│   │   ├── check-undeclared-secrets.sh # 🐳 Manual scan for secrets declared nowhere
 │   │   ├── run-all-tests.sh          # Run all test scripts
 │   │   └── test-*.sh                 # Test scripts
 │   ├── host-setup/            # 🖥️ Host initialization scripts (manual execution only)

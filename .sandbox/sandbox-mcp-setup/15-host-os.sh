@@ -1,4 +1,5 @@
 #!/bin/bash
+# @output: file  (see https://github.com/YujiSuzuki/sandbox-mcp/blob/main/README.md#setup-scripts-sandboxsandbox-mcp-setup)
 # Tell the AI the host OS/arch, so it knows what environment host-side
 # scripts (.sandbox/host-setup/, install-hostmcp.sh) actually run under.
 # Silent if .host-os hasn't been written yet (init-host-env.sh not run on the host).

@@ -1,4 +1,5 @@
 #!/bin/bash
+# @output: file  (see https://github.com/YujiSuzuki/sandbox-mcp/blob/main/README.md#setup-scripts-sandboxsandbox-mcp-setup)
 # Hint that .sandbox/host-tools/ scripts exist but are unusable because
 # HostMCP is not connected (not registered, or registered but offline).
 # Silent when host-tools is empty or HostMCP is already connected.
@@ -6,6 +7,15 @@
 # sandbox-mcp's runSetupScripts() gives each setup script a 5s budget total
 # and discards output on timeout or non-zero exit -- so the --check call
 # below is capped well under that, and this script always exits 0.
+# ---
+# .sandbox/host-tools/ にスクリプトはあるのに、HostMCPが未接続（未登録、または
+# 登録済みだがオフライン）のせいで使えない、という状況をAIに知らせる。
+# host-toolsが空、またはHostMCPが既に接続済みの場合は何も出力しない。
+#
+# sandbox-mcpのrunSetupScripts()は各セットアップスクリプトに合計5秒のタイム
+# アウトを設けており、タイムアウトや異常終了時は出力を握りつぶす仕様のため、
+# 下の --check 呼び出しはそれより十分短く設定してあり、このスクリプト自体は
+# 常にexit 0で終わる。
 
 WORKSPACE="${WORKSPACE:-/workspace}"
 HOSTMCP_CHECK_SCRIPT="${HOSTMCP_CHECK_SCRIPT:-$WORKSPACE/.sandbox/scripts/setup-hostmcp.sh}"

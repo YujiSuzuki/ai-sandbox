@@ -13,6 +13,16 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPT="$SCRIPT_DIR/check-secret-sync.sh"
 TEST_WORKSPACE=""
 
+# check-secret-sync.sh now refuses to run unless $SANDBOX_ENV is set or
+# /.dockerenv exists. Default it here so this test suite still runs outside
+# the container (plain checkout, CI without a devcontainer) -- tests below
+# that need a different value (or none) override it inline per-invocation.
+# check-secret-sync.sh は $SANDBOX_ENV か /.dockerenv が無いと実行を拒否する
+# ようになった。コンテナ外（素のチェックアウトやdevcontainer無しのCI）でも
+# このテストスイートが動くよう既定値を設定する。異なる値（または未設定）が
+# 必要なテストは、呼び出しごとにインラインで上書きする。
+export SANDBOX_ENV="${SANDBOX_ENV:-devcontainer}"
+
 # Colors for output
 # 出力用の色定義
 RED='\033[0;31m'
@@ -718,6 +728,95 @@ EOF
     cleanup
 }
 
+# Test: host-OS guard blocks execution when neither SANDBOX_ENV nor a
+# docker-marker file is present, and allows it when either one is (the
+# guard's OR logic). Runs against a copy of the script with the hardcoded
+# "/.dockerenv" path swapped for a controllable one via sed, since the real
+# path can't be safely faked away inside this container test run itself --
+# see docs/ai-guide.md "Host OS Test Scripts" for the copy-and-patch pattern.
+# テスト: SANDBOX_ENVもDockerマーカーファイルも無い場合にホストOSガードが
+# 実行をブロックし、どちらか一方があれば通す（ガードのOR条件）ことを確認する。
+# このコンテナ内のテスト実行中は実際の"/.dockerenv"を安全に消せないため、
+# ハードコードされたパスをsedで差し替え可能にしたスクリプトのコピーに対して
+# 実行する（docs/ai-guide.mdの「Host OS Test Scripts」節のコピー＆パッチ方式を参照）。
+test_host_os_guard() {
+    echo ""
+    echo "=== Test: host-OS guard blocks/allows based on SANDBOX_ENV / docker-marker ==="
+
+    setup
+
+    create_compose_file "" ""
+    echo '{}' > "$TEST_WORKSPACE/.claude/settings.json"
+
+    local patched_script="$TEST_WORKSPACE/check-secret-sync-patched.sh"
+    local fake_marker="$TEST_WORKSPACE/no-such-dockerenv"
+    sed "s#/\.dockerenv#$fake_marker#" "$SCRIPT" > "$patched_script"
+    chmod +x "$patched_script"
+
+    local output exit_code
+
+    # Neither SANDBOX_ENV nor the docker marker present -> blocked
+    output=$(env -u SANDBOX_ENV WORKSPACE="$TEST_WORKSPACE" "$patched_script" 2>&1) && exit_code=0 || exit_code=$?
+    if [ "$exit_code" -ne 0 ] && echo "$output" | grep -q "cannot be run on the host OS\|ホストOSでは実行できません"; then
+        pass "Blocks with host-OS error when neither SANDBOX_ENV nor docker marker is present"
+    else
+        fail "Should block with host-OS error, got exit=$exit_code output: $output"
+    fi
+
+    # SANDBOX_ENV set, docker marker still absent -> allowed through
+    output=$(env -u SANDBOX_ENV WORKSPACE="$TEST_WORKSPACE" SANDBOX_ENV=devcontainer "$patched_script" 2>&1) && exit_code=0 || exit_code=$?
+    if ! echo "$output" | grep -q "cannot be run on the host OS\|ホストOSでは実行できません"; then
+        pass "Allows execution when SANDBOX_ENV is set, even without the docker marker"
+    else
+        fail "Should not block when SANDBOX_ENV is set, got: $output"
+    fi
+
+    # SANDBOX_ENV unset, docker marker present -> allowed through
+    touch "$fake_marker"
+    output=$(env -u SANDBOX_ENV WORKSPACE="$TEST_WORKSPACE" "$patched_script" 2>&1) && exit_code=0 || exit_code=$?
+    if ! echo "$output" | grep -q "cannot be run on the host OS\|ホストOSでは実行できません"; then
+        pass "Allows execution when the docker marker is present, even without SANDBOX_ENV"
+    else
+        fail "Should not block when docker marker is present, got: $output"
+    fi
+
+    cleanup
+}
+
+# Test: a declared file whose path contains regex metacharacters (e.g. "+")
+# is still correctly recognized as hidden in docker-compose.yml (regression
+# test for is_file_in_compose() embedding the raw path into a `grep -E`
+# pattern -- an unescaped "+" turns the preceding character into a
+# quantifier, so e.g. ".env+special" would fail to match the literal
+# ".env+special" text in docker-compose.yml and be misreported as missing).
+# テスト: 正規表現メタ文字（例: "+"）を含むパスの宣言済みファイルも、
+# docker-compose.yml で正しく隠蔽済みと認識される（is_file_in_compose()が
+# 生パスを`grep -E`パターンにそのまま埋め込んでいたバグの回帰テスト --
+# エスケープなしの"+"は直前の文字を量指定子に変えてしまうため、例えば
+# ".env+special"はdocker-compose.yml内のリテラル文字列".env+special"に
+# マッチせず、未設定と誤って報告されていた）。
+test_regex_metacharacter_in_path_synced_correctly() {
+    echo ""
+    echo "=== Test: path with regex metacharacter (+) is correctly matched ==="
+
+    setup
+
+    touch "$TEST_WORKSPACE/demo-app/.env+special"
+    create_claude_settings '"Read(demo-app/.env+special)"'
+    create_compose_file "      - /dev/null:$TEST_WORKSPACE/demo-app/.env+special:ro" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -qE "all configured|すべての秘匿ファイル|All secret files"; then
+        pass "Path containing a regex metacharacter is correctly recognized as synced"
+    else
+        fail "Path containing a regex metacharacter should be recognized as synced, got: $output"
+    fi
+
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -728,6 +827,7 @@ main() {
 
     test_script_executable_and_valid
     test_all_synced
+    test_regex_metacharacter_in_path_synced_correctly
     test_missing_file_warning
     test_no_claude_settings
     test_no_matching_files
@@ -743,6 +843,7 @@ main() {
     test_recursive_glob_matches_subdirs
     test_aiexclude_directory_trailing_slash
     test_aiexclude_recursive_directory_pattern
+    test_host_os_guard
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

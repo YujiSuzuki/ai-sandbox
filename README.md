@@ -3,6 +3,16 @@
 [日本語の README はこちら](README.ja.md)
 
 
+**AI-driven development** is a development style where AI coding assistants (like Claude Code) go beyond simple autocomplete, taking the central role across requirements, design, implementation, testing, review, and documentation.
+
+Key traits of AI-driven development:
+
+- **AI drives implementation**: instead of humans writing code line by line, AI generates and modifies it from instructions, while humans focus on review and decision-making
+- **Iterative dialogue**: requirements get clarified through conversation with AI, cycling quickly through implement → test → review
+- **Agentic autonomy**: beyond simple completion, AI autonomously handles multi-step tasks — exploring files, editing across multiple files, running tests, executing commands
+
+The "AI Sandbox Environment + HostMCP + SandboxMCP" is the environment that makes this AI-driven development safe. It gives AI (like Claude Code) broad operating privileges over the codebase inside a container, while mechanisms like secret isolation (Docker volume mounts), a safe bridge to the host PC (HostMCP), and quality-focused review commands (`.sandbox/commands/`) keep things safe and high-quality even when AI is driving. One challenge stands out in particular:
+
 AI coding agents read everything in your project directory — including `.env` files, API keys, and private certificates. Application-level deny rules can help, but they depend on correct configuration and have [scope limitations](docs/comparison.md). What if the secrets simply didn't exist in AI's filesystem?
 
 This template creates a Docker-based development environment where:

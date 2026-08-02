@@ -66,9 +66,26 @@ if ! command -v jq &> /dev/null; then
     exit 0
 fi
 
-# Find all .claude/settings.json in subprojects (max depth 3)
+# Find all .claude/settings.json in subprojects (up to maxdepth 8, enough
+# for a template checked out under a subdirectory with projects added or
+# migrated into it afterwards, e.g. <workspace>/mainte/ai-sandbox-demo/
+# demo-apps-ios/.claude/settings.json at depth 5). Known heavy/irrelevant
+# directories are also pruned so an unexpectedly large one doesn't slow
+# down the search; maxdepth is the backstop for any directory not in that
+# prune list.
+# サブプロジェクトの .claude/settings.json を検索する（maxdepth 8まで。
+# テンプレートがサブディレクトリ配下にあり、後からプロジェクトを追加/移行する
+# 構成 -- 例: <workspace>/mainte/ai-sandbox-demo/demo-apps-ios/.claude/settings.json
+# は深さ5 -- に対応できる余裕を持たせている）。既知の重い/無関係な
+# ディレクトリもプルーン対象にし、想定外に巨大なディレクトリで探索が
+# 遅くならないようにしている。プルーンリストに無い巨大ディレクトリに対する
+# 安全弁としてmaxdepthを設けている。
 find_project_settings() {
-    find "$WORKSPACE_ROOT" -maxdepth 3 -path "*/.claude/settings.json" -type f 2>/dev/null | \
+    find "$WORKSPACE_ROOT" -maxdepth 8 \
+        \( -name node_modules -o -name .git -o -name vendor -o -name Pods \
+           -o -name dist -o -name build -o -name .build -o -name DerivedData \
+           -o -name Carthage -o -name .venv -o -name __pycache__ \) -prune -o \
+        -path "*/.claude/settings.json" -type f -print 2>/dev/null | \
         grep -v "^$WORKSPACE_ROOT/.claude/settings.json$" | sort || true
 }
 

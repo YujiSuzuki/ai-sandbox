@@ -1,9 +1,15 @@
 #!/bin/bash
+# @output: file  (see https://github.com/YujiSuzuki/sandbox-mcp/blob/main/README.md#setup-scripts-sandboxsandbox-mcp-setup)
 # Report the AI's own MCP tool-call timeout so it doesn't have to guess.
 # Claude Code applies a per-request timer to HTTP/SSE-based MCP servers
 # (HostMCP is one) independently of anything the server itself is configured
 # with; MCP_TOOL_TIMEOUT (milliseconds) overrides that timer, which otherwise
 # defaults to 60s.
+# ---
+# AI自身が使っているMCPツール呼び出しのタイムアウト値を報告し、推測させない
+# ようにする。Claude Codeは HTTP/SSE ベースのMCPサーバー（HostMCPもその一つ）
+# に対して、サーバー側の設定とは無関係にリクエスト単位のタイマーを適用しており、
+# MCP_TOOL_TIMEOUT（ミリ秒）でそのタイマーを上書きできる（既定値は60秒）。
 
 if [[ "$MCP_TOOL_TIMEOUT" =~ ^[0-9]+$ ]]; then
     timeout_sec=$(( 10#$MCP_TOOL_TIMEOUT / 1000 ))

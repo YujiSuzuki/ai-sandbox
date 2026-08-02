@@ -13,6 +13,13 @@
 # .gitignore is intentionally NOT supported because it contains many non-secret patterns
 # (node_modules/, dist/, *.log, .DS_Store) that would create noise in the sync check.
 # AI exclusion files should explicitly list only secrets, keeping intent clear.
+#
+# Container-only: the docker-compose.yml hidden-file declarations it checks
+# against always target the fixed in-container path /workspace/<path>, not
+# wherever the repo happens to live on the host, so this comparison is only
+# meaningful when $WORKSPACE is actually /workspace (i.e. running inside the
+# container where that path is the live mount root).
+# @env: container
 # ---
 # AI設定でブロックされたファイルが docker-compose.yml でも隠蔽されているかチェック
 # このスクリプトは AI Sandbox 起動時に実行され、AI から隠すべきファイルが
@@ -29,8 +36,33 @@
 #   .gitignore には秘匿情報以外のパターン（node_modules/, dist/, *.log 等）が
 #   多く含まれ、同期チェックでノイズになります。AI除外ファイルには秘匿情報のみを
 #   明示的に記載することで、意図が明確になりメンテナンスも容易になります。
+#
+# コンテナ専用: 照合対象の docker-compose.yml の隠蔽宣言は常にコンテナ内の
+# 固定パス /workspace/<path> を指しており、リポジトリがホスト上のどこに
+# あるかとは無関係。そのため $WORKSPACE が実際に /workspace であるとき
+# （＝コンテナ内で、そのパスが実マウントのルートであるとき）のみ、
+# この照合は意味を持つ。
 
 set -e
+
+# Check if running on host OS (not in container)
+# ホストOSで実行されていないかチェック
+if [[ -z "${SANDBOX_ENV:-}" ]] && [[ ! -f "/.dockerenv" ]]; then
+    if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
+        echo "❌ このスクリプトはホストOSでは実行できません。"
+        echo ""
+        echo "以下のいずれかの環境で実行してください："
+        echo "  • AI Sandbox のターミナル"
+        echo "  • cli_sandbox/ai_sandbox.sh"
+    else
+        echo "❌ This script cannot be run on the host OS."
+        echo ""
+        echo "Please run in one of these environments:"
+        echo "  • AI Sandbox terminal"
+        echo "  • cli_sandbox/ai_sandbox.sh"
+    fi
+    exit 1
+fi
 
 WORKSPACE="${WORKSPACE:-/workspace}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -226,10 +258,13 @@ find_matching_files() {
 is_file_in_compose() {
     local file_path="$1"
     local compose_file="$2"
+    # Escaped for safe use inside a grep -E pattern (both checks below)
+    local escaped_file_path
+    escaped_file_path=$(printf '%s' "$file_path" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
 
     # Check /dev/null mounts
     # /dev/null マウントをチェック
-    if grep -qE "^\s*-\s*/dev/null:${file_path}(:ro)?$" "$compose_file" 2>/dev/null; then
+    if grep -qE "^\s*-\s*/dev/null:${escaped_file_path}(:ro)?$" "$compose_file" 2>/dev/null; then
         return 0
     fi
 
@@ -238,7 +273,10 @@ is_file_in_compose() {
     local dir_path
     dir_path=$(dirname "$file_path")
     while [ "$dir_path" != "$WORKSPACE" ] && [ "$dir_path" != "/" ]; do
-        if grep -qE "^\s*-\s*${dir_path}:ro$" "$compose_file" 2>/dev/null; then
+        # Escaped for safe use inside a grep -E pattern
+        local escaped_dir_path
+        escaped_dir_path=$(printf '%s' "$dir_path" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
+        if grep -qE "^\s*-\s*${escaped_dir_path}:ro$" "$compose_file" 2>/dev/null; then
             return 0
         fi
         dir_path=$(dirname "$dir_path")

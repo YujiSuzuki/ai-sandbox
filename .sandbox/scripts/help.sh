@@ -42,7 +42,7 @@ show_script_list() {
     fi
 
     # Scripts that must run in container
-    local container_only="sync-secrets.sh validate-secrets.sh sync-compose-secrets.sh"
+    local container_only="sync-secrets.sh validate-secrets.sh sync-compose-secrets.sh check-undeclared-secrets.sh check-secret-sync.sh compare-secret-config.sh"
 
     get_env_icon() {
         local s="$1"
@@ -147,6 +147,9 @@ show_workflow_guide() {
   同期のズレを対話的に修正:
     .sandbox/scripts/sync-secrets.sh
 
+  そもそも隠蔽設定に入っていない秘密ファイルがないか確認（誤検知あり、判断を伴う）:
+    .sandbox/scripts/check-undeclared-secrets.sh
+
 ■ HostMCP（他コンテナとの連携）
 
   ホスト OS で HostMCP サーバーを起動:
@@ -188,6 +191,9 @@ GUIDE_JA
 
   Interactively fix sync issues:
     .sandbox/scripts/sync-secrets.sh
+
+  Check for secret files never declared anywhere (has false positives, use judgment):
+    .sandbox/scripts/check-undeclared-secrets.sh
 
 ■ HostMCP (Cross-Container Access)
 

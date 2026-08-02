@@ -190,5 +190,5 @@ For full structure, see [docs/ai-guide.md](docs/ai-guide.md#project-structure-fu
 
 For more details, see:
 - [README.md](README.md) — User documentation
-- [hostmcp/README.md](https://raw.githubusercontent.com/YujiSuzuki/hostmcp/refs/heads/main/README.md) — HostMCP details
+- [hostmcp/README.md](https://raw.githubusercontent.com/YujiSuzuki/hostmcp/refs/heads/main/README.md) — HostMCP details (raw URL: this file is AI-facing and raw.githubusercontent.com fetches more reliably than the rendered page; human-facing docs should link `github.com/<owner>/<repo>#<anchor>` instead — do not copy this raw-URL pattern into README.md or docs/*.md)
 - [docs/ai-guide.md](docs/ai-guide.md) — AI reference guide

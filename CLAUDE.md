@@ -31,6 +31,7 @@ Direct users to documentation — do not explain setup/troubleshooting yourself:
 - ❌ Never access Docker socket directly
 - ✅ Explain when secrets are hidden (don't just say "file not found")
 - ✅ Check host tools (`list_host_tools`) before telling the user "I can't do this"
+- ✅ Undeclared secret-like files reported at session start (via `check-undeclared-secrets-diff.sh`): mention them in your first reply, even if unrelated to the user's question. Do not remediate (add to `.gitignore`, delete, etc.) without explicit user confirmation — false positives are possible.
 
 ### Hidden Files
 
@@ -235,5 +236,5 @@ For detailed information, read the relevant file when needed:
 
 For more details, see:
 - [README.md](README.md) — User documentation
-- [hostmcp/README.md](https://raw.githubusercontent.com/YujiSuzuki/hostmcp/refs/heads/main/README.md) — HostMCP details
+- [hostmcp/README.md](https://raw.githubusercontent.com/YujiSuzuki/hostmcp/refs/heads/main/README.md) — HostMCP details (raw URL: this file is AI-facing and raw.githubusercontent.com fetches more reliably than the rendered page; human-facing docs should link `github.com/<owner>/<repo>#<anchor>` instead — do not copy this raw-URL pattern into README.md or docs/*.md)
 - [docs/ai-guide.md](docs/ai-guide.md) — AI reference guide

@@ -1,4 +1,5 @@
 #!/bin/bash
+# @output: file  (see https://github.com/YujiSuzuki/sandbox-mcp/blob/main/README.md#setup-scripts-sandboxsandbox-mcp-setup)
 # Tell the AI which language to respond in
 
 if [ "$LANG" = "ja_JP.UTF-8" ]; then

@@ -413,7 +413,7 @@ Scripts are classified into two execution environments.
 
 | Environment | Scripts |
 |---|---|
-| `container` (container only) | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh` |
+| `container` (container only) | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.sh`, `check-undeclared-secrets.sh` |
 | `any` (either) | All others |
 
 ```
@@ -437,12 +437,20 @@ Place shell scripts in [`.sandbox/sandbox-mcp-setup/`](../.sandbox/sandbox-mcp-s
 
 ```
 .sandbox/sandbox-mcp-setup/
-├── 10-sandbox-env.sh              ← reports $SANDBOX_ENV
-├── 15-host-os.sh                  ← reports the host OS/arch from .sandbox/.host-os
-├── 20-git-uncommitted.sh          ← reports uncommitted changes in nested git repos
-├── 30-language.sh                 ← reports the response language derived from $LANG
-├── 40-hostmcp-host-tools-hint.sh  ← hints that .sandbox/host-tools/ scripts exist when HostMCP isn't connected
-└── 50-mcp-tool-timeout.sh         ← reports Claude Code's own MCP tool-call timeout (MCP_TOOL_TIMEOUT or the 60s default)
+├── 05-sandbox-mcp-purpose.sh       ← self-describes SandboxMCP's role vs HostMCP
+├── 10-sandbox-env.sh               ← reports $SANDBOX_ENV
+├── 15-host-os.sh                   ← reports the host OS/arch from .sandbox/.host-os
+├── 20-git-uncommitted.sh           ← reports uncommitted changes in nested git repos
+├── 25-undeclared-secrets-diff.sh   ← reports newly-appeared undeclared-secret-like files
+├── 30-language.sh                  ← reports the response language derived from $LANG
+├── 40-hostmcp-host-tools-hint.sh   ← hints that .sandbox/host-tools/ scripts exist when HostMCP isn't connected
+└── 50-mcp-tool-timeout.sh          ← reports Claude Code's own MCP tool-call timeout (MCP_TOOL_TIMEOUT or the 60s default)
 ```
 
 This is how the AI learns things like the current sandbox environment type or nested-repo status without being told every session.
+
+All of the scripts above actually use the `# @output: file` header, spilling their stdout to a file instead of embedding it directly in `instructions`. `instructions` has a byte-size limit, and exceeding it silently truncates the field on the MCP client side (with no trace of what was cut) — this is the workaround. See the [sandbox-mcp README](https://github.com/YujiSuzuki/sandbox-mcp/blob/main/README.md#setup-scripts-sandboxsandbox-mcp-setup) for the full mechanism.
+
+`instructions` still keeps a one-line pointer after the spill, but that line is easy to miss among other system-reminders. To close that gap, an ai-sandbox-specific UserPromptSubmit hook ([.sandbox/hooks/setup-output-reminder.sh](../.sandbox/hooks/setup-output-reminder.sh), auto-registered by `startup.sh`) inlines the actual file contents — once per setup-output directory — as `additionalContext` on the next prompt. Since it's the content itself and not just a repeated path, there's nothing left to skip past.
+
+That one-shot dump is enough for purely informational scripts, but not for ones that need the AI to actually act (e.g. [25-undeclared-secrets-diff.sh](../.sandbox/sandbox-mcp-setup/25-undeclared-secrets-diff.sh), which requires mentioning a finding to the user in the very first reply): mixed in with 7 other FYI files and shown only once, an actionable item is easy for the AI to miss entirely. A script can opt out of that one-shot dump and into a repeated one by adding `# @notify: persistent` to its header comment, alongside `# @output: file` — this is an ai-sandbox-only convention read by `setup-output-reminder.sh` itself, not by sandbox-mcp (which has no notion of this tag). Files tagged this way get their own separate, higher-signal block, repeated on every turn until either the AI marks it resolved by running `touch <name>.resolved` next to the spilled `.txt` (the reminder text tells it the exact path) or a repeat cap (5 by default, `PERSISTENT_NOTIFY_CAP` env var) is reached.
