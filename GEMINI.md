@@ -138,7 +138,9 @@ For HostMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#h
 
 ## SandboxMCP
 
-Runs inside the container via stdio. Its tools appear with the `mcp__sandbox-mcp__` prefix once connected — treat that live tool list (and SandboxMCP's own MCP server instructions) as the source of truth for what's available, rather than a hardcoded list here.
+SandboxMCP solves a discoverability problem: a script or tool placed in `.sandbox/` is useless if the AI doesn't know it exists or has to be re-told how to use it every session. It runs inside the container via stdio, auto-discovers scripts/tools placed there, and pushes startup context (git status, env info, etc.) to the AI automatically.
+
+Its tools appear with the `mcp__sandbox-mcp__` prefix once connected — treat that live tool list (and SandboxMCP's own MCP server instructions) as the source of truth for what's available, rather than a hardcoded list here.
 
 | | SandboxMCP | HostMCP |
 |---|---|---|

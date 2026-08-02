@@ -58,8 +58,11 @@ A secure AI development environment demonstrating:
 2. **Secret Protection** — Hide sensitive files from AI via volume mounts
 3. **Cross-Container Access** — Interact with other containers via HostMCP
 4. **Multi-Project Workspaces** — Mobile, API, Web in one workspace
+5. **Tool/Script Discoverability** — AI automatically discovers and runs `.sandbox/` scripts and tools via SandboxMCP
 
 **HostMCP** is an MCP server on the host OS providing controlled access to the host environment — Docker containers, host tools (approved scripts), and host OS commands. It solves problems like: "My API is in a separate container, how can AI help debug it?" and "How can AI run a host-side build/deploy script without direct Docker socket access?"
+
+**SandboxMCP** is an MCP server that runs inside the container and automatically discovers scripts/tools placed in `.sandbox/`, pushing workspace context (git status, environment info, etc.) to the AI at startup. It solves problems like: "I wrote a script in `.sandbox/scripts/`, how does the AI know it exists or how to use it?" and "How does the AI get up-to-date context (uncommitted changes, HostMCP connection status) without me re-explaining it every session?"
 
 ---
 
