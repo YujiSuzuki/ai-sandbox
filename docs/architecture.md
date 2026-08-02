@@ -263,6 +263,8 @@ What AI can do:
 
 In addition to HostMCP (host-side), **SandboxMCP** runs inside the container.
 
+**Why it exists:** a script or tool dropped in `.sandbox/` doesn't help if the AI doesn't know it exists, and re-explaining its usage every session doesn't scale. SandboxMCP solves this by auto-discovering scripts/tools and pushing workspace context to the AI automatically at startup — dynamic environment info such as git status, or proactively flagging that HostMCP is disconnected and host-tools are unavailable — this matters even for AI agents with full shell access, since the AI receives the context without having to decide to go look for it. See the [sandbox-mcp README](https://github.com/YujiSuzuki/sandbox-mcp#readme) for the full rationale.
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │ AI Sandbox (inside container)                       │
