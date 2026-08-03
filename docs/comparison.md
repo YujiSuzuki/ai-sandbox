@@ -68,7 +68,7 @@ tmpfs:
 
 The secrets don't exist in AI's world — not blocked by a rule, not filtered by a config, just not there. Meanwhile, your app containers mount the real files normally.
 
-To catch misconfigurations, the sandbox runs **startup validation** that checks whether your AI tool's deny rules and your `docker-compose.yml` volume mounts are in sync. If a secret file is blocked in one but not the other, you get a warning before AI sees it.
+To catch misconfigurations, the sandbox runs **startup validation** that checks whether your AI tool's deny rules and your `docker-compose.yml` volume mounts are in sync. If a secret file is blocked in one but not the other, you get a warning before AI sees it. A separate check also detects secret-like files that aren't declared in either config, every time an AI session starts — catching configuration gaps early for files created during day-to-day development. Rather than auto-remediating, the AI asks you how to handle each one: whether it's a secret that needs hiding, or fine to leave as is.
 
 ### Gap 2: Controlled cross-container access
 
@@ -77,6 +77,7 @@ HostMCP acts as a gateway between the AI sandbox and other Docker containers, wi
 - AI can read logs, run whitelisted commands, and inspect containers
 - AI cannot access blocked paths or run arbitrary commands; starting/stopping containers is disabled by default and only works if explicitly enabled in the config
 - Sensitive data (passwords, API keys, tokens) is automatically masked in output
+- HostMCP itself binds to loopback (127.0.0.1) by default, so it isn't reachable from other machines on the network out of the box
 
 ---
 
