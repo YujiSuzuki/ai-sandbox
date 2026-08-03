@@ -22,6 +22,11 @@
 #      NOTE: When --repo is used, ReleaseNotes-draft.md is written INSIDE the repo directory
 #            (e.g., --repo /path/to/repo  =>  /path/to/repo/ReleaseNotes-draft.md)
 #            Edit that file, NOT a file in the current working directory.
+#      NOTE: The draft lists one entry per commit (mechanical `git log` output). If the
+#            same feature/fix was touched by multiple commits within this release (e.g.
+#            Add X -> Fix X -> Adjust X), consolidate them into a single net-effect entry.
+#            Release notes describe the change since the PREVIOUS release, not the
+#            in-between commit history.
 #   4. Show the draft to the user for approval
 #   5. Run github-release.sh <version> --notes-file ReleaseNotes-draft.md to publish
 #      NOTE: Relative paths are resolved from your current working directory, not the repo.
@@ -55,6 +60,11 @@
 #      注意: --repo を指定した場合、ReleaseNotes-draft.md はそのリポジトリ内に生成される
 #            （例: --repo /path/to/repo  =>  /path/to/repo/ReleaseNotes-draft.md）
 #            カレントディレクトリではなく、そのファイルを編集すること。
+#      注意: ドラフトは `git log` の出力そのままでコミット単位の1行になっている。
+#            同じ機能・修正が今回のリリース内で複数コミットにまたがる場合
+#            （例: Add X -> Fix X -> Adjust X）は、正味の変更点として1つにまとめること。
+#            リリースノートに書くのは「前回リリースからの差分」であり、
+#            リリース内の変遷（コミット履歴）ではない。
 #   4. ユーザーにドラフトを提示して承認を得る
 #   5. github-release.sh <version> --notes-file ReleaseNotes-draft.md でリリース実行
 #      注意: 相対パスはカレントディレクトリ基準で解決される（リポジトリ内ではない）。
@@ -93,6 +103,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_NO_COMMITS="前回のタグ %s 以降のコミットがありません。リリースするものがありません。"
     MSG_DRAFT_TITLE="📋 リリースノート ドラフト"
     MSG_WROTE="を出力しました。"
+    MSG_CONSOLIDATE_HINT="ヒント: 各項目はコミット単位。同じ機能・修正が今回のリリース内で複数コミットにまたがる場合は、正味の変更点として1つにまとめること（書くのは前回リリースからの差分。リリース内の変遷は書かない）。"
     MSG_NEXT_STEPS="次のステップ:"
     MSG_STEP1="1. 前回のリリースノートのトーンを確認:"
     MSG_STEP2="2. ドラフトをトーンに合わせて推敲"
@@ -129,6 +140,7 @@ else
     MSG_NO_COMMITS="No commits since %s. Nothing to release."
     MSG_DRAFT_TITLE="📋 Release Notes Draft"
     MSG_WROTE="written."
+    MSG_CONSOLIDATE_HINT="Tip: entries are one-per-commit. If the same feature/fix was touched by multiple commits within this release, consolidate them into a single net-effect entry (describe the change since the previous release, not the in-between commit history)."
     MSG_NEXT_STEPS="Next steps:"
     MSG_STEP1="1. Check the previous release tone:"
     MSG_STEP2="2. Refine the draft to match the tone"
@@ -457,6 +469,7 @@ if [[ -z "$NOTES_FILE" ]]; then
 
     echo ""
     ok "${DRAFT_FILE} ${MSG_WROTE}"
+    warn "$MSG_CONSOLIDATE_HINT"
     echo ""
     REPO_FLAG=""
     [[ -n "$REPO" ]] && REPO_FLAG=" --repo $(pwd)"
