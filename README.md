@@ -98,7 +98,7 @@ This project is designed for local development environments and is not intended 
 
 ## Limitations
 
-- **Local development only** — HostMCP has no authentication, so it's designed for local use only
+- **Local development only** — HostMCP has no authentication. By default it binds only to loopback (`127.0.0.1`), so it isn't reachable from other machines on your network out of the box — this is an intentional trade-off for local-dev simplicity, not an oversight. Binding to all interfaces (`0.0.0.0`) is opt-in via `host` in `hostmcp.yaml`, for setups that genuinely need it
 - **Docker required** — The volume mount approach requires a Docker-compatible runtime (Docker Desktop, OrbStack, etc.)
 - **Only tested on macOS** — It should work on Linux and Windows, but this is unverified
 - **No network restriction by default** — AI can still make outbound HTTP requests. See [Network Restrictions Guide](docs/network-firewall.md) for adding a firewall
@@ -583,3 +583,10 @@ Open to consulting on MCP server security and AI agent sandbox design.
 
 - GitHub: https://github.com/YujiSuzuki
 - LinkedIn: https://www.linkedin.com/in/yuji-suzuki-dev
+
+
+## Sponsor
+
+This project is a small OSS maintained by a solo developer, and sponsorship helps fund vulnerability response and ongoing maintenance. I hope this project is useful to people.
+
+- GitHub Sponsors: https://github.com/sponsors/YujiSuzuki
