@@ -33,7 +33,13 @@ This project is designed for local development environments and is not intended 
 > [!NOTE]
 > **HostMCP** is an optional companion tool that runs on your **host OS**, giving AI inside the sandbox controlled access to the host environment — Docker containers, host tools, and host OS commands. "MCP" (Model Context Protocol) is the open protocol AI tools use to talk to external servers like HostMCP. HostMCP is maintained as a [separate repository](https://github.com/YujiSuzuki/hostmcp) and installed independently. This template works without HostMCP if you don't need any of these features.
 >
-> **Using HostMCP standalone with host OS CLI tools (Claude Code, Gemini CLI, etc.) is not recommended.** CLI tools running on the host OS can already execute `docker` commands and host tools directly, so routing through HostMCP adds no benefit. However, for apps like **Claude Desktop** that can only reach external systems via MCP, HostMCP is useful for container access and host tool execution. For standalone setup, see [HostMCP README](https://github.com/YujiSuzuki/hostmcp#readme).
+> | Pattern | Setup | Benefit from HostMCP |
+> |---|---|---|
+> | **A (recommended)** | AI + HostMCP together, inside this Dev Container | Full — the sandbox has no Docker socket, so HostMCP is the only path out |
+> | **B (limited use)** | HostMCP standalone, driving a GUI-only MCP client (e.g. Claude Desktop) | Full — the client has no other way to reach Docker or the host |
+> | **C (no benefit)** | HostMCP standalone, driving a host-OS CLI (Claude Code, Gemini CLI, etc.) | **None** — see below |
+>
+> **Pattern C provides no protective benefit.** A CLI running directly on the host OS already has OS-level privileges and can call `docker`/host tools directly — it doesn't need to go through HostMCP to reach anything HostMCP would otherwise gate. Using HostMCP there just adds an extra hop with no corresponding safety gain. For Pattern B standalone setup, see [HostMCP README](https://github.com/YujiSuzuki/hostmcp#readme).
 
 
 ---
