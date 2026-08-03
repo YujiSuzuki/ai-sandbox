@@ -22,7 +22,7 @@ How AI Sandbox + HostMCP compares to other AI security tools, and why they work 
 **Gaps this project fills:**
 - Deny rules are application-level — they depend on correct configuration and the AI tool respecting them
 - Deny rules [don't traverse parent directories](https://github.com/anthropics/claude-code/issues/12962), so in a monorepo or multi-project workspace, settings in one project won't protect secrets in a sibling project
-- Sandbox restricts outbound network access, which limits cross-container debugging
+- Docker commands require direct access to the Docker socket, which is structurally incompatible with the sandbox. The [official troubleshooting docs](https://code.claude.com/docs/en/sandboxing#troubleshooting) themselves recommend adding `docker *` to `excludedCommands`, so Docker operations get no sandbox protection at all and run with unrestricted host privileges
 
 ### Docker AI Sandboxes
 
@@ -34,7 +34,7 @@ How AI Sandbox + HostMCP compares to other AI security tools, and why they work 
 - Each sandbox has its own Docker daemon
 
 **Gaps this project fills:**
-- Syncs your entire workspace directory into the microVM with no mechanism to exclude specific files — `.env` files are visible inside
+- Syncs your entire workspace directory into the microVM with no mechanism to exclude specific files — `.env` files are visible inside. This isn't an implementation oversight, but a difference in design goals: Docker AI Sandboxes is built to **protect the host** from the AI agent, not to **hide secrets** from the AI
 - Fully isolated — each sandbox can't communicate with other containers, making cross-container debugging impossible
 
 ### Docker MCP Toolkit
@@ -83,16 +83,23 @@ HostMCP acts as a gateway between the AI sandbox and other Docker containers, wi
 
 ## Using Them Together
 
-These tools are **complementary, not competing**. For defense in depth:
+These tools fall into two layers of a different nature, and separating them clarifies how they relate.
 
-| Layer | Tool | What It Does |
-|-------|------|-------------|
-| Execution restriction | Claude Code Sandbox | Prevents malicious command execution |
-| System isolation | Docker AI Sandboxes | Isolates AI in a microVM |
-| Secret hiding | **AI Sandbox** (this project) | Makes secrets absent from AI's filesystem |
-| Cross-container access | **HostMCP** (this project) | Controlled access to other containers |
+### Isolation boundaries: pick one based on your threat model
 
-You can use Claude Code's sandbox *inside* the AI Sandbox for maximum protection.
+Docker AI Sandboxes and AI Sandbox (this project) both answer the same question — where do you draw the boundary around the AI agent's entire runtime environment? The former uses a microVM, the latter a container plus volume-mount secret removal. Because they play the same role, they aren't meant to be stacked; you pick one based on your threat model.
+
+Claude Code Sandbox targets something narrower — it restricts Bash command execution at the OS level — so it can be nested inside whichever outer boundary you chose. When nesting it inside an unprivileged container such as AI Sandbox's, though, the [official docs](https://code.claude.com/docs/en/sandboxing#troubleshooting) note that bubblewrap can't mount a fresh `/proc` and `enableWeakerNestedSandbox` becomes necessary, in which case the nested sandbox's process isolation ends up depending on the outer container boundary instead (permission deny rules are unaffected and keep working). So nesting it inside AI Sandbox adds some protection, but not the "maximum protection" the earlier wording implied.
+
+| Isolation boundary options | What It Does |
+|----------------------------|--------------|
+| Claude Code Sandbox | Restricts Bash command execution at the OS level (can nest inside another boundary, with the caveat above) |
+| Docker AI Sandboxes | Isolates the entire AI agent in a microVM |
+| **AI Sandbox** (this project) | Container isolation plus volume-mount removal of secrets from AI's filesystem |
+
+### Permission layer: composes independently
+
+HostMCP's (this project) controlled cross-container access and Managed Settings deny rules operate at a different layer than isolation boundaries — they gate individual tool calls rather than the process/filesystem boundary — so they compose independently with whichever isolation boundary you chose above.
 
 ---
 
