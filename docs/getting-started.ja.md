@@ -293,7 +293,7 @@ AI Sandbox 内の Claude Code（または Gemini）で、以下を試してみ�
 | セキュリティ機能を詳しく体験する | [ai-sandbox-demo ハンズオン](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.ja.md) |
 | 自分のプロジェクトで使う | [自分のプロジェクトへの適用](customization.ja.md) |
 | アーキテクチャを理解する | [アーキテクチャ詳細](architecture.ja.md) |
-| 他のツールとの違いを知る | [既存ソリューションとの比較](comparison.ja.md) |
+| 他のツールとの違いを知る | [既存ソリューションとの関係](comparison.ja.md) |
 | ネットワーク制限を追加する | [ネットワーク制限](network-firewall.ja.md) |
 
 ---

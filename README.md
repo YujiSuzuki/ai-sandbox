@@ -63,7 +63,7 @@ This project is designed for local development environments and is not intended 
 
 ### 📖 Getting Started
 - [Getting Started Guide](docs/getting-started.md) — Step-by-step setup from zero to a working environment
-- [Comparison with Existing Solutions](docs/comparison.md) — How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc.
+- [Relationship to Existing Solutions](docs/comparison.md) — How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc.
 - [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md) — Hands-on exercises for security features, using the demo apps
 
 ### 🔧 Setup & Operations
@@ -100,14 +100,14 @@ This project is designed for local development environments and is not intended 
 
 **Using your own tools and scripts** — Writing a handy script doesn't help if AI doesn't know it exists. This environment's SandboxMCP lets AI automatically discover and run tools/scripts placed under `.sandbox/`.
 
-> **How does this compare to existing tools?** Claude Code Sandboxing and Docker AI Sandboxes are valuable — this project complements them by adding filesystem-level secret hiding and controlled cross-container access. See [Comparison with Existing Solutions](docs/comparison.md) for details.
+> **How does this compare to existing tools?** Claude Code Sandboxing and Docker AI Sandboxes are valuable — this project adds filesystem-level secret hiding and controlled cross-container access on top of whichever of them you choose as your isolation boundary. See [Relationship to Existing Solutions](docs/comparison.md) for details.
 
 ## Limitations
 
 - **Local development only** — HostMCP has no authentication. By default it binds only to loopback (`127.0.0.1`), so it isn't reachable from other machines on your network out of the box — this is an intentional trade-off for local-dev simplicity, not an oversight. Binding to all interfaces (`0.0.0.0`) is opt-in via `host` in `hostmcp.yaml`, for setups that genuinely need it
 - **Docker required** — The volume mount approach requires a Docker-compatible runtime (Docker Desktop, OrbStack, etc.)
 - **Only tested on macOS** — It should work on Linux and Windows, but this is unverified
-- **No network restriction by default** — AI can still make outbound HTTP requests. See [Network Restrictions Guide](docs/network-firewall.md) for adding a firewall
+- **Network restriction is opt-in** — To restrict outbound traffic from the AI Sandbox container, see the [Network Restrictions Guide](docs/network-firewall.md) for adding a container-level firewall. For org-wide rollout, Claude Code's Managed Settings (`sandbox.network.allowManagedDomainsOnly`) can also lock down domains centrally, but that only covers traffic through Claude Code's own Bash/WebFetch — not other processes in the container
 - **Not a replacement for production secrets management** — This is a development-time protection layer. Use HashiCorp Vault, AWS Secrets Manager, etc. for production
 
 
@@ -539,7 +539,7 @@ See [Customization Guide](docs/customization.md) for how to add your own project
 # FAQ
 
 **Q: How is this different from Claude Code's sandboxing or Docker AI Sandboxes?**
-A: They're complementary. Claude Code's sandbox restricts execution; Docker AI Sandboxes provide full VM isolation. This project adds filesystem-level secret hiding and cross-container access. Use them together for defense in depth. See [Comparison with Existing Solutions](docs/comparison.md) for details.
+A: Docker AI Sandboxes and this project both isolate the AI's entire runtime environment, so they're alternatives to choose between based on your threat model, not layers to stack. Claude Code Sandbox targets something narrower (OS-level Bash execution restriction) and can nest inside whichever you pick. This project adds filesystem-level secret hiding, plus HostMCP for controlled cross-container access — a permission-layer addition that composes with any of them. See [Relationship to Existing Solutions](docs/comparison.md) for details.
 
 **Q: Do I need to use HostMCP?**
 A: No. It works as a regular sandbox without HostMCP. HostMCP adds extras like cross-container access and host tool execution.
@@ -560,7 +560,7 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 | Document | Description |
 |----------|-------------|
 | [Getting Started Guide](docs/getting-started.md) | Step-by-step setup from zero to a working environment |
-| [Comparison with Existing Solutions](docs/comparison.md) | How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc. |
+| [Relationship to Existing Solutions](docs/comparison.md) | How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc. |
 | [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md) | Hands-on exercises for security features, using the demo apps |
 | [Customization Guide](docs/customization.md) | How to adapt this template to your project |
 | [Reference](docs/reference.md) | Environment settings, options, troubleshooting |

@@ -1,4 +1,4 @@
-# 既存ソリューションとの比較
+# 既存ソリューションとの関係
 
 [English version here](comparison.md)
 

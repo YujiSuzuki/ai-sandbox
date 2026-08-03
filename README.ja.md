@@ -69,7 +69,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 
 ### 📖 はじめに
 - [はじめてのセットアップガイド](docs/getting-started.ja.md) — ゼロから動く状態まで一歩ずつ案内
-- [既存ソリューションとの比較](docs/comparison.ja.md) — Claude Code Sandbox、Docker AI Sandboxes等との比較
+- [既存ソリューションとの関係](docs/comparison.ja.md) — Claude Code Sandbox、Docker AI Sandboxes等との比較
 - [ai-sandbox-demo ハンズオン](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.ja.md) — デモアプリを使ってセキュリティ機能を実際に体験する演習
 
 ### 🔧 セットアップ・運用
@@ -106,14 +106,14 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 
 **自作ツール・スクリプトの活用** — 便利なスクリプトを作っても、AIに存在を伝えるのは面倒です。本環境はSandboxMCPにより、`.sandbox/`配下に置いたツール・スクリプトをAIが自動的に発見・実行できるようにします。
 
-> **既存ツールとの違いは？** Claude Code SandboxやDocker AI Sandboxesは有用なツールです。本プロジェクトはそれらを補完し、ファイルシステムレベルのシークレット隠蔽とコンテナ間アクセスを追加します。詳しくは [既存ソリューションとの比較](docs/comparison.ja.md) を参照してください。
+> **既存ツールとの違いは？** Claude Code SandboxやDocker AI Sandboxesは有用なツールです。本プロジェクトは、そのどちらを隔離境界として選んでも、その上にファイルシステムレベルのシークレット隠蔽とコンテナ間アクセスを追加します。詳しくは [既存ソリューションとの関係](docs/comparison.ja.md) を参照してください。
 
 ## 制約事項
 
 - **ローカル開発専用** — HostMCPには認証機能がありませんが、デフォルトではloopback（`127.0.0.1`）のみにbindするため、初期状態では同一ネットワーク上の他端末からアクセスできません。これは実装漏れではなく、ローカル開発の手軽さを優先した意図的なトレードオフです。全インターフェース（`0.0.0.0`）へのbindは`hostmcp.yaml`の`host`設定でオプトイン可能で、それが本当に必要な場合のみ使用できます。
 - **Docker必須** — ボリュームマウントによるアプローチのため、Docker互換のランタイム（Docker Desktop、OrbStackなど）が必要です
 - **macOSのみ検証済み** — Linux/Windowsでも動作する想定ですが、未検証です
-- **ネットワーク制限なし（デフォルト）** — AIは外部HTTPリクエストを実行できます。ファイアウォールの追加は [ネットワーク制限ガイド](docs/network-firewall.ja.md) を参照してください
+- **ネットワーク制限は個別設定** — AI Sandboxのコンテナから外部への通信を制限するには、[ネットワーク制限ガイド](docs/network-firewall.ja.md) を参照し、コンテナ単位のファイアウォールを追加してください。組織展開では、一元適用できるClaude CodeのManaged Settings（`sandbox.network.allowManagedDomainsOnly`）でドメインを固定する方法もありますが、これはClaude Code自身のBash/WebFetch経由の通信のみが対象で、コンテナ内の他プロセスの通信までは制限しない点に注意してください
 - **本番用シークレット管理の代替ではない** — 開発時の保護レイヤーです。本番環境ではHashiCorp Vault、AWS Secrets Manager等を使用してください
 
 
@@ -550,7 +550,7 @@ workspace/
 # よくある質問
 
 **Q: Claude Code SandboxやDocker AI Sandboxesとの違いは？**
-A: 補完関係にあります。Claude Code Sandboxは実行を制限し、Docker AI SandboxesはVM分離を提供します。本プロジェクトはファイルシステムレベルのシークレット隠蔽とコンテナ間アクセスを追加します。組み合わせて多層防御にできます。詳しくは [既存ソリューションとの比較](docs/comparison.ja.md) を参照してください。
+A: Docker AI Sandboxesと本プロジェクトは、どちらもAIの実行環境全体を隔離する役割を担うため、脅威モデルに応じて選ぶ関係にあり、重ねて使う想定ではありません。Claude Code Sandboxは対象が異なり（Bashコマンド実行のOSレベル制限）、選んだ環境の内側にネストできます。本プロジェクトはファイルシステムレベルのシークレット隠蔽に加え、HostMCPによるコンテナ間アクセス制御という、階層の異なるパーミッション層の機能を追加します。詳しくは [既存ソリューションとの関係](docs/comparison.ja.md) を参照してください。
 
 **Q: HostMCPを使う必要がありますか？**
 A: いいえ。HostMCPなしでも通常のサンドボックスとして機能します。HostMCPは他コンテナへのアクセスやホストツール実行などの拡張機能を提供します。
@@ -571,7 +571,7 @@ A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられま�
 | ドキュメント | 内容 |
 |-------------|------|
 | [はじめてのセットアップガイド](docs/getting-started.ja.md) | ゼロから動く状態まで一歩ずつ案内 |
-| [既存ソリューションとの比較](docs/comparison.ja.md) | Claude Code Sandbox、Docker AI Sandboxes等との比較 |
+| [既存ソリューションとの関係](docs/comparison.ja.md) | Claude Code Sandbox、Docker AI Sandboxes等との比較 |
 | [ai-sandbox-demo ハンズオン](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.ja.md) | デモアプリを使ってセキュリティ機能を実際に体験する演習 |
 | [自分のプロジェクトへの適用](docs/customization.ja.md) | テンプレートのカスタマイズ手順 |
 | [リファレンス](docs/reference.ja.md) | 環境設定、オプション、トラブルシューティング |

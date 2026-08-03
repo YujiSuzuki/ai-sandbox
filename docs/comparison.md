@@ -1,4 +1,4 @@
-# Comparison with Existing Solutions
+# Relationship to Existing Solutions
 
 [日本語版はこちら](comparison.ja.md)
 

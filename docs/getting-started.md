@@ -284,7 +284,7 @@ With setup complete, continue based on what you want to do.
 | Explore security features hands-on | [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md) |
 | Use with your own project | [Customization Guide](customization.md) |
 | Understand the architecture | [Architecture Details](architecture.md) |
-| Compare with other tools | [Comparison with Existing Solutions](comparison.md) |
+| Compare with other tools | [Relationship to Existing Solutions](comparison.md) |
 | Add network restrictions | [Network Restrictions](network-firewall.md) |
 
 ---
