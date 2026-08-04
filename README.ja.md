@@ -147,13 +147,13 @@ workspace/
 ```
 AIは `.env` の中身を一切見ずに、決済ロジックの実装やレビューを行える。
 
-### マルチクライアント／マルチプロジェクト
+### マルチクライアント／マルチワークスペース
 ```
 ~/clients/
-├── client-a/       ← 専用HostMCPインスタンス（:18080）、専用hostmcp.yaml
-└── client-b/       ← 専用HostMCPインスタンス（:18081）、専用hostmcp.yaml
+├── client-a-workspace/       ← 専用HostMCPインスタンス（:18080）、専用hostmcp.yaml
+└── client-b-workspace/       ← 専用HostMCPインスタンス（:18081）、専用hostmcp.yaml
 ```
-[クライアントごとに別々のHostMCPインスタンス](https://github.com/YujiSuzuki/hostmcp#running-multiple-instances)（ポートと設定ファイルを分離）を起動する——各クライアントのAIセッションは自分専用のインスタンスしか参照しないため、他クライアントのコンテナやシークレットへの経路がそもそも存在しない。その上で `allowed_containers` によるコンテナスコープ制限と、`max_depth` による各サブプロジェクトのdenyルール自動インポートを、インスタンス単位の多層防御として重ねる。詳細は[HostMCPの設定リファレンス](https://github.com/YujiSuzuki/hostmcp#configuration-reference)を参照。
+クライアントごとに専用のワークスペースを用意し、[別々のHostMCPインスタンス](https://github.com/YujiSuzuki/hostmcp#running-multiple-instances)（ポートと設定ファイルを分離）を起動する——各クライアントのAIセッションは自分専用のインスタンスしか参照しないため、他クライアントのコンテナやシークレットへの経路がそもそも存在しない。その上で `allowed_containers` によるコンテナスコープ制限と、`max_depth` による各サブプロジェクトのdenyルール自動インポートを、インスタンス単位の多層防御として重ねる。詳細は[HostMCPの設定リファレンス](https://github.com/YujiSuzuki/hostmcp#configuration-reference)を参照。
 
 ---
 

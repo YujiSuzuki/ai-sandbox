@@ -152,11 +152,11 @@ workspace/
 ```
 AI can implement and review payment logic without ever seeing the contents of `.env`.
 
-### Multi-Client / Multi-Project
+### Multi-Client / Multi-Workspace
 ```
 ~/clients/
-├── client-a/       ← Own HostMCP instance (:18080), own hostmcp.yaml
-└── client-b/       ← Own HostMCP instance (:18081), own hostmcp.yaml
+├── client-a-workspace/       ← Own HostMCP instance (:18080), own hostmcp.yaml
+└── client-b-workspace/       ← Own HostMCP instance (:18081), own hostmcp.yaml
 ```
 Run a separate [HostMCP instance per client](https://github.com/YujiSuzuki/hostmcp#running-multiple-instances) (own port + config) — since each client's AI session only talks to its own instance, it has no path to another client's containers or secrets. `allowed_containers` and `max_depth` (auto-importing each subproject's deny rules) add further per-instance scoping on top of that. See the [HostMCP Configuration Reference](https://github.com/YujiSuzuki/hostmcp#configuration-reference) for details.
 
