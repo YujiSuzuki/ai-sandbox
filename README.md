@@ -2,18 +2,14 @@
 
 [日本語の README はこちら](README.ja.md)
 
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg) ![Requires Docker](https://img.shields.io/badge/requires-Docker-2496ED?logo=docker&logoColor=white) ![Protocol: MCP](https://img.shields.io/badge/protocol-MCP-000000)
 
-**AI-driven development** is a development style where AI coding assistants (like Claude Code) go beyond simple autocomplete, taking the central role across requirements, design, implementation, testing, review, and documentation.
+**Your AI agent's filesystem has no `.env`, no API keys, no secrets — not hidden by a rule, just not there. It can still read and edit everything else in your repo.**
 
-Key traits of AI-driven development:
+<!-- TODO(demo-gif): record and embed here before publishing/posting. -->
+<!-- ![AI Sandbox demo: secrets stay invisible while AI keeps working](docs/assets/demo.gif) -->
 
-- **AI drives implementation**: instead of humans writing code line by line, AI generates and modifies it from instructions, while humans focus on review and decision-making
-- **Iterative dialogue**: requirements get clarified through conversation with AI, cycling quickly through implement → test → review
-- **Agentic autonomy**: beyond simple completion, AI autonomously handles multi-step tasks — exploring files, editing across multiple files, running tests, executing commands
-
-The "AI Sandbox Environment + HostMCP + SandboxMCP" is the environment that makes this AI-driven development safe. It gives AI (like Claude Code) broad operating privileges over the codebase inside a container, while mechanisms like secret isolation (Docker volume mounts), a safe bridge to the host PC (HostMCP), and quality-focused review commands (`.sandbox/commands/`) keep things safe and high-quality even when AI is driving. One challenge stands out in particular:
-
-AI coding agents read everything in your project directory — including `.env` files, API keys, and private certificates. Application-level deny rules can help, but they depend on correct configuration and have [scope limitations](docs/comparison.md). What if the secrets simply didn't exist in AI's filesystem?
+AI coding agents normally read everything in your project directory — including `.env` files, API keys, and private certificates. Application-level deny rules can help, but they depend on correct configuration and have [scope limitations](docs/comparison.md). This template takes a different approach, via Docker volume mounts, to make it true at the filesystem level.
 
 This template creates a Docker-based development environment where:
 
@@ -88,6 +84,21 @@ This project is designed for local development environments and is not intended 
 
 </details>
 
+<details>
+<summary>💡 Background: why does this need to exist? (Click to expand)</summary>
+
+**AI-driven development** is a development style where AI coding assistants (like Claude Code) go beyond simple autocomplete, taking the central role across requirements, design, implementation, testing, review, and documentation.
+
+Key traits of AI-driven development:
+
+- **AI drives implementation**: instead of humans writing code line by line, AI generates and modifies it from instructions, while humans focus on review and decision-making
+- **Iterative dialogue**: requirements get clarified through conversation with AI, cycling quickly through implement → test → review
+- **Agentic autonomy**: beyond simple completion, AI autonomously handles multi-step tasks — exploring files, editing across multiple files, running tests, executing commands
+
+The "AI Sandbox Environment + HostMCP + SandboxMCP" is the environment that makes this AI-driven development safe. It gives AI (like Claude Code) broad operating privileges over the codebase inside a container, while mechanisms like secret isolation (Docker volume mounts), a safe bridge to the host PC (HostMCP), and quality-focused review commands (`.sandbox/commands/`) keep things safe and high-quality even when AI is driving.
+
+</details>
+
 ----
 
 # Problems This Solves
@@ -140,6 +151,14 @@ workspace/
 └── frontend/         ← Payment screen implementation
 ```
 AI can implement and review payment logic without ever seeing the contents of `.env`.
+
+### Multi-Client / Multi-Project
+```
+~/clients/
+├── client-a/       ← Own HostMCP instance (:18080), own hostmcp.yaml
+└── client-b/       ← Own HostMCP instance (:18081), own hostmcp.yaml
+```
+Run a separate [HostMCP instance per client](https://github.com/YujiSuzuki/hostmcp#running-multiple-instances) (own port + config) — since each client's AI session only talks to its own instance, it has no path to another client's containers or secrets. `allowed_containers` and `max_depth` (auto-importing each subproject's deny rules) add further per-instance scoping on top of that. See the [HostMCP Configuration Reference](https://github.com/YujiSuzuki/hostmcp#configuration-reference) for details.
 
 ---
 

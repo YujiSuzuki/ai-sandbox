@@ -21,7 +21,7 @@ AI Sandbox + HostMCPと他のAIセキュリティツールとの比較、そし�
 
 **本プロジェクトが埋めるギャップ：**
 - denyルールはアプリケーションレベル — 正しい設定とAIツールがそれを尊重することに依存
-- denyルールは[親ディレクトリを走査しない](https://github.com/anthropics/claude-code/issues/12962)ため、モノレポやマルチプロジェクトワークスペースで、あるプロジェクトの設定が兄弟プロジェクトのシークレットを保護しない
+- denyルールは[親ディレクトリを走査しない](https://github.com/anthropics/claude-code/issues/12962)ため、モノレポやマルチプロジェクトワークスペースで、あるプロジェクトの設定が兄弟プロジェクトのシークレットを保護しない — HostMCPはプロジェクト/クライアントごとのインスタンス分離と`allowed_containers`/`max_depth`によるスコープ制御でこれに対応。[マルチクライアント／マルチプロジェクト](../README.ja.md#マルチクライアントマルチプロジェクト)を参照
 - Dockerコマンドはdockerソケットへの直接アクセスを必要とするため、サンドボックスの仕組みと構造的に相容れない。[公式ドキュメントのトラブルシューティング項目](https://code.claude.com/docs/en/sandboxing#troubleshooting)自体が`docker *`を`excludedCommands`（サンドボックス対象外）に指定することを推奨しており、結果としてDockerを使った操作はサンドボックスの保護を一切受けずに、無制限のホスト権限で実行される
 
 ### Docker AI Sandboxes
