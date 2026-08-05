@@ -520,6 +520,10 @@ test_interactive_hostmcp_init_custom_port() {
     cat > "$mb/hostmcp" << DEOF
 #!/bin/bash
 echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
+if [ "\$1" = "version" ]; then
+    echo "v0.0.0-test"
+    exit 0
+fi
 if [ "\$1" = "init" ]; then
     ws=""
     shift
@@ -532,6 +536,12 @@ fi
 exit 0
 DEOF
     chmod +x "$mb/hostmcp"
+    # Force fetch_latest_release to fail deterministically, so
+    # _check_hostmcp_update no-ops silently instead of inserting a
+    # reinstall/update prompt that would shift this test's piped port-select
+    # answers out of sync with the questions they're meant to answer.
+    printf '#!/bin/bash\nexit 1\n' > "$mb/curl"
+    chmod +x "$mb/curl"
 
     # Input: port=custom(2), port_number=9999
     echo -e "2\n9999" | bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
@@ -752,6 +762,31 @@ test_interactive_hostmcp_init_invalid_port_string() {
     local fp mb
     _setup_hostmcp_mocks fp mb
     mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+    # _setup_hostmcp_mocks' default fake hostmcp doesn't handle `version`, and
+    # a real GitHub fetch could flakily insert an update/reinstall prompt
+    # that shifts this test's piped port-select answers out of sync. Give it
+    # a version and force fetch_latest_release to fail deterministically so
+    # _check_hostmcp_update no-ops silently.
+    cat > "$mb/hostmcp" << 'DEOF'
+#!/bin/bash
+if [ "$1" = "version" ]; then
+    echo "v0.0.0-test"
+    exit 0
+fi
+if [ "$1" = "init" ]; then
+    ws=""
+    shift
+    while [ $# -gt 0 ]; do
+        [ "$1" = "--workspace" ] && ws="$2"
+        shift
+    done
+    [ -n "$ws" ] && mkdir -p "$ws/.sandbox/config" && touch "$ws/.sandbox/config/hostmcp.yaml"
+fi
+exit 0
+DEOF
+    chmod +x "$mb/hostmcp"
+    printf '#!/bin/bash\nexit 1\n' > "$mb/curl"
+    chmod +x "$mb/curl"
 
     # Input: port=custom(2), bad=abc, then valid=8080
     local output
@@ -780,6 +815,10 @@ test_interactive_hostmcp_init_invalid_port_out_of_range() {
     cat > "$mb/hostmcp" << DEOF
 #!/bin/bash
 echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
+if [ "\$1" = "version" ]; then
+    echo "v0.0.0-test"
+    exit 0
+fi
 if [ "\$1" = "init" ]; then
     ws=""
     shift
@@ -792,6 +831,8 @@ fi
 exit 0
 DEOF
     chmod +x "$mb/hostmcp"
+    printf '#!/bin/bash\nexit 1\n' > "$mb/curl"
+    chmod +x "$mb/curl"
 
     # bad=99999, then valid=8080
     local output
@@ -830,6 +871,10 @@ test_interactive_hostmcp_port_retry_fallback() {
     cat > "$mb/hostmcp" << DEOF
 #!/bin/bash
 echo "\$@" >> "$TEST_PROJECT/hostmcp-calls.log"
+if [ "\$1" = "version" ]; then
+    echo "v0.0.0-test"
+    exit 0
+fi
 if [ "\$1" = "init" ]; then
     ws=""
     shift
@@ -842,6 +887,8 @@ fi
 exit 0
 DEOF
     chmod +x "$mb/hostmcp"
+    printf '#!/bin/bash\nexit 1\n' > "$mb/curl"
+    chmod +x "$mb/curl"
 
     # 3 invalid ports → fallback
     local output
@@ -1149,6 +1196,57 @@ test_interactive_hostmcp_binary_download_success() {
     cleanup
 }
 
+# Regression test: a `hostmcp serve` process left running in another
+# terminal keeps the current binary's inode open/mapped. Downloading
+# straight into $install_path (a plain `curl -o`) would overwrite that same
+# inode in place and could get the running process SIGKILLed by macOS code-
+# integrity checks. The fix downloads to a temp file and `mv`s it into
+# place, which always produces a new inode at the install path. This test
+# holds a file descriptor open on the pre-existing binary (standing in for
+# the running process) and asserts the install path ends up on a different
+# inode, not verifies observable install success (which the tests around
+# this one already cover).
+test_binary_download_replaces_via_new_inode_not_inplace_write() {
+    echo ""
+    echo "=== Test: binary download replaces via a new inode (rename), not an in-place overwrite ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    local install_path="$fake_home/.local/bin/hostmcp"
+    mkdir -p "$(dirname "$install_path")"
+    printf '#!/bin/bash\necho old\n' > "$install_path"
+    chmod +x "$install_path"
+
+    local old_inode
+    old_inode=$(stat -c %i "$install_path" 2>/dev/null || stat -f %i "$install_path")
+
+    # Hold the pre-existing binary open for the duration of the
+    # download+install, standing in for a `hostmcp serve` process that still
+    # has it mapped.
+    exec 9< "$install_path"
+
+    HOME="$fake_home" LANG=C bash -c "
+        export PATH='$mb'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " > /dev/null 2>&1
+
+    exec 9<&-
+
+    local new_inode
+    new_inode=$(stat -c %i "$install_path" 2>/dev/null || stat -f %i "$install_path")
+
+    if [ "$old_inode" != "$new_inode" ]; then
+        pass "Install path got a new inode via rename, not an in-place overwrite of the one held open"
+    else
+        fail "Install path kept the same inode ($old_inode) — binary was overwritten in place"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
 # Test 41b: no go, binary download accepted, install-dir=2 (~/go/bin) → installs there
 test_interactive_hostmcp_binary_download_success_go_bin() {
     echo ""
@@ -1309,6 +1407,186 @@ test_interactive_hostmcp_binary_download_curl_fails() {
         fail "Next steps should NOT appear after download failure"
     else
         pass "Next steps not shown after download failure"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+# Regression test: _download_hostmcp_binary downloads to a temp file and
+# `mv`s it into place, but never checked whether that `mv` itself succeeded.
+# Since the function is invoked as `if _download_hostmcp_binary ...; then`,
+# `set -e` does not apply inside it, so a failed `mv` (e.g. an immutable
+# install path or a full disk) was silently swallowed: the function still
+# printed "installed to:" and returned success, leaving no binary at the
+# install path and no cleanup of the temp download file.
+test_binary_download_mv_failure_reports_error_and_cleans_up() {
+    echo ""
+    echo "=== Test: mv into install path fails → error shown, no false success, temp file cleaned up ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    # _isolate_hostmcp_absent (used by _setup_binary_download_mocks) populates
+    # $mb with symlinks to real binaries, including `mv` — overwriting through
+    # that link with `>` would write to the real binary, so remove it first.
+    # Only `mv` used by install-hostmcp.sh is the rename into place, so
+    # overriding it here doesn't affect anything else the script does.
+    rm -f "$mb/mv"
+    printf '#!/bin/bash\nexit 1\n' > "$mb/mv"
+    chmod +x "$mb/mv"
+
+    local install_path="$fake_home/.local/bin/hostmcp"
+
+    # Input: install=1(yes), install-dir=default(1), port=default(1)
+    local output
+    output=$(HOME="$fake_home" LANG=C bash -c "
+        export PATH='$mb'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "installed to:"; then
+        fail "Should not show success message when mv into install path fails, got: $output"
+    else
+        pass "No false success message when mv into install path fails"
+    fi
+
+    if echo "$output" | grep -q "Failed to move downloaded binary"; then
+        pass "Error message shown when mv into install path fails"
+    else
+        fail "Expected an error message when mv into install path fails, got: $output"
+    fi
+
+    if [ -f "$install_path" ]; then
+        fail "Install path should not exist after a failed mv, got: $output"
+    else
+        pass "Install path not created after a failed mv"
+    fi
+
+    if find "$(dirname "$install_path")" -name "hostmcp.download.*" 2>/dev/null | grep -q .; then
+        fail "Leftover temp download file was not cleaned up after mv failure"
+    else
+        pass "Temp download file cleaned up after mv failure"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+test_binary_download_verify_warns_gatekeeper_on_darwin() {
+    echo ""
+    echo "=== Test: freshly downloaded binary fails to launch, Darwin → Gatekeeper hint shown ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+    _mock_uname_s "$mb" "Darwin"
+
+    # Same shape as _setup_binary_download_mocks' fake curl, except the
+    # "binary" it writes always exits non-zero — simulating a Gatekeeper-
+    # killed launch rather than a successful `hostmcp version`.
+    cat > "$mb/curl" << 'CURLEOF'
+#!/bin/bash
+out_file=""
+prev=""
+for arg in "$@"; do
+    [ "$prev" = "-o" ] && out_file="$arg"
+    prev="$arg"
+done
+if [ "$out_file" = "/dev/null" ]; then
+    printf 'https://github.com/YujiSuzuki/hostmcp/releases/tag/v0.0.1'
+    exit 0
+fi
+if [ -n "$out_file" ]; then
+    mkdir -p "$(dirname "$out_file")"
+    printf '#!/bin/bash\nexit 1\n' > "$out_file"
+fi
+exit 0
+CURLEOF
+    chmod +x "$mb/curl"
+
+    local output
+    output=$(HOME="$fake_home" LANG=C bash -c "
+        export PATH='$mb'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "Gatekeeper"; then
+        pass "Gatekeeper hint shown when freshly downloaded binary fails to launch on Darwin"
+    else
+        fail "Expected Gatekeeper hint in output, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+test_binary_download_verify_generic_warning_on_non_darwin() {
+    echo ""
+    echo "=== Test: freshly downloaded binary fails to launch, non-Darwin → generic warning, no Gatekeeper ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+    _mock_uname_s "$mb" "Linux"
+
+    cat > "$mb/curl" << 'CURLEOF'
+#!/bin/bash
+out_file=""
+prev=""
+for arg in "$@"; do
+    [ "$prev" = "-o" ] && out_file="$arg"
+    prev="$arg"
+done
+if [ "$out_file" = "/dev/null" ]; then
+    printf 'https://github.com/YujiSuzuki/hostmcp/releases/tag/v0.0.1'
+    exit 0
+fi
+if [ -n "$out_file" ]; then
+    mkdir -p "$(dirname "$out_file")"
+    printf '#!/bin/bash\nexit 1\n' > "$out_file"
+fi
+exit 0
+CURLEOF
+    chmod +x "$mb/curl"
+
+    local output
+    output=$(HOME="$fake_home" LANG=C bash -c "
+        export PATH='$mb'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "Gatekeeper"; then
+        fail "Did not expect a Gatekeeper hint on non-Darwin, got: $output"
+    elif echo "$output" | grep -q "failed to run"; then
+        pass "Generic warning shown when freshly downloaded binary fails to launch on non-Darwin"
+    else
+        fail "Expected a generic 'failed to run' warning, got: $output"
+    fi
+
+    _cleanup_binary_download_mocks "$fake_home" "$mb"
+    cleanup
+}
+
+test_binary_download_verify_no_warning_when_binary_runs() {
+    echo ""
+    echo "=== Test: freshly downloaded binary launches fine → no verify warning ==="
+
+    setup
+    local fake_home mb
+    _setup_binary_download_mocks fake_home mb
+
+    local output
+    output=$(HOME="$fake_home" LANG=C bash -c "
+        export PATH='$mb'
+        echo -e '1\n1\n1' | bash '$SCRIPT' '$TEST_PROJECT'
+    " 2>&1)
+
+    if echo "$output" | grep -q "failed to run"; then
+        fail "Did not expect a verify warning for a working binary, got: $output"
+    else
+        pass "No verify warning shown when the freshly installed binary launches successfully"
     fi
 
     _cleanup_binary_download_mocks "$fake_home" "$mb"
@@ -1552,12 +1830,14 @@ CURLEOF
 
 test_update_check_same_version_no_prompt() {
     echo ""
-    echo "=== Test: installed version == latest → no update prompt ==="
+    echo "=== Test: installed version == latest → no *update* prompt (reinstall prompt is separate) ==="
 
     setup
     local fp
     _setup_versioned_hostmcp_mock fp "v1.0.0"
 
+    # No input: the reinstall prompt (added for same-version reinstall) hits
+    # EOF and defaults to No, same as the update prompt's own default.
     local output
     output=$(MOCK_LATEST_VERSION="v1.0.0" LANG=C bash "$SCRIPT" "$TEST_PROJECT" < /dev/null 2>&1)
 
@@ -1574,6 +1854,100 @@ test_update_check_same_version_no_prompt() {
     fi
 
     safe_rm_rf "$fp"
+    cleanup
+}
+
+test_update_check_same_version_reinstall_prompt_shown() {
+    echo ""
+    echo "=== Test: installed version == latest → reinstall prompt is offered ==="
+
+    setup
+    local fp
+    _setup_versioned_hostmcp_mock fp "v1.0.0"
+
+    local output
+    output=$(MOCK_LATEST_VERSION="v1.0.0" LANG=C bash "$SCRIPT" "$TEST_PROJECT" < /dev/null 2>&1)
+
+    if echo "$output" | grep -q "Reinstall anyway"; then
+        pass "Reinstall option shown when installed version matches latest"
+    else
+        fail "Expected 'Reinstall anyway' option in up-to-date output, got: $output"
+    fi
+
+    safe_rm_rf "$fp"
+    cleanup
+}
+
+test_update_check_same_version_reinstall_decline_default() {
+    echo ""
+    echo "=== Test: reinstall prompt, empty input → defaults to No, go install NOT called ==="
+
+    setup
+    local fp mb
+    _setup_versioned_hostmcp_mock fp "v1.0.0"
+    mb=$(mktemp -d)
+    # Same marker technique as test_update_check_decline_no_upgrade: only
+    # `go install` (the actual reinstall action) touches the marker.
+    cat > "$mb/go" << 'GOEOF'
+#!/bin/bash
+if [ "$1" = "install" ]; then
+    echo "go should not have been called for a declined reinstall" >&2
+    touch "$GO_CALLED_MARKER"
+fi
+exit 0
+GOEOF
+    chmod +x "$mb/go"
+    export PATH="$mb:$PATH"
+
+    local marker
+    marker=$(mktemp -u)
+    GO_CALLED_MARKER="$marker" MOCK_LATEST_VERSION="v1.0.0" \
+        LANG=C bash -c "export GO_CALLED_MARKER='$marker'; bash '$SCRIPT' '$TEST_PROJECT' < /dev/null" > /dev/null 2>&1
+
+    if [ -f "$marker" ]; then
+        fail "go install should NOT be called when reinstall prompt defaults to No"
+        rm -f "$marker"
+    else
+        pass "go install not called when reinstall prompt defaults to No"
+    fi
+
+    safe_rm_rf "$fp" "$mb"
+    cleanup
+}
+
+test_update_check_same_version_reinstall_accept() {
+    echo ""
+    echo "=== Test: reinstall accepted at same version → go install called ==="
+
+    setup
+    local fp mb
+    _setup_versioned_hostmcp_mock fp "v1.0.0"
+    mb=$(mktemp -d)
+    # Same technique as test_update_check_accept_go_install: actually create a
+    # binary at the isolated $HOME/go/bin to simulate a real `go install`, so
+    # _upgrade_hostmcp's post-install existence check has something to find.
+    cat > "$mb/go" << GOEOF
+#!/bin/bash
+if [ "\$1" = "install" ]; then
+    mkdir -p "$HOME/go/bin"
+    touch "$HOME/go/bin/hostmcp"
+    chmod +x "$HOME/go/bin/hostmcp"
+    exit 0
+fi
+GOEOF
+    chmod +x "$mb/go"
+    export PATH="$mb:$PATH"
+
+    local output
+    output=$(MOCK_LATEST_VERSION="v1.0.0" LANG=C bash -c "echo -e '1' | bash '$SCRIPT' '$TEST_PROJECT'" 2>&1)
+
+    if echo "$output" | grep -q "hostmcp updated"; then
+        pass "Update-complete message shown after accepted same-version reinstall"
+    else
+        fail "Expected update-complete message after accepted reinstall, got: $output"
+    fi
+
+    safe_rm_rf "$fp" "$mb"
     cleanup
 }
 
@@ -1864,9 +2238,9 @@ test_update_check_fetch_failure_skips_silently() {
     cleanup
 }
 
-test_update_check_empty_installed_version_skips() {
+test_update_check_empty_installed_version_offers_reinstall() {
     echo ""
-    echo "=== Test: hostmcp version prints nothing → update check silently skipped ==="
+    echo "=== Test: hostmcp version prints nothing → no version-comparison prompt, but reinstall is offered ==="
 
     setup
     local fp mb
@@ -1874,15 +2248,68 @@ test_update_check_empty_installed_version_skips() {
     mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
 
     # _setup_hostmcp_mocks' default fake hostmcp only handles `init`; `version`
-    # falls through to a bare `exit 0` with no output, simulating a hostmcp
-    # binary that doesn't support the version subcommand (or any parse failure).
+    # falls through to a bare `exit 0` with no output, simulating a corrupted,
+    # architecture-mismatched, or OS-blocked (e.g. killed at launch) binary.
     local output
     output=$(MOCK_LATEST_VERSION="v9.9.9" LANG=C bash "$SCRIPT" "$TEST_PROJECT" < /dev/null 2>&1)
 
     if echo "$output" | grep -q "update available\|up to date"; then
-        fail "Update check should be skipped entirely when installed version can't be determined, got: $output"
+        fail "Version-comparison messages should not appear when installed version can't be determined, got: $output"
     else
-        pass "Update check silently skipped when hostmcp version is empty"
+        pass "No version-comparison message when hostmcp version is empty"
+    fi
+
+    if echo "$output" | grep -q "Reinstall hostmcp"; then
+        pass "Reinstall option offered when hostmcp version produces no output"
+    else
+        fail "Expected 'Reinstall hostmcp' option, got: $output"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+test_update_check_empty_installed_version_reinstall_decline_default() {
+    echo ""
+    echo "=== Test: hostmcp version empty, reinstall prompt, empty input → defaults to No ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+
+    local output
+    output=$(MOCK_LATEST_VERSION="v9.9.9" LANG=C bash "$SCRIPT" "$TEST_PROJECT" < /dev/null 2>&1)
+
+    if echo "$output" | grep -q "hostmcp updated"; then
+        fail "Should not reinstall when reinstall prompt defaults to No, got: $output"
+    else
+        pass "No reinstall performed when reinstall prompt defaults to No"
+    fi
+
+    _cleanup_mocks "$fp" "$mb"
+    cleanup
+}
+
+test_update_check_empty_installed_version_reinstall_accept() {
+    echo ""
+    echo "=== Test: hostmcp version empty, reinstall accepted → go install called ==="
+
+    setup
+    local fp mb
+    _setup_hostmcp_mocks fp mb
+    mkdir -p "$fp/bin" && touch "$fp/bin/hostmcp" && chmod +x "$fp/bin/hostmcp"
+
+    # _setup_hostmcp_mocks' fake `go install` (see its definition above)
+    # already creates a working $fp/bin/hostmcp, so accepting here exercises
+    # the real _upgrade_hostmcp -> go install path end to end.
+    local output
+    output=$(MOCK_LATEST_VERSION="v9.9.9" LANG=C bash -c "echo -e '1' | bash '$SCRIPT' '$TEST_PROJECT'" 2>&1)
+
+    if echo "$output" | grep -q "hostmcp updated"; then
+        pass "Update-complete message shown after accepted reinstall of a broken install"
+    else
+        fail "Expected update-complete message after accepted reinstall, got: $output"
     fi
 
     _cleanup_mocks "$fp" "$mb"
@@ -1902,6 +2329,15 @@ test_update_check_empty_installed_version_skips() {
 # — ここで固定が必要なのは `-s` だけのため。
 _mock_uname_s() {
     local mb="$1" os_name="$2"
+    # _isolate_hostmcp_absent (used by some callers, e.g. via
+    # _setup_binary_download_mocks) populates $mb with symlinks to the real
+    # binaries, including a read-only `uname` — overwriting through that
+    # link with `>` fails with "Permission denied", so remove it first.
+    # 一部の呼び出し元（_setup_binary_download_mocks経由など）が使う
+    # _isolate_hostmcp_absent は、$mb に実バイナリへのシンボリックリンク
+    # （読み取り専用の `uname` を含む）を配置する — そのリンク越しに `>` で
+    # 上書きしようとすると "Permission denied" になるため、先に削除する。
+    rm -f "$mb/uname"
     cat > "$mb/uname" << UNAMEEOF
 #!/bin/bash
 if [ "\$1" = "-s" ]; then
@@ -2221,16 +2657,24 @@ main() {
     test_interactive_hostmcp_init_fails_skips_next_steps
     test_interactive_hostmcp_binary_download_declined
     test_interactive_hostmcp_binary_download_success
+    test_binary_download_replaces_via_new_inode_not_inplace_write
     test_interactive_hostmcp_binary_download_success_go_bin
     test_interactive_hostmcp_binary_download_dir_prompt_shown
     test_interactive_hostmcp_binary_download_warns_hash_r
     test_interactive_hostmcp_binary_download_warns_stale_other_location
     test_interactive_hostmcp_binary_download_curl_fails
+    test_binary_download_mv_failure_reports_error_and_cleans_up
+    test_binary_download_verify_warns_gatekeeper_on_darwin
+    test_binary_download_verify_generic_warning_on_non_darwin
+    test_binary_download_verify_no_warning_when_binary_runs
     test_interactive_hostmcp_no_curl_no_wget
     test_interactive_hostmcp_version_shown_in_prompt
     test_interactive_hostmcp_version_fetch_fails_installs_anyway
     test_update_check_queries_stable_channel_only
     test_update_check_same_version_no_prompt
+    test_update_check_same_version_reinstall_prompt_shown
+    test_update_check_same_version_reinstall_decline_default
+    test_update_check_same_version_reinstall_accept
     test_update_check_new_version_prompt_shown
     test_update_check_verbose_shows_path_when_up_to_date
     test_update_check_verbose_shows_path_when_update_available
@@ -2240,7 +2684,9 @@ main() {
     test_update_check_accept_go_install
     test_update_check_accept_binary_redownload
     test_update_check_fetch_failure_skips_silently
-    test_update_check_empty_installed_version_skips
+    test_update_check_empty_installed_version_offers_reinstall
+    test_update_check_empty_installed_version_reinstall_decline_default
+    test_update_check_empty_installed_version_reinstall_accept
     test_macos_launcher_created_with_correct_content
     test_macos_sync_launcher_created_with_correct_content
     test_macos_launcher_not_created_on_non_darwin

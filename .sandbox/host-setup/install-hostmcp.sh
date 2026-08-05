@@ -182,7 +182,7 @@ _detect_os_name() {
 _download_hostmcp_binary() {
     local version="${1:-}"
     local install_dir="$2"
-    local os arch filename install_path url download_ok
+    local os arch filename install_path tmp_path url download_ok
 
     os=$(_detect_os_name)
     arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
@@ -195,6 +195,26 @@ _download_hostmcp_binary() {
         url="https://github.com/YujiSuzuki/hostmcp/releases/latest/download/${filename}"
     fi
     install_path="$install_dir/hostmcp"
+    # Download to a separate temp file, then move it into place atomically
+    # (see the `mv` below) instead of writing straight to $install_path. A
+    # `hostmcp serve` process left running in another terminal keeps the
+    # current binary's code pages mapped; overwriting that same inode in
+    # place (a plain `curl -o "$install_path"`) can make macOS's code-
+    # integrity checks see the on-disk bytes change out from under the
+    # running process and SIGKILL it (or the freshly (re)installed one,
+    # since both would then share the tampered inode until the rename).
+    # `mv` instead swaps the directory entry to a new inode, leaving
+    # whatever still has the old one open/mapped untouched.
+    # $install_path に直接書き込むのではなく、別の一時ファイルにダウンロードして
+    # から（下記の `mv` で）アトミックに配置する。別ターミナルで `hostmcp serve` が
+    # 実行され続けていると、そのプロセスは現在のバイナリのコードページをmapした
+    # ままになる。同じinodeをその場で上書きする（素の `curl -o "$install_path"`）と、
+    # macOSのコード整合性検証がディスク上のバイト列が実行中プロセスの下で
+    # 書き換わったことを検知し、そのプロセス（またはrenameまでの間は同じ改変済み
+    # inodeを共有することになる、新しく(再)インストールしたバイナリ自身）を
+    # SIGKILLすることがある。`mv` ならディレクトリエントリを新しいinodeに
+    # 差し替えるだけなので、古いinodeを開いている/mapしている側には影響しない。
+    tmp_path="$install_path.download.$$"
 
     msg "Downloading hostmcp ($filename) from GitHub Releases..." \
         "GitHub Releases から hostmcp ($filename) をダウンロード中..."
@@ -203,23 +223,24 @@ _download_hostmcp_binary() {
 
     download_ok=false
     if command -v curl > /dev/null 2>&1; then
-        curl -fsSL "$url" -o "$install_path" 2>&1 && download_ok=true
+        curl -fsSL "$url" -o "$tmp_path" 2>&1 && download_ok=true
     elif command -v wget > /dev/null 2>&1; then
-        wget -q "$url" -O "$install_path" 2>&1 && download_ok=true
+        wget -q "$url" -O "$tmp_path" 2>&1 && download_ok=true
     else
         msg "Error: Neither curl nor wget found." "エラー: curl も wget も見つかりません。"
         msg "Please download manually from: https://github.com/YujiSuzuki/hostmcp/releases/latest" \
             "手動でダウンロードしてください: https://github.com/YujiSuzuki/hostmcp/releases/latest"
+        rm -f "$tmp_path"
         return 1
     fi
 
     if [ "$_DKMCP_CANCELLED" = true ]; then
-        rm -f "$install_path"
+        rm -f "$tmp_path"
         return 1
     fi
 
-    if [ "$download_ok" != true ] || [ ! -s "$install_path" ]; then
-        rm -f "$install_path"
+    if [ "$download_ok" != true ] || [ ! -s "$tmp_path" ]; then
+        rm -f "$tmp_path"
         msg "Error: Download failed. Binary for ${os}/${arch} may not exist in the latest release." \
             "エラー: ダウンロードに失敗しました。${os}/${arch} 向けバイナリが最新リリースに存在しない可能性があります。"
         msg "Install Go and run: go install github.com/YujiSuzuki/hostmcp@latest" \
@@ -227,8 +248,15 @@ _download_hostmcp_binary() {
         return 1
     fi
 
-    chmod +x "$install_path"
+    chmod +x "$tmp_path"
+    if ! mv -f "$tmp_path" "$install_path"; then
+        rm -f "$tmp_path"
+        msg "Error: Failed to move downloaded binary into place: $install_path" \
+            "エラー: ダウンロードしたバイナリの配置に失敗しました: $install_path"
+        return 1
+    fi
     msg "hostmcp installed to: $install_path" "hostmcp をインストールしました: $install_path"
+    _verify_hostmcp_runs "$install_path"
     _warn_stale_hostmcp_hash "$install_dir"
 
     # Make discoverable for the rest of this script / このスクリプト内で hostmcp を使えるようにする
@@ -243,6 +271,44 @@ _download_hostmcp_binary() {
             ;;
     esac
     return 0
+}
+
+# Smoke-test a freshly (re)installed binary. A launch failure here can have
+# several distinct causes (Gatekeeper/signing rejection, a corrupted
+# download, wrong architecture) — this deliberately doesn't try to
+# distinguish between them and just points at generic remediation steps,
+# since telling them apart needs manual diagnosis (see docs/reference.md)
+# beyond what's worth running unconditionally on every install. Note this
+# does NOT cover the "overwriting a binary a running hostmcp process still
+# has mapped" failure mode documented there — install-hostmcp.sh already
+# avoids that itself by downloading to a temp file and renaming it into
+# place instead of writing straight to the install path.
+# インストール/再インストール直後のバイナリを試験実行する。ここでの起動失敗には
+# 複数の異なる原因があり得る（Gatekeeper・署名の拒否、ダウンロードの破損、
+# アーキテクチャ不一致など）— ここでは意図的にそれらを区別せず、汎用的な
+# 対処法だけを示す。原因の切り分けには手動での診断（docs/reference.md 参照）が
+# 必要で、インストールのたびに無条件で行うほどの価値はないため。なお、
+# 同ドキュメントに記載されている「実行中の hostmcp プロセスがまだ参照している
+# バイナリを上書きしてしまう」失敗パターンはここではカバーしていない —
+# install-hostmcp.sh 自身は、インストール先に直接書き込むのではなく一時ファイルに
+# ダウンロードしてからリネームして配置することで、既にこの問題を回避している。
+_verify_hostmcp_runs() {
+    local bin_path="$1"
+    [ -x "$bin_path" ] || return 0
+    "$bin_path" version > /dev/null 2>&1 && return 0
+
+    echo ""
+    if [ "$(uname -s)" = "Darwin" ]; then
+        msg "Warning: '$bin_path version' failed to run. This may be Gatekeeper/signing, a corrupted download, or the wrong architecture — see docs/reference.md for how to tell them apart." \
+            "警告: '$bin_path version' の実行に失敗しました。Gatekeeper・署名の問題、ダウンロードの破損、アーキテクチャ不一致などが考えられます — 切り分け方は docs/reference.md を参照してください。"
+        msg "  Try: sudo spctl --add --label hostmcp '$bin_path'" \
+            "  試してください: sudo spctl --add --label hostmcp '$bin_path'"
+        msg "  Or: System Settings > Privacy & Security > \"Allow Anyway\" for hostmcp." \
+            "  または: システム設定 > プライバシーとセキュリティ で hostmcp の「このまま開く」を選択してください。"
+    else
+        msg "Warning: '$bin_path version' failed to run. The binary may be corrupted or built for the wrong architecture." \
+            "警告: '$bin_path version' の実行に失敗しました。バイナリが壊れているか、アーキテクチャが合っていない可能性があります。"
+    fi
 }
 
 # Warn that bash caches resolved command paths (`hash`), so a shell that already
@@ -337,6 +403,32 @@ _check_hostmcp_update() {
 
     installed_version=$(hostmcp version 2>/dev/null) || installed_version=""
     if [ -z "$installed_version" ]; then
+        # `hostmcp` was found on PATH (that's why setup_hostmcp_install got
+        # here), but `hostmcp version` produced no output — e.g. a truncated
+        # download, an architecture mismatch, or an unsigned/blocked binary
+        # killed by the OS at launch (SIGKILL). None of that is diagnosable
+        # further from here, but reinstalling is a reasonable blind fix, so
+        # offer it instead of silently giving up.
+        # `hostmcp` はPATH上に見つかっている（そのため setup_hostmcp_install が
+        # ここに到達した）が、`hostmcp version` が出力を返さなかった — 例:
+        # ダウンロードの破損、アーキテクチャ不一致、署名なし/ブロックされた
+        # バイナリが起動時にOSに強制終了される（SIGKILL）等。これ以上ここから
+        # 原因を切り分けることはできないが、再インストールは妥当な当て推量の
+        # 対処法なので、黙って諦めるのではなくここで提案する。
+        echo ""
+        msg "Warning: 'hostmcp version' produced no output. The binary may be corrupted, built for the wrong architecture, or blocked by the OS." \
+            "警告: 'hostmcp version' から出力がありませんでした。バイナリが壊れている、アーキテクチャが合っていない、またはOSにブロックされている可能性があります。"
+        msg "  1) Reinstall hostmcp" "  1) hostmcp を再インストールする"
+        msg "  2) No (default)" "  2) いいえ（デフォルト）"
+        echo ""
+        local _broken_prompt _broken_choice
+        _broken_prompt=$(msg "Enter 1 or 2 [2]: " "1 または 2 を入力 [2]: ")
+        read -r -p "$_broken_prompt" _broken_choice || true
+        if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+
+        if [ "$_broken_choice" = "1" ]; then
+            _upgrade_hostmcp "$gopath_bin"
+        fi
         return 0
     fi
 
@@ -371,6 +463,28 @@ _check_hostmcp_update() {
         else
             msg "hostmcp is up to date ($installed_version)." \
                 "hostmcp は最新です（${installed_version}）。"
+        fi
+
+        # _upgrade_hostmcp performs no version comparison of its own — it just
+        # reinstalls via the same method (go install / binary re-download) and
+        # judges success by the install command's exit status — so it is safe
+        # to call here for a same-version reinstall, not just for a real
+        # upgrade.
+        # _upgrade_hostmcp はバージョン比較を一切行わない —
+        # 単に同じ方式（go install / バイナリ再ダウンロード）で入れ直し、成功判定は
+        # インストールコマンドの終了コードのみで行う — そのため、実際の更新だけでなく
+        # 同一バージョンへの再インストール用途でもそのまま安全に呼び出せる。
+        echo ""
+        msg "  1) Reinstall anyway" "  1) それでも再インストールする"
+        msg "  2) No (default)" "  2) いいえ（デフォルト）"
+        echo ""
+        local _reinstall_prompt _reinstall_choice
+        _reinstall_prompt=$(msg "Enter 1 or 2 [2]: " "1 または 2 を入力 [2]: ")
+        read -r -p "$_reinstall_prompt" _reinstall_choice || true
+        if [ "$_DKMCP_CANCELLED" = true ]; then return 0; fi
+
+        if [ "$_reinstall_choice" = "1" ]; then
+            _upgrade_hostmcp "$gopath_bin"
         fi
         return 0
     fi
@@ -425,6 +539,11 @@ _upgrade_hostmcp() {
             fi
             hash -r 2>/dev/null || true
             msg "hostmcp updated." "hostmcp を更新しました。"
+            if [ -f "$gopath_bin/hostmcp" ]; then
+                _verify_hostmcp_runs "$gopath_bin/hostmcp"
+            else
+                _verify_hostmcp_runs "$gopath_bin/hostmcp.exe"
+            fi
             # go install always targets $gopath_bin, which may not be where the
             # currently-active `hostmcp` on PATH resolves to (e.g. it was originally
             # installed via binary download to ~/.local/bin) — warn the same way
@@ -572,6 +691,11 @@ setup_hostmcp_install() {
                     return 0
                 fi
                 msg "hostmcp installation complete." "hostmcp のインストールが完了しました。"
+                if [ -f "$gopath_bin/hostmcp" ]; then
+                    _verify_hostmcp_runs "$gopath_bin/hostmcp"
+                else
+                    _verify_hostmcp_runs "$gopath_bin/hostmcp.exe"
+                fi
                 _warn_stale_hostmcp_hash "$gopath_bin"
                 DKMCP_AVAILABLE=true
             else

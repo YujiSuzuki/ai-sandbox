@@ -246,6 +246,25 @@ If Claude Code doesn't recognize HostMCP tools:
 3. **Try MCP reconnect** - In Claude Code, run `/mcp` and select "Reconnect"
 4. **Fully restart VS Code** (Cmd+Q / Alt+F4) - If Reconnect doesn't help
 
+### macOS: hostmcp Fails to Launch ("Killed: 9")
+
+If `hostmcp version` (or any `hostmcp` command) exits immediately with `Killed: 9`, the most common cause (confirmed by reproduction) is **overwriting the `hostmcp` binary while a `hostmcp serve` process is still running against that same file**. A running process keeps the current binary's code mapped; overwriting that same file in place (e.g. `cp` onto the existing path) changes the on-disk bytes out from under it, and macOS's code-integrity checks respond by killing the process launching the new binary. This was reproduced repeatedly: `cp`-ing a new binary over the existing one while `hostmcp serve` kept running consistently caused `Killed: 9` until `serve` was stopped.
+
+This matches macOS's own code-signing design: signing information is cached against the kernel's vnode for a file, so changing that file's bytes while its vnode is still in use invalidates the cache; only replacing it with a genuinely new file (a new vnode/inode), swapped in via an atomic rename, avoids the problem (see Apple Developer Forums, "Signing modified binaries").
+
+`install-hostmcp.sh` avoids this by downloading to a temporary file and atomically renaming it into place, rather than writing directly to the install path — confirmed working even while `hostmcp serve` stayed running throughout an update. `go install` is safe here too: Go's toolchain writes the build output to a new file and renames (or, on its fallback path, unlinks-then-creates) rather than overwriting in place. If you replace the `hostmcp` binary some other way that isn't rename-based (e.g. manually `cp`-ing over the existing one), **stop any running `hostmcp serve` first**, replace the binary, then restart it.
+
+If `hostmcp version` still fails to launch after confirming no `hostmcp serve` process was running during the (re)install, Gatekeeper/signing may be a separate contributing cause. Check with:
+```bash
+spctl -a -vvv $(which hostmcp)
+# "rejected" points at Gatekeeper/signing
+```
+Fix by explicitly trusting the binary:
+```bash
+sudo spctl --add --label hostmcp $(which hostmcp)
+```
+Or via the GUI: System Settings → Privacy & Security → "Allow Anyway" next to the hostmcp warning.
+
 ### Auto-setup with setup-hostmcp.sh
 
 You can use the setup script inside AI Sandbox to check registration status and register HostMCP automatically:

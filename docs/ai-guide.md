@@ -15,7 +15,7 @@ This file is referenced from [CLAUDE.md](../CLAUDE.md) — read sections on dema
 
 ```bash
 # On Host OS (NOT in AI Sandbox)
-.sandbox/host-setup/install-hostmcp.sh   # installs hostmcp + generates config (or offers to update it if already installed)
+.sandbox/host-setup/install-hostmcp.sh   # installs hostmcp + generates config (or offers to update/reinstall it if already installed)
 hostmcp serve --workspace /path/to/your-repo
 ```
 
@@ -156,6 +156,8 @@ git log HEAD..origin/main --oneline
    go install github.com/YujiSuzuki/hostmcp@latest
    # No Go? Re-run install-hostmcp.sh instead — it detects the existing
    # install and offers to update it via a prebuilt binary re-download.
+   # Already on the latest version? It offers a "Reinstall anyway" option
+   # too, useful for recovering a corrupted binary or a broken install dir.
    .sandbox/host-setup/install-hostmcp.sh
    ```
 
