@@ -100,11 +100,13 @@ state_file_path() {
 # Test Cases / テストケース
 # ========================================
 
-# Test 1: First run (no prior state file) -> silent, but writes a baseline state file
-# テスト1: 初回実行（状態ファイルなし） -> 無出力だが、ベースラインとして状態ファイルは作成される
-test_first_run_is_silent_and_writes_baseline() {
-    info "Test 1: First run is silent and writes a baseline state file"
-    info "テスト1: 初回実行は無出力で、ベースライン状態ファイルを書き込む"
+# Test 1: First run (no prior state file) -> reports the currently-undeclared
+# files (previous set treated as empty) and writes a baseline state file
+# テスト1: 初回実行（状態ファイルなし） -> 前回集合を空として扱い、その時点の
+# 未宣言ファイルを報告したうえで、ベースラインとして状態ファイルを作成する
+test_first_run_reports_existing_and_writes_baseline() {
+    info "Test 1: First run reports existing undeclared files and writes a baseline state file"
+    info "テスト1: 初回実行は既存の未宣言ファイルを報告し、ベースライン状態ファイルを書き込む"
 
     setup
 
@@ -113,10 +115,10 @@ test_first_run_is_silent_and_writes_baseline() {
 
     output=$(run_script)
 
-    if [ -z "$output" ]; then
-        pass "First run produced no output"
+    if echo "$output" | grep -q "api/\.env"; then
+        pass "First run flagged the pre-existing undeclared file"
     else
-        fail "First run should be silent"
+        fail "First run should flag pre-existing undeclared files, not stay silent"
         echo "Output: $output"
     fi
 
@@ -277,7 +279,7 @@ echo "check-undeclared-secrets-diff.sh のテスト"
 echo "=========================================="
 echo ""
 
-test_first_run_is_silent_and_writes_baseline
+test_first_run_reports_existing_and_writes_baseline
 test_unchanged_set_is_silent
 test_new_file_added_notifies
 test_file_removed_is_silent

@@ -540,6 +540,7 @@ See [Customization Guide](docs/customization.md) for how to add your own project
 | **Sandbox protection** | Non-root user, limited sudo, no access to host OS files |
 | **Output masking** | HostMCP automatically masks passwords and API keys in logs |
 | **Startup validation** | Automatically checks secret configuration consistency on every startup. Warns if issues are found |
+| **Undeclared secret detection** | Scans for secret-like files by name pattern and flags any not declared in docker-compose.yml or .claude/settings.json — Claude Code is notified automatically at session start (or check manually) |
 
 → For details and configuration, see [Architecture Details](docs/architecture.md). For startup validation details, see [Reference](docs/reference.md#startup-validation)
 

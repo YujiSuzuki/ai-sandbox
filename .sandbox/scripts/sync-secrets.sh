@@ -95,6 +95,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_PREVIEW_FOOTER="上記をコピーして docker-compose.yml に貼り付けてください"
     MSG_TARGET_FILES="対象ファイル:"
     MSG_COMPOSE_FOUND="検出された docker-compose.yml:"
+    MSG_IGNORED="件のファイルが無視されました (sync-ignore パターンにマッチ)"
 else
     MSG_TITLE="🔧 Secret Config Sync Tool"
     MSG_CHECKING="Checking..."
@@ -129,6 +130,7 @@ else
     MSG_PREVIEW_FOOTER="Copy and paste the above into your docker-compose.yml"
     MSG_TARGET_FILES="Target files:"
     MSG_COMPOSE_FOUND="Detected docker-compose.yml:"
+    MSG_IGNORED="file(s) ignored (matched sync-ignore patterns)"
 fi
 
 # Collect existing compose files
@@ -458,8 +460,7 @@ done <<< "$all_matching_files"
 # Show info about ignored files
 # 無視されたファイルの情報を表示
 if [ ${#ignored_files[@]} -gt 0 ]; then
-    echo "ℹ️  ${#ignored_files[@]} file(s) ignored (matched sync-ignore patterns)"
-    echo "   無視されたファイル (sync-ignore パターンにマッチ): ${#ignored_files[@]} 件"
+    echo "ℹ️  ${#ignored_files[@]} $MSG_IGNORED"
     echo ""
 fi
 
