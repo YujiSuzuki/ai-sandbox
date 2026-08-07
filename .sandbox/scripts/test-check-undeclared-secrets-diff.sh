@@ -243,6 +243,38 @@ test_file_swap_same_count_still_notifies() {
     cleanup
 }
 
+# Test 7: A file covered only by .claude/settings.json (not docker-compose.yml)
+# is reported as newly-undeclared, annotated with a settings.json-covered note
+# テスト7: .claude/settings.jsonのみでカバーされている（docker-compose.ymlには
+# 未宣言の）ファイルは、新規の未宣言として通知され、settings.json注記が付く
+test_claude_settings_only_file_notifies_with_note() {
+    info "Test 7: File covered only by .claude/settings.json notifies with a settings.json-covered note"
+    info "テスト7: .claude/settings.jsonのみでカバーされたファイルはsettings.json注記付きで通知される"
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/ios-app"
+    touch "$TEST_WORKSPACE/ios-app/foo.mobileprovision"
+    cat > "$TEST_WORKSPACE/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "deny": ["Read(**/foo.mobileprovision)"]
+  }
+}
+EOF
+
+    output=$(run_script)
+
+    if echo "$output" | grep -q "ios-app/foo\.mobileprovision.*\(already covered by .claude/settings.json\|\.claude/settings\.json では既にカバー済み\)"; then
+        pass "settings.json-only file notified with the covered note"
+    else
+        fail "settings.json-only file should be notified with the covered note"
+        echo "Output: $output"
+    fi
+
+    cleanup
+}
+
 # Test 6: Script always exits 0
 # テスト6: 常にexit 0
 test_always_exits_zero() {
@@ -284,6 +316,7 @@ test_unchanged_set_is_silent
 test_new_file_added_notifies
 test_file_removed_is_silent
 test_file_swap_same_count_still_notifies
+test_claude_settings_only_file_notifies_with_note
 test_always_exits_zero
 
 echo ""

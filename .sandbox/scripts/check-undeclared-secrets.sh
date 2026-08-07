@@ -1,16 +1,18 @@
 #!/bin/bash
 # check-undeclared-secrets.sh
 # Warn about files/directories that look like secrets by naming convention
-# but are not hidden from AI in EITHER docker-compose.yml (Docker volume
-# mount) OR .claude/settings.json (permissions.deny).
+# but are not hidden from AI via docker-compose.yml (Docker volume mount).
+# That is the only mechanism that actually removes file content from AI's
+# view; .claude/settings.json (permissions.deny) only blocks the Read tool
+# and leaves the file itself visible, so it is NOT treated as "declared"
+# here -- a path covered solely by permissions.deny still shows up as
+# undeclared, annotated with a note that settings.json already covers it.
 #
 # validate-secrets.sh and check-secret-sync.sh only verify configuration
 # that already exists; neither one catches a secret file that was never
 # declared anywhere in the first place. This script fills that gap.
 #
-# This is a heuristic, name-pattern-based scan and WILL produce false
-# positives (e.g. a *.key file that isn't actually sensitive). Run manually
-# and use judgment -- this is intentionally NOT wired into startup.sh.
+# This is a heuristic scan based on filename patterns.
 #
 # Container-only: the docker-compose.yml hidden-file declarations it checks
 # against always target the fixed in-container path /workspace/<path>, not
@@ -20,16 +22,18 @@
 # @env: container
 # ---
 # 名前のパターンから「秘密っぽい」ファイル/ディレクトリを検出し、
-# docker-compose.yml（Dockerボリュームマウント）と 
-# .claude/settings.json（permissions.deny）のどちらにも未宣言のものを警告する。
+# docker-compose.yml（Dockerボリュームマウント）で未宣言のものを警告する。
+# AIの視界からファイル内容そのものを取り除くのはこの仕組みだけであり、
+# .claude/settings.json（permissions.deny）はReadツールを拒否するだけで
+# ファイル自体は見える状態のままなので、ここでは「宣言済み」とは扱わない
+# -- permissions.denyだけでカバーされているパスも未宣言として表示され、
+# settings.jsonで既にカバーされている旨の注記が付く。
 #
 # validate-secrets.sh と check-secret-sync.sh は「既に存在する設定」を
 # 検証するだけで、そもそも一度も宣言されていない秘密ファイルは検出できない。
 # このスクリプトはその抜け穴を埋めるためのもの。
 #
-# これは名前パターンに基づくヒューリスティックな検出であり、誤検知が
-# 発生する（例: 本当は機密でない *.key ファイル）。手動実行専用として
-# 判断を伴って使うこと -- 意図的に startup.sh には組み込んでいない。
+# これは名前パターンに基づくヒューリスティックな検出です。
 #
 # コンテナ専用: 照合対象の docker-compose.yml の隠蔽宣言は常にコンテナ内の
 # 固定パス /workspace/<path> を指しており、リポジトリがホスト上のどこに
@@ -81,24 +85,26 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_TITLE="🕵️  未宣言シークレットのスキャン（手動確認用）"
     MSG_DISCLAIMER="名前パターンによる検出です。1件ずつ内容を確認してください。"
     MSG_NONE_FOUND="疑わしいファイルは見つかりませんでした。"
-    MSG_HEADER="⚠️  以下は秘密っぽい名前ですが、docker-compose.yml にも .claude/settings.json にも未宣言です:"
+    MSG_HEADER="⚠️  以下は秘密っぽい名前ですが、docker-compose.yml には未宣言です:"
     MSG_ACTION="対処方法:"
     MSG_ACTION1="  本当に秘密なら: docker-compose.yml に追記 (.sandbox/scripts/sync-secrets.sh でも可)"
-    MSG_ACTION2="  または: 各プロジェクトの .claude/settings.json の permissions.deny に追記"
+    MSG_ACTION2="  または: 各プロジェクトの .claude/settings.json の permissions.deny に追記（Readツールは防げるが、ファイル自体はAIから見える状態のままです）"
     MSG_ACTION3="  秘密でないなら: このメッセージは無視してよい"
+    MSG_CLAUDE_ONLY_NOTE="（.claude/settings.json では既にカバー済み。ただしdocker-compose.ymlのようにファイル内容自体を隠すものではありません）"
     MSG_IGNORED_HEADER="無視されたファイル (sync-ignore パターンにマッチ):"
-    MSG_CHECKED_SUMMARY="チェック対象: %d 件 / 宣言済み: %d 件 / 無視: %d 件"
+    MSG_CHECKED_SUMMARY="チェック対象: %d 件 / docker-compose宣言済み: %d 件 / うち settings.json のみでカバー(未宣言扱い): %d 件 / 無視: %d 件"
 else
     MSG_TITLE="🕵️  Undeclared Secrets Scan (manual check)"
     MSG_DISCLAIMER="This is a name-pattern detection -- review each one before acting."
     MSG_NONE_FOUND="No suspicious files found."
-    MSG_HEADER="⚠️  These look like secrets by name, but are NOT declared in docker-compose.yml or .claude/settings.json:"
+    MSG_HEADER="⚠️  These look like secrets by name, but are NOT declared in docker-compose.yml:"
     MSG_ACTION="Action:"
     MSG_ACTION1="  If genuinely secret: add to docker-compose.yml (or run .sandbox/scripts/sync-secrets.sh)"
-    MSG_ACTION2="  Or: add to the relevant project's .claude/settings.json permissions.deny"
+    MSG_ACTION2="  Or: add to the relevant project's .claude/settings.json permissions.deny (blocks the Read tool, but the file itself remains visible to AI)"
     MSG_ACTION3="  If not secret: safe to ignore"
+    MSG_CLAUDE_ONLY_NOTE="(already covered by .claude/settings.json -- but that doesn't hide the file's content the way docker-compose.yml does)"
     MSG_IGNORED_HEADER="Ignored files (matched sync-ignore patterns):"
-    MSG_CHECKED_SUMMARY="Checked: %d / Already declared: %d / Ignored: %d"
+    MSG_CHECKED_SUMMARY="Checked: %d / Declared in docker-compose.yml: %d / Of those still undeclared, settings.json-only: %d / Ignored: %d"
 fi
 
 # Name patterns that look like secrets. Modeled on the file types already
@@ -283,6 +289,7 @@ fi
 candidates=$(find_secret_like_candidates | sort -u)
 
 undeclared=()
+claude_only=()
 ignored=()
 declared_count=0
 
@@ -294,12 +301,13 @@ while IFS= read -r path; do
         continue
     fi
 
-    if is_path_hidden_by_compose "$path" || is_path_denied_by_claude_settings "$path"; then
+    if is_path_hidden_by_compose "$path"; then
         declared_count=$((declared_count + 1))
         continue
     fi
 
     undeclared+=("$path")
+    is_path_denied_by_claude_settings "$path" && claude_only+=("$path")
 done <<< "$candidates"
 
 total_checked=$(echo "$candidates" | grep -c . || true)
@@ -309,10 +317,30 @@ for f in "${undeclared[@]}"; do
     undeclared_rel+=("${f#"$WORKSPACE"/}")
 done
 
+claude_only_rel=()
+for f in "${claude_only[@]}"; do
+    claude_only_rel+=("${f#"$WORKSPACE"/}")
+done
+
 ignored_rel=()
 for f in "${ignored[@]}"; do
     ignored_rel+=("${f#"$WORKSPACE"/}")
 done
+
+# Linear membership check against claude_only_rel -- lists here are the
+# handful of secret-like candidates found in one workspace scan, not a
+# hot path, so an O(n) scan per undeclared entry is not worth a lookup
+# table.
+# claude_only_rel に対する線形探索 -- ここでのリストは1回のワークスペース
+# スキャンで見つかった秘密っぽい候補の少数件に限られ、ホットパスではない
+# ため、未宣言1件ごとのO(n)探索でもルックアップ表を用意するほどではない。
+is_claude_only() {
+    local target="$1" p
+    for p in "${claude_only_rel[@]}"; do
+        [ "$p" = "$target" ] && return 0
+    done
+    return 1
+}
 
 # Build a JSON array from a bash array, without the single-empty-string
 # artifact `printf '%s\n' "${empty_arr[@]}" | jq -R .` produces when the
@@ -332,10 +360,11 @@ to_json_array() {
 if [ "$FORMAT" = "json" ]; then
     jq -n \
         --argjson undeclared "$(to_json_array undeclared_rel)" \
+        --argjson claude_only "$(to_json_array claude_only_rel)" \
         --argjson ignored "$(to_json_array ignored_rel)" \
         --argjson declared_count "$declared_count" \
         --argjson total_checked "$total_checked" \
-        '{undeclared: $undeclared, ignored: $ignored, declared_count: $declared_count, total_checked: $total_checked}'
+        '{undeclared: $undeclared, claude_only: $claude_only, ignored: $ignored, declared_count: $declared_count, total_checked: $total_checked}'
     exit 0
 fi
 
@@ -349,7 +378,11 @@ else
     echo "$MSG_HEADER"
     echo ""
     for rel_path in "${undeclared_rel[@]}"; do
-        echo "   📄 $rel_path"
+        if is_claude_only "$rel_path"; then
+            echo "   📄 $rel_path  $MSG_CLAUDE_ONLY_NOTE"
+        else
+            echo "   📄 $rel_path"
+        fi
     done
     echo ""
     echo "$MSG_ACTION"
@@ -368,9 +401,7 @@ fi
 
 echo ""
 # shellcheck disable=SC2059
-printf "${MSG_CHECKED_SUMMARY}\n" "$total_checked" "$declared_count" "${#ignored[@]}"
+printf "${MSG_CHECKED_SUMMARY}\n" "$total_checked" "$declared_count" "${#claude_only[@]}" "${#ignored[@]}"
 print_footer
 
-# Advisory only: always exit 0, false positives are expected by design
-# 助言のみ: 誤検知が前提のため常に exit 0
 exit 0

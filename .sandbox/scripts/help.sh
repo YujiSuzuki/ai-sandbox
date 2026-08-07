@@ -147,7 +147,7 @@ show_workflow_guide() {
   同期のズレを対話的に修正:
     .sandbox/scripts/sync-secrets.sh
 
-  そもそも隠蔽設定に入っていない秘密ファイルがないか確認（誤検知あり、判断を伴う）:
+  そもそも隠蔽設定に入っていない秘密ファイルがないか確認（名前パターンによる検出 -- 対処前に確認が必要）:
     .sandbox/scripts/check-undeclared-secrets.sh
 
 ■ HostMCP（他コンテナとの連携）
@@ -192,7 +192,7 @@ GUIDE_JA
   Interactively fix sync issues:
     .sandbox/scripts/sync-secrets.sh
 
-  Check for secret files never declared anywhere (has false positives, use judgment):
+  Check for secret files never declared anywhere (name-pattern detection -- review before acting):
     .sandbox/scripts/check-undeclared-secrets.sh
 
 ■ HostMCP (Cross-Container Access)

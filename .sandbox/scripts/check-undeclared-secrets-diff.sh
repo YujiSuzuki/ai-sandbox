@@ -42,6 +42,7 @@ else
     prev_undeclared=$(jq -c '.undeclared // []' "$STATE_FILE")
 fi
 curr_undeclared=$(echo "$current_json" | jq -c '.undeclared')
+curr_claude_only=$(echo "$current_json" | jq -c '.claude_only // []')
 
 new_paths_json=$(jq -n --argjson curr "$curr_undeclared" --argjson prev "$prev_undeclared" '$curr - $prev')
 
@@ -55,13 +56,20 @@ new_count=$(echo "$new_paths_json" | jq 'length')
 
 if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     echo "⚠️  前回チェック時にはなかった、未宣言の秘密っぽいファイルが見つかりました:"
+    claude_only_note="（.claude/settings.json では既にカバー済み。ただしdocker-compose.ymlのようにファイル内容自体を隠すものではありません）"
 else
     echo "⚠️  New undeclared secret-like files found since the last check:"
+    claude_only_note="(already covered by .claude/settings.json -- but that doesn't hide the file's content the way docker-compose.yml does)"
 fi
 
-while IFS= read -r path; do
-    echo "   📄 $path"
-done < <(echo "$new_paths_json" | jq -r '.[]')
+while IFS=$'\t' read -r path is_claude_only; do
+    if [ "$is_claude_only" = "true" ]; then
+        echo "   📄 $path  $claude_only_note"
+    else
+        echo "   📄 $path"
+    fi
+done < <(jq -n -r --argjson new "$new_paths_json" --argjson claude_only "$curr_claude_only" \
+    '$new[] as $p | [$p, (($claude_only | index($p)) != null | tostring)] | @tsv')
 
 if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     echo "詳細と対処方法: .sandbox/scripts/check-undeclared-secrets.sh を実行（名前パターンによる検出のため、内容を確認のうえ対処してください）"

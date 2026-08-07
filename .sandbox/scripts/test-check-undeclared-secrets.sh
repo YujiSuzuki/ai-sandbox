@@ -162,11 +162,16 @@ test_undeclared_file_flagged() {
     cleanup
 }
 
-# Test 4: Secret-like file covered only by .claude/settings.json permissions.deny -> not flagged
-# テスト4: .claude/settings.json の permissions.deny のみでカバーされているファイル -> 未宣言扱いされない
-test_declared_in_claude_settings_not_flagged() {
-    info "Test 4: File covered by .claude/settings.json permissions.deny is not flagged"
-    info "テスト4: .claude/settings.jsonのpermissions.denyでカバーされているファイルは未宣言扱いされない"
+# Test 4: Secret-like file covered only by .claude/settings.json permissions.deny
+# -> still flagged as undeclared (docker-compose.yml is the only mechanism
+# that actually hides file content), but annotated with a note that
+# settings.json already covers it.
+# テスト4: .claude/settings.json の permissions.deny のみでカバーされているファイル
+# -> 未宣言として引き続き警告される（ファイル内容自体を隠すのはdocker-compose.ymlのみ）が、
+# settings.jsonで既にカバーされている旨の注記が付く。
+test_claude_settings_only_flagged_with_note() {
+    info "Test 4: File covered only by .claude/settings.json permissions.deny is still flagged, with a note"
+    info "テスト4: .claude/settings.jsonのpermissions.denyのみでカバーされているファイルは未宣言として警告され、注記が付く"
 
     setup
 
@@ -183,10 +188,58 @@ EOF
     output=$(run_script)
 
     if echo "$output" | grep -q "GoogleService-Info.plist"; then
-        fail "File covered by permissions.deny should not be flagged"
-        echo "Output: $output"
+        pass "File covered only by permissions.deny is still flagged as undeclared"
     else
-        pass "File covered by permissions.deny correctly not flagged"
+        fail "File covered only by permissions.deny should still be flagged as undeclared (docker-compose.yml is the only real declaration)"
+        echo "Output: $output"
+    fi
+
+    if echo "$output" | grep -q "GoogleService-Info.plist.*\(already covered by .claude/settings.json\|\.claude/settings\.json では既にカバー済み\)"; then
+        pass "Note correctly indicates settings.json already covers this file"
+    else
+        fail "Should show a note that settings.json already covers this file"
+        echo "Output: $output"
+    fi
+
+    cleanup
+}
+
+# Test: --format json output includes a claude_only field listing paths that
+# are undeclared (not in docker-compose.yml) but covered by .claude/settings.json,
+# while such paths still remain part of the undeclared field itself.
+# テスト: --format json の出力に、未宣言（docker-compose.yml未宣言）だが
+# .claude/settings.jsonではカバーされているパスの一覧 claude_only フィールドが
+# 含まれる。そのようなパスも undeclared フィールド自体には引き続き含まれる。
+test_json_format_includes_claude_only() {
+    info "Test: --format json output includes claude_only field"
+    info "テスト: --format json の出力に claude_only フィールドが含まれる"
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/ios-app"
+    touch "$TEST_WORKSPACE/ios-app/foo.mobileprovision"
+    cat > "$TEST_WORKSPACE/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "deny": ["Read(**/foo.mobileprovision)"]
+  }
+}
+EOF
+
+    json_output=$(WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" --format json)
+
+    if echo "$json_output" | jq -e '.claude_only | index("ios-app/foo.mobileprovision") != null' > /dev/null 2>&1; then
+        pass "claude_only field correctly lists the settings.json-only file"
+    else
+        fail "claude_only field should list ios-app/foo.mobileprovision"
+        echo "JSON: $json_output"
+    fi
+
+    if echo "$json_output" | jq -e '.undeclared | index("ios-app/foo.mobileprovision") != null' > /dev/null 2>&1; then
+        pass "undeclared field still includes the settings.json-only file"
+    else
+        fail "undeclared field should still include ios-app/foo.mobileprovision"
+        echo "JSON: $json_output"
     fi
 
     cleanup
@@ -278,11 +331,17 @@ EOF
 
     output=$(run_script)
 
-    if echo "$output" | grep -q "securenote-api/secrets/jwt\.key"; then
-        fail "File covered by its own directory-scoped deny pattern should not be flagged"
-        echo "Output: $output"
+    # Both files remain undeclared (docker-compose.yml is the only real
+    # declaration mechanism); only the one actually covered by the deny
+    # pattern should carry the settings.json-covered note.
+    # docker-compose.ymlのみが実質的な宣言手段のため、どちらのファイルも
+    # 未宣言のままだが、実際にdenyパターンでカバーされている方だけに
+    # settings.json注記が付くはず。
+    if echo "$output" | grep -q "securenote-api/secrets/jwt\.key.*\(already covered by .claude/settings.json\|\.claude/settings\.json では既にカバー済み\)"; then
+        pass "File covered by its own directory-scoped deny pattern correctly gets the settings.json-covered note"
     else
-        pass "File covered by its own directory-scoped deny pattern correctly not flagged"
+        fail "File covered by its own directory-scoped deny pattern should get the settings.json-covered note"
+        echo "Output: $output"
     fi
 
     if echo "$output" | grep -q "other-app/secrets/jwt\.key"; then
@@ -290,6 +349,13 @@ EOF
     else
         fail "Unrelated file in a different directory should still be flagged (deny pattern must not blanket-match by filename alone)"
         echo "Output: $output"
+    fi
+
+    if echo "$output" | grep "other-app/secrets/jwt\.key" | grep -q "\(already covered by .claude/settings.json\|\.claude/settings\.json では既にカバー済み\)"; then
+        fail "Unrelated file in a different directory should NOT get the note (deny pattern must not blanket-match by filename alone)"
+        echo "Output: $output"
+    else
+        pass "Unrelated file in a different directory correctly has no settings.json-covered note"
     fi
 
     cleanup
@@ -359,11 +425,15 @@ EOF
 
     output=$(run_script)
 
-    if echo "$output" | grep -q "ios-app/foo\.mobileprovision"; then
-        fail "File covered by its own scoped **/dir/pattern deny pattern should not be flagged"
-        echo "Output: $output"
+    # Both files remain undeclared; only the one actually covered by the
+    # deny pattern should carry the settings.json-covered note.
+    # どちらのファイルも未宣言のままだが、実際にdenyパターンでカバーされている
+    # 方だけにsettings.json注記が付くはず。
+    if echo "$output" | grep -q "ios-app/foo\.mobileprovision.*\(already covered by .claude/settings.json\|\.claude/settings\.json では既にカバー済み\)"; then
+        pass "File covered by its own scoped **/dir/pattern deny pattern correctly gets the settings.json-covered note"
     else
-        pass "File covered by its own scoped **/dir/pattern deny pattern correctly not flagged"
+        fail "File covered by its own scoped **/dir/pattern deny pattern should get the settings.json-covered note"
+        echo "Output: $output"
     fi
 
     if echo "$output" | grep -q "other-app/foo\.mobileprovision"; then
@@ -371,6 +441,13 @@ EOF
     else
         fail "Unrelated file in a different directory should still be flagged (**/dir/pattern must not blanket-match by filename alone)"
         echo "Output: $output"
+    fi
+
+    if echo "$output" | grep "other-app/foo\.mobileprovision" | grep -q "\(already covered by .claude/settings.json\|\.claude/settings\.json では既にカバー済み\)"; then
+        fail "Unrelated file in a different directory should NOT get the note (**/dir/pattern must not blanket-match by filename alone)"
+        echo "Output: $output"
+    else
+        pass "Unrelated file in a different directory correctly has no settings.json-covered note"
     fi
 
     cleanup
@@ -430,11 +507,11 @@ EOF
 
     output=$(run_script)
 
-    if echo "$output" | grep -q "someapp/secrets/id_rsa\.pem"; then
-        fail "File under a directory covered by a trailing-slash deny pattern should not be flagged"
-        echo "Output: $output"
+    if echo "$output" | grep -q "someapp/secrets/id_rsa\.pem.*\(already covered by .claude/settings.json\|\.claude/settings\.json では既にカバー済み\)"; then
+        pass "File under a directory covered by a trailing-slash deny pattern correctly gets the settings.json-covered note"
     else
-        pass "File under a directory covered by a trailing-slash deny pattern correctly not flagged"
+        fail "File under a directory covered by a trailing-slash deny pattern should get the settings.json-covered note"
+        echo "Output: $output"
     fi
 
     cleanup
@@ -464,11 +541,11 @@ EOF
 
     output=$(run_script)
 
-    if echo "$output" | grep -q "api/secrets/jwt\.key"; then
-        fail "File under a directory matched by a recursive **/dirname/ deny pattern should not be flagged"
-        echo "Output: $output"
+    if echo "$output" | grep -q "api/secrets/jwt\.key.*\(already covered by .claude/settings.json\|\.claude/settings\.json では既にカバー済み\)"; then
+        pass "File under a directory matched by a recursive **/dirname/ deny pattern correctly gets the settings.json-covered note"
     else
-        pass "File under a directory matched by a recursive **/dirname/ deny pattern correctly not flagged"
+        fail "File under a directory matched by a recursive **/dirname/ deny pattern should get the settings.json-covered note"
+        echo "Output: $output"
     fi
 
     cleanup
@@ -513,7 +590,8 @@ echo ""
 test_no_candidates
 test_declared_in_compose_not_flagged
 test_undeclared_file_flagged
-test_declared_in_claude_settings_not_flagged
+test_claude_settings_only_flagged_with_note
+test_json_format_includes_claude_only
 test_directory_scoped_double_star_not_over_broadened
 test_multi_segment_pattern_not_over_broadened
 test_multi_segment_leading_double_star_not_over_broadened

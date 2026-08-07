@@ -68,7 +68,7 @@ tmpfs:
 
 The secrets don't exist in AI's world — not blocked by a rule, not filtered by a config, just not there. Meanwhile, your app containers mount the real files normally.
 
-To catch misconfigurations, the sandbox runs **startup validation** that checks whether your AI tool's deny rules and your `docker-compose.yml` volume mounts are in sync. If a secret file is blocked in one but not the other, you get a warning before AI sees it. A separate check also detects secret-like files that aren't declared in either config, every time an AI session starts — catching configuration gaps early for files created during day-to-day development. Rather than auto-remediating, the AI asks you how to handle each one: whether it's a secret that needs hiding, or fine to leave as is.
+To catch misconfigurations, the sandbox runs **startup validation** that checks whether your AI tool's deny rules and your `docker-compose.yml` volume mounts are in sync. If a secret file is blocked in one but not the other, you get a warning before AI sees it. A separate check also detects secret-like files that aren't hidden by `docker-compose.yml` (files covered only by an AI tool's deny rules are still flagged, since that only blocks reads and doesn't actually hide the file), every time an AI session starts — catching configuration gaps early for files created during day-to-day development. Rather than auto-remediating, the AI asks you how to handle each one: whether it's a secret that needs hiding, or fine to leave as is.
 
 ### Gap 2: Controlled cross-container access
 
