@@ -97,6 +97,36 @@ Claude Code Sandbox targets something narrower — it restricts Bash command exe
 | Docker AI Sandboxes | Isolates the entire AI agent in a microVM |
 | **AI Sandbox** (this project) | Container isolation plus volume-mount removal of secrets from AI's filesystem |
 
+### Where this project sits among isolation technologies
+
+Cloud-managed AI agent services that need strong isolation actually rely on technologies like these:
+
+- **AWS Bedrock AgentCore Code Interpreter**: spins up a dedicated Firecracker microVM per session — a one-session-one-microVM model ([AWS docs](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/built-in-tools-how-it-works.html))
+- **Google Cloud GKE Agent Sandbox**: kernel-level isolation via gVisor ([Google Cloud docs](https://docs.cloud.google.com/kubernetes-engine/docs/concepts/machine-learning/agent-sandbox))
+
+> **Note:** the AWS/Google services above are cloud APIs / managed services, not local-dev-environment alternatives to this project. They're cited only to show that gVisor/Firecracker are real, production-proven isolation technologies. Product-level comparisons like "can it exclude specific files from sync" or "can it talk to other containers" — the kind we did for [Docker AI Sandboxes](#docker-ai-sandboxes) — don't apply to these cloud services in the first place; they aren't in the same product category.
+
+Firecracker creates a VM: it spins up one lightweight virtual machine (a microVM) and runs the code inside it. gVisor works differently — it doesn't create a VM at all. A userspace program called "Sentry" intercepts the application's system calls and reimplements kernel functionality itself; the process keeps running as an ordinary process on the host. Google's own description, "VM-grade isolation," is about the resulting strength, not the mechanism — worth keeping distinct.
+
+| Approach | Creates a VM? | Runs on |
+|---|---|---|
+| Firecracker (AWS) | Yes (microVM) | Linux (requires KVM) |
+| gVisor (Google) | No (intercepts syscalls) | Linux (as a Docker runtime) |
+
+### Using these locally
+
+Both are OSS, so neither is cloud-exclusive — see above. But how easily each one fits into a local dev environment differs:
+
+- **gVisor**: locally, this is just switching Docker's runtime to `runsc`. That hardens process isolation, an axis orthogonal to this project's volume-mount secret hiding ([Gap 1](#gap-1-filesystem-level-secret-hiding)) — so it layers on top rather than replacing it. Whether it's actually usable on your machine can be checked with [`check-gvisor.sh`](../.sandbox/host-tools/check-gvisor.sh), a read-only script that runs on the host OS via HostMCP.
+- **Firecracker**: also runnable locally, but needs Linux + KVM plus an integration layer like `firecracker-containerd` — not a simple runtime swap. In practice this means picking a different isolation boundary altogether, closer to the [Docker AI Sandboxes](#docker-ai-sandboxes) product category than to a drop-in runtime change.
+
+Whether kernel exploits themselves belong in your threat model also depends on your development machine's OS:
+
+- **Using Docker Desktop / OrbStack / etc. on macOS**: this is easy to overlook, but the container is actually running inside a disposable, lightweight Linux VM, separate from macOS itself. A successful kernel exploit inside the container only takes over that VM — reaching macOS itself (the Darwin kernel) requires a second, separate exploit against the hypervisor (a VM escape). In other words, a Mac development machine already has one extra layer of isolation working in its favor, independent of anything this project configures, purely because of how Docker Desktop/OrbStack itself is built. **So on a Mac dev machine, there's generally little need to add gVisor on top.** (On OrbStack specifically, it currently wouldn't help anyway: `runsc` crashes on startup because OrbStack's VM symlinks `/tmp` to `/private/tmp` and gVisor's chroot safety check rejects that — see [orbstack/orbstack#2362](https://github.com/orbstack/orbstack/issues/2362).)
+- **Running Docker directly on Linux**: a kernel exploit inside a container is an attack on the host OS's kernel itself — nothing else is in the way. This project doesn't pin a runtime in `docker-compose.yml`, so it stays on Docker's default `runc`, which doesn't add a layer that stops that path. **So on Linux dev machines, it's worth considering switching the Docker runtime to `runsc` (gVisor).** As above, this is an orthogonal, additive hardening step relative to secret hiding ([Gap 1](#gap-1-filesystem-level-secret-hiding)); whether it's actually usable can be checked with [`check-gvisor.sh`](../.sandbox/host-tools/check-gvisor.sh).
+
+Given that difference, how much priority you give to adding gVisor-based isolation on top reasonably differs between a Linux and a Mac development machine.
+
 ### Permission layer: composes independently
 
 HostMCP's (this project) controlled cross-container access and Managed Settings deny rules operate at a different layer than isolation boundaries — they gate individual tool calls rather than the process/filesystem boundary — so they compose independently with whichever isolation boundary you chose above.

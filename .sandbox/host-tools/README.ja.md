@@ -38,12 +38,14 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 | `xcode-build.sh` | Xcode ビルド（構文チェック用） | macOS のみ |
 | `xcode-test.sh` | Xcode テスト実行 | macOS のみ |
 | `xcode-archive.sh` | Xcode アーカイブ（TestFlight / App Store 提出用） | macOS のみ |
+| `xcode-install-app.sh` | ビルドして .app を固定ディレクトリ（デフォルト: `~/.hostmcp/Applications`）にコピー | macOS のみ |
 | `copy-credentials.sh` | 認証情報のコピー | クロスプラットフォーム |
 | `mac-memory.sh` | macOS メモリ使用状況確認 | macOS のみ |
 | `run-host-setup-tests.sh` | `.sandbox/host-setup/test-*.sh` を全件(または `--test-script` で1件)実行 | クロスプラットフォーム |
 | `docker-compose-up.sh` | 任意の docker-compose ファイルからコンテナを起動 | クロスプラットフォーム |
 | `docker-compose-down.sh` | 任意の docker-compose ファイルからコンテナを停止 | クロスプラットフォーム |
 | `docker-compose-build.sh` | 任意の docker-compose ファイルからイメージをビルド | クロスプラットフォーム |
+| `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） | クロスプラットフォーム |
 
 ---
 
@@ -97,6 +99,37 @@ UI テストは `--no-skip-ui-tests` を付けると実行されます（デフ�
 ```
 
 コンテナ内から Read ツールで直接読めます。
+
+---
+
+## xcode-install-app.sh
+
+> **macOS 専用。** Xcode がインストールされたホスト OS でのみ動作します。
+
+アプリをビルドし、DerivedData 配下の（予測できないハッシュ付きの）パスから
+固定ディレクトリ ─ デフォルトでは `~/.hostmcp/Applications` ─ へ `.app` をコピーします。DerivedData の
+ハッシュ付きパスを探し当てる代わりに、コンテナ側から常に同じ既知のパスを参照できる
+ようにするためのツールです。
+
+> **上書きの仕組み**: `--dest-dir` は `$HOME` 配下のパスにのみ解決できるようスクリプト側で
+> 強制されており（範囲外は拒否）。その配下のうち、ビルド成果物名（例: `MyApp.app`）と同名の
+> サブフォルダだけが `rsync --delete` で新しいビルドと完全に同期されます（コピー元にない
+> ファイルは削除する）。そのため同じアプリを再インストールする分には新旧が混在せず常に
+> クリーンな状態になりますが、同じ `--dest-dir` を共有する他のアプリには影響しません。
+> なお、同一プロジェクトでもビルド成果物名が変わった場合、旧名のフォルダは削除されずに
+> 残ります。
+
+```bash
+# ビルドして ~/.hostmcp/Applications にインストール
+./xcode-install-app.sh --project /path/to/MyApp.xcodeproj
+
+# インストール先を変更
+./xcode-install-app.sh --scheme MyApp --dest-dir ~/.local/App
+```
+
+変わるのは「コピー後の設置場所」だけで、Xcode 自体のビルド先（DerivedData）には
+手を加えません。後で Xcode を直接開いて同じプロジェクトをビルドしても、通常どおり
+動作します。
 
 ---
 
@@ -170,3 +203,25 @@ AI Sandbox 内からでも、ユーザーに `docker compose` の手動実行を
 起動・停止・ビルドができます。プロジェクト固有の要件（compose ファイルパスの固定化、
 追加の環境変数、ログメッセージ中のサービス名など）がある場合は、このスクリプトを
 コピーして調整してください。
+
+---
+
+## check-gvisor.sh
+
+ホスト OS 上で gVisor（`runsc`）が Docker ランタイムとして使える状態かどうかを確認する、
+読み取り専用の診断スクリプトです。設定変更は一切行いません。
+
+```bash
+./check-gvisor.sh
+```
+
+確認内容:
+- Docker デーモンに到達できるか
+- `runsc` が Docker のランタイムとして既に登録されているか（`docker info` の `Runtimes`）
+- ホスト OS の PATH 上に `runsc` バイナリが見つかるか
+- OS（Linux / macOS）に応じた次のステップの案内
+
+macOS では Docker Desktop / OrbStack がコンテナを独自の Linux VM 内で実行しており、
+この VM 境界によって既に一段階の隔離が働いているため、gVisor の追加導入は基本的に
+不要です（詳細は [docs/comparison.ja.md](../../docs/comparison.ja.md#隔離技術としての位置づけ)
+を参照）。

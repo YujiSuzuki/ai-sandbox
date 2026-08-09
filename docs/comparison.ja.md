@@ -97,6 +97,36 @@ Claude Code Sandboxは対象が異なり、Bashコマンドの実行のみをOS�
 | Docker AI Sandboxes | microVMでAIエージェント全体を隔離 |
 | **AI Sandbox**（本プロジェクト） | コンテナ隔離＋ボリュームマウントでシークレットをAIのファイルシステムから除去 |
 
+### 隔離技術としての位置づけ
+
+強い隔離を必要とするクラウドのマネージドAIエージェントサービスでは、実際に次のような隔離技術が使われている：
+
+- **AWS Bedrock AgentCore Code Interpreter**：セッションごとに専用のFirecracker microVMを起動する「one-session-one-microVM」方式（[AWS公式ドキュメント](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/built-in-tools-how-it-works.html)）
+- **Google Cloud GKE Agent Sandbox**：gVisorによるカーネルレベルの強い隔離（[Google Cloud公式ドキュメント](https://docs.cloud.google.com/kubernetes-engine/docs/concepts/machine-learning/agent-sandbox)）
+
+> **注記**：上記のAWS/Googleのサービスは、いずれもクラウドAPI／マネージドサービスであり、本プロジェクトのようなローカル開発環境の代替候補ではない。ここでは「gVisor/Firecrackerという隔離技術が、実運用で使われている本物の技術である」ことを示す実例として挙げているだけである。ワークスペース全体の同期可否や他コンテナとの通信可否といった、[Docker AI Sandboxesとの比較](#docker-ai-sandboxes)で扱ったような製品レベルの機能比較は、これらクラウドサービスにはそもそも当てはまらない（同じカテゴリの製品ではないため）。
+
+Firecrackerは「軽量な仮想マシン（microVM）を1つ作り、その中でコードを実行する」方式である。gVisorは仕組みが異なり、仮想マシンを作らない：「Sentry」と呼ばれるユーザー空間のプログラムがシステムコールを横取りし、カーネルの機能を自前で再実装することで隔離を実現している（プロセス自体はホストの上で普通に動いている）。Googleが「VM並みの隔離強度」と説明しているのは強度の話であり、方式としては別物である点に注意。
+
+| 方式 | 仮想マシンを作るか | 動作環境 |
+|---|---|---|
+| Firecracker（AWS） | 作る（microVM） | Linux（KVM必須） |
+| gVisor（Google） | 作らない（システムコールの横取り） | Linux（Dockerランタイムとして） |
+
+### ローカル開発環境でどう使えるか
+
+上記の技術はいずれもOSSなので、クラウド事業者専用ではなくローカルでも使える（[前述の通り](#隔離技術としての位置づけ)）。ただし、ローカル開発環境への組み込みやすさは技術ごとに違う：
+
+- **gVisor**：ローカルでもDockerのランタイムを`runsc`に切り替えるだけで使える。これは「プロセス分離の強度」を上げる対策であり、本プロジェクトの「ボリュームマウントによるシークレット隠蔽」（[ギャップ1](#ギャップ1-ファイルシステムレベルのシークレット隠蔽)）とは別軸なので、置き換えではなく**上乗せ**できる。実際に使える状態かどうかは、[`check-gvisor.sh`](../.sandbox/host-tools/check-gvisor.sh)（HostMCP経由でホストOS上で実行する読み取り専用の確認スクリプト）で確認できる。
+- **Firecracker**：ローカルでも動かせるが、Linux + KVMに加えて`firecracker-containerd`のような統合レイヤーが必要で、単純なランタイムの切り替えでは済まない。実質的には「別の隔離境界を丸ごと選ぶ」話になり、[Docker AI Sandboxes](#docker-ai-sandboxes)のような製品カテゴリに近づく。
+
+カーネルエクスプロイトそのものを脅威モデルに含める必要があるかどうかは、開発機のOSによっても事情が変わる：
+
+- **macOS上でDocker Desktop/OrbStackなどを使っている場合**：普段は意識されないことが多いが、コンテナは実際にはmacOS本体とは別の、使い捨ての軽量Linux VMの中で動いている。コンテナ内でのカーネルエクスプロイトが成功しても、直接乗っ取られるのはこのLinux VMまでで、macOS本体(Darwinカーネル)に到達するには、ハイパーバイザー自体の脆弱性を突く別の攻撃(VMエスケープ)がもう一段階必要になる。つまりMac上の開発環境では、本プロジェクトの設定とは無関係に、Docker Desktop/OrbStack自身の実装によって、既に1段階分の追加の隔離が働いている。**そのため、Mac開発機ではgVisorを追加で導入する必要性は基本的に低い。**（さらにOrbStackの場合、現時点ではgVisorのrunscがVM内の`/tmp`シンボリックリンクと衝突して起動時にクラッシュする既知の不具合があり（[orbstack/orbstack#2362](https://github.com/orbstack/orbstack/issues/2362)）、導入自体が実用的でない）
+- **Linux上で直接Dockerを使っている場合**：コンテナ内でのカーネルエクスプロイトは、そのままホストOSのカーネルに対する攻撃になる。本プロジェクトは`docker-compose.yml`でランタイムを特に指定していないため、Docker標準の`runc`のままであり、この経路を止める層がない。**そのため、Linux開発機ではDockerランタイムを`runsc`（gVisor）に切り替えることを検討する価値がある。** 上記の通りシークレット隠蔽（[ギャップ1](#ギャップ1-ファイルシステムレベルのシークレット隠蔽)）とは別軸の上乗せ対策であり、実際に使える状態かどうかは[`check-gvisor.sh`](../.sandbox/host-tools/check-gvisor.sh)で確認できる。
+
+この前提の違いにより、gVisorベースの隔離を追加で検討する優先度は、Linux開発機とMac開発機とで異なる。
+
 ### パーミッション層：独立して併用可能
 
 HostMCP（本プロジェクト）のコンテナ間アクセス制御や、Managed Settingsのdenyルールは、隔離境界とは階層が異なります。ツール呼び出し単位でのアクセス可否を制御するものなので、上記のどの隔離境界を選んでも独立して重ねて使えます。

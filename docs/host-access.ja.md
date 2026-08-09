@@ -103,8 +103,9 @@ host_access:
 | `copy-credentials.sh` | DevContainer プロジェクト間でホームディレクトリをコピー |
 | `mac-memory.sh` | macOS のメモリ使用状況レポート |
 | `run-host-setup-tests.sh` | ホストOS上で `.sandbox/host-setup/test-*.sh` を実行 |
-| `xcode-build.sh` / `xcode-test.sh` / `xcode-archive.sh` | Xcode のビルド・テスト・アーカイブ（macOS専用） |
+| `xcode-build.sh` / `xcode-test.sh` / `xcode-archive.sh` / `xcode-install-app.sh` | Xcode のビルド・テスト・アーカイブ・固定ディレクトリへのインストール（macOS専用） |
 | `docker-compose-up.sh` / `docker-compose-down.sh` / `docker-compose-build.sh` | `docker compose up` / `down` / `build` の汎用ラッパー |
+| `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） |
 
 > 各ツールの詳しい使い方は [.sandbox/host-tools/README.ja.md](../.sandbox/host-tools/README.ja.md) を参照してください。
 

@@ -2,6 +2,8 @@
 
 [English README is here](README.md)
 
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg) ![Requires Docker](https://img.shields.io/badge/requires-Docker-2496ED?logo=docker&logoColor=white) ![Protocol: MCP](https://img.shields.io/badge/protocol-MCP-000000)
+
 
 **AI駆動開発（AI-driven development）** とは、AIコーディングアシスタント（Claude Codeなど）が単なる補完ツールではなく、要件定義・設計・実装・テスト・レビュー・ドキュメント作成といった開発プロセスの中心的な役割を担い、開発を推進していく開発スタイルを指します。
 

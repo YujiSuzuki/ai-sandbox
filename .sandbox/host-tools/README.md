@@ -38,12 +38,14 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `xcode-build.sh` | Xcode build (syntax check) | macOS only |
 | `xcode-test.sh` | Xcode test runner | macOS only |
 | `xcode-archive.sh` | Xcode archive (for TestFlight / App Store submission) | macOS only |
+| `xcode-install-app.sh` | Build and copy the resulting .app to a fixed directory (default: `~/.hostmcp/Applications`) | macOS only |
 | `copy-credentials.sh` | Copy credentials | Cross-platform |
 | `mac-memory.sh` | macOS memory usage report | macOS only |
 | `run-host-setup-tests.sh` | Run all (or one, via `--test-script`) `.sandbox/host-setup/test-*.sh` files | Cross-platform |
 | `docker-compose-up.sh` | Start containers from any docker-compose file | Cross-platform |
 | `docker-compose-down.sh` | Stop containers from any docker-compose file | Cross-platform |
 | `docker-compose-build.sh` | Build images from any docker-compose file | Cross-platform |
+| `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) | Cross-platform |
 
 ---
 
@@ -97,6 +99,37 @@ After running `xcode-build.sh`, any errors are saved to:
 ```
 
 Readable from inside the container with the Read tool.
+
+---
+
+## xcode-install-app.sh
+
+> **macOS only.** Requires Xcode installed on the host OS.
+
+Builds the app and copies the resulting `.app` from Xcode's DerivedData (an
+unpredictable, hashed path) to a fixed directory — `~/.hostmcp/Applications` by default. This gives
+the container a stable, known path to reference instead of having to locate
+DerivedData's hashed build folder.
+
+> **How overwriting works**: `--dest-dir` can only resolve to a path under `$HOME` (enforced
+> by the script — anything outside is rejected). Within that directory, only the subfolder
+> matching the built app's name (e.g. `MyApp.app`) is synced with `rsync --delete` (removing
+> anything not present in the fresh build), so reinstalling the same app never leaves a mix
+> of old and new files behind — other apps sharing the same `--dest-dir` are untouched. Note
+> that if a project's built app name changes between installs, the old, differently-named
+> folder is left behind rather than removed.
+
+```bash
+# Build and install to ~/.hostmcp/Applications
+./xcode-install-app.sh --project /path/to/MyApp.xcodeproj
+
+# Install to a custom directory
+./xcode-install-app.sh --scheme MyApp --dest-dir ~/.local/App
+```
+
+This only affects where the *installed copy* lives — it doesn't change where Xcode
+itself builds (DerivedData), so building the same project from the Xcode GUI later
+still works exactly as normal.
 
 ---
 
@@ -170,3 +203,25 @@ from inside the AI Sandbox even without Docker socket access — no need to ask 
 to run `docker compose` manually. Copy and adapt these scripts if your project needs
 project-specific defaults (fixed compose file path, extra env vars, service names in
 log messages, etc.).
+
+---
+
+## check-gvisor.sh
+
+A read-only diagnostic that checks whether gVisor (`runsc`) is usable as a Docker
+runtime on the host OS. Makes no changes.
+
+```bash
+./check-gvisor.sh
+```
+
+What it checks:
+- Whether the Docker daemon is reachable
+- Whether `runsc` is already registered as a Docker runtime (`docker info`'s `Runtimes`)
+- Whether a `runsc` binary is found on the host PATH
+- OS-specific (Linux / macOS) next-step guidance
+
+On macOS, Docker Desktop / OrbStack already run containers inside their own Linux VM,
+and that VM boundary provides a layer of isolation on its own, so adding gVisor on top
+is generally unnecessary (see [docs/comparison.md](../../docs/comparison.md#where-this-project-sits-among-isolation-technologies)
+for details).
