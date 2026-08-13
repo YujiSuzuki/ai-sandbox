@@ -45,6 +45,7 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `docker-compose-up.sh` | Start containers from any docker-compose file | Cross-platform |
 | `docker-compose-down.sh` | Stop containers from any docker-compose file | Cross-platform |
 | `docker-compose-build.sh` | Build images from any docker-compose file | Cross-platform |
+| `xcodegen-generate.sh` | Generate an `.xcodeproj` from an XcodeGen `project.yml` spec | macOS only |
 | `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) | Cross-platform |
 
 ---
@@ -179,8 +180,6 @@ Exports or imports the home directory (credentials, settings, history) between D
 
 Generic wrappers around `docker compose up -d` / `down` / `build`, executed on the host OS.
 These are sample scripts — a working starting point, not a full solution for every project.
-Adapted from the demo scripts in `ai-sandbox-demo/.sandbox/host-tools/` (`demo-up.sh` /
-`demo-down.sh` / `demo-build.sh`), which hardcode the demo's compose file path.
 
 ```bash
 # Start containers
@@ -203,6 +202,24 @@ from inside the AI Sandbox even without Docker socket access — no need to ask 
 to run `docker compose` manually. Copy and adapt these scripts if your project needs
 project-specific defaults (fixed compose file path, extra env vars, service names in
 log messages, etc.).
+
+---
+
+## xcodegen-generate.sh
+
+> **macOS only.** Requires [XcodeGen](https://github.com/yonaskolb/XcodeGen) on the host: `brew install xcodegen`.
+
+Generates an `.xcodeproj` from an XcodeGen `project.yml` spec.
+
+```bash
+# Generate next to the spec file
+./xcodegen-generate.sh /path/to/project.yml
+
+# Extra xcodegen flags after --
+./xcodegen-generate.sh ./project.yml -- --use-cache
+```
+
+The `.xcodeproj` is written into the same directory as the spec file.
 
 ---
 

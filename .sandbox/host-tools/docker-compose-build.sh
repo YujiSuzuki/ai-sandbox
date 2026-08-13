@@ -1,7 +1,6 @@
 #!/bin/bash
 # docker-compose-build.sh
 # Build images defined in a docker-compose file (host OS execution).
-# Generic version of the sample workflow in ai-sandbox-demo/.sandbox/host-tools/demo-build.sh.
 #
 # Usage:
 #   docker-compose-build.sh <compose-file> [-- <extra docker compose args>]
@@ -11,7 +10,6 @@
 #   docker-compose-build.sh ./docker-compose.yml -- --no-cache
 # ---
 # 指定した docker-compose ファイルのイメージをホスト OS 上でビルドする汎用スクリプトです。
-# ai-sandbox-demo/.sandbox/host-tools/demo-build.sh を汎用化したサンプルです。
 
 set -e
 

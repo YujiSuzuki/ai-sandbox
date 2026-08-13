@@ -45,6 +45,7 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 | `docker-compose-up.sh` | 任意の docker-compose ファイルからコンテナを起動 | クロスプラットフォーム |
 | `docker-compose-down.sh` | 任意の docker-compose ファイルからコンテナを停止 | クロスプラットフォーム |
 | `docker-compose-build.sh` | 任意の docker-compose ファイルからイメージをビルド | クロスプラットフォーム |
+| `xcodegen-generate.sh` | XcodeGen の `project.yml` から `.xcodeproj` を生成 | macOS のみ |
 | `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） | クロスプラットフォーム |
 
 ---
@@ -179,8 +180,6 @@ UI テストは `--no-skip-ui-tests` を付けると実行されます（デフ�
 
 `docker compose up -d` / `down` / `build` をホスト OS 上で実行する汎用ラッパーです。
 これはサンプルスクリプトであり、あらゆるプロジェクトに対応する完成品ではなく、出発点として用意しています。
-`ai-sandbox-demo/.sandbox/host-tools/` にある `demo-up.sh` / `demo-down.sh` / `demo-build.sh`
-（compose ファイルのパスが固定されているデモ専用版）を汎用化したものです。
 
 ```bash
 # コンテナ起動
@@ -203,6 +202,24 @@ AI Sandbox 内からでも、ユーザーに `docker compose` の手動実行を
 起動・停止・ビルドができます。プロジェクト固有の要件（compose ファイルパスの固定化、
 追加の環境変数、ログメッセージ中のサービス名など）がある場合は、このスクリプトを
 コピーして調整してください。
+
+---
+
+## xcodegen-generate.sh
+
+> **macOS 専用。** ホスト側に [XcodeGen](https://github.com/yonaskolb/XcodeGen) が必要です: `brew install xcodegen`
+
+XcodeGen の `project.yml` から `.xcodeproj` を生成します。
+
+```bash
+# spec ファイルと同じディレクトリに生成
+./xcodegen-generate.sh /path/to/project.yml
+
+# -- の後に xcodegen の追加オプションを渡せる
+./xcodegen-generate.sh ./project.yml -- --use-cache
+```
+
+`.xcodeproj` は spec ファイルと同じディレクトリに生成されます。
 
 ---
 

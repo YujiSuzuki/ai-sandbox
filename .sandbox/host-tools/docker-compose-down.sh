@@ -1,7 +1,6 @@
 #!/bin/bash
 # docker-compose-down.sh
 # Stop containers defined in a docker-compose file (host OS execution).
-# Generic version of the sample workflow in ai-sandbox-demo/.sandbox/host-tools/demo-down.sh.
 #
 # Usage:
 #   docker-compose-down.sh <compose-file> [-- <extra docker compose args>]
@@ -11,7 +10,6 @@
 #   docker-compose-down.sh ./docker-compose.yml -- --volumes
 # ---
 # 指定した docker-compose ファイルのコンテナをホスト OS 上で停止する汎用スクリプトです。
-# ai-sandbox-demo/.sandbox/host-tools/demo-down.sh を汎用化したサンプルです。
 
 set -e
 

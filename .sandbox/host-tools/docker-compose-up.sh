@@ -1,7 +1,6 @@
 #!/bin/bash
 # docker-compose-up.sh
 # Start containers defined in a docker-compose file (host OS execution).
-# Generic version of the sample workflow in ai-sandbox-demo/.sandbox/host-tools/demo-up.sh.
 #
 # Usage:
 #   docker-compose-up.sh <compose-file> [-- <extra docker compose args>]
@@ -11,7 +10,6 @@
 #   docker-compose-up.sh ./docker-compose.yml -- --build
 # ---
 # 指定した docker-compose ファイルのコンテナをホスト OS 上で起動する汎用スクリプトです。
-# ai-sandbox-demo/.sandbox/host-tools/demo-up.sh を汎用化したサンプルです。
 
 set -e
 
