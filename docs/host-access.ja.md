@@ -78,6 +78,15 @@ HostMCP サーバー（ホスト OS）
 - **`_common/`** — 全プロジェクトで共有されるツール（`common: true` で有効化）
 - **`<project-id>/`** — ワークスペースパスから自動生成され、プロジェクトごとにツールを隔離
 
+### `.project` メタデータファイル
+
+`.project` は、各 `<project-id>/` ディレクトリに書き込まれる JSON ファイルです（内容は `{"workspace": "<ホストOS上の絶対パス>"}`）。承認済みツールはコンテナの `/workspace` マウントの外側にあたるホストOS上の `~/.hostmcp/host-tools/<project-id>/` から実行されるため、ツール自身は自分がどのワークスペースに属しているかを知る手段を持ちません。特に同一ホスト上で複数の AI Sandbox プロジェクトを承認している場合、この区別が必要になります。
+
+- **書き込まれるタイミング:** `hostmcp tools sync` を実行するたび（ツールの中身に変更がなくても）。承認済みディレクトリを準備した直後、ツールの差分比較より前に毎回上書きされます。
+- **読み取るツール:** `--workspace <path>` オプションを持つツール（`xcode-build.sh`、`xcode-test.sh`、`xcode-archive.sh`、`xcode-install-app.sh`、`run-host-setup-tests.sh` など）。`--workspace` を省略すると、これらのツールは自分と同じディレクトリの `.project` を探し、その `workspace` の値から `WORKSPACE_DIR` を自動解決します。`--workspace` を明示すればこの自動解決より優先されます。
+- **`docker-compose-up.sh` / `-down.sh` / `-build.sh` も読み取る:** これらは compose ファイルのパスを単純な引数として受け取ります。与えられたパスがそのまま見つからない場合（`mainte/app/docker-compose.yml` のような、コンテナ内からしか見えないワークスペース相対パスを渡した場合など）、`.project` の `workspace` の値と結合して再度探してから失敗を報告します。ホストOS上の絶対パスを渡した場合は `.project` の有無に関わらず常にそのまま使われます。
+- このファイルはホストOS側（`~/.hostmcp/...`）にのみ存在します。`/workspace` ボリュームマウントの範囲外にあるため、コンテナ内からは見えません。
+
 ### 設定
 
 ```yaml
