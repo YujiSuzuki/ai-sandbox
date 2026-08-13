@@ -1,6 +1,31 @@
 #!/bin/bash
 # run-host-setup-tests.sh
 # @timeout: 300
+# Run .sandbox/host-setup/test-*.sh on the host OS (generic runner).
+# Invoked from the container via HostMCP's run_host_tool.
+#
+# Tests under .sandbox/host-setup/ need a real network, real go/curl, and real
+# shell rc files, so they can't run inside the AI Sandbox container (each test
+# script itself guards on the presence of /workspace). This wrapper delegates
+# execution to the host OS via HostMCP. By default it runs every test-*.sh
+# under host-setup/; --test-script narrows it to one.
+#
+# Usage:
+#   ./run-host-setup-tests.sh
+#   ./run-host-setup-tests.sh --test-script test-install-hostmcp.sh
+#   ./run-host-setup-tests.sh --workspace <path>
+#
+# Options:
+#   --test-script <name>  Run only this specific test file under host-setup/ (default: all)
+#   --workspace <path>    Workspace root path (if not auto-detected via .project)
+#   --help, -h             Show this help
+#
+# Command-line usage example
+# hostmcp client --url http://host.docker.internal:18080 host-tools run run-host-setup-tests.sh
+
+# ---
+# run-host-setup-tests.sh
+# @timeout: 300
 # .sandbox/host-setup/test-*.sh をホスト OS 上で実行する（汎用ランナー）。
 # HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #

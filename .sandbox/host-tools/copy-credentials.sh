@@ -381,20 +381,20 @@ check_project_name_conflict() {
 
     local metadata_file="$backup_dir/.export-metadata"
 
-    # メタデータファイルがなければスキップ
+    # Skip if there's no metadata file / メタデータファイルがなければスキップ
     if [ ! -f "$metadata_file" ]; then
         return 0
     fi
 
-    # ソースプロジェクト名を取得
+    # Get the source project name / ソースプロジェクト名を取得
     local source_project
     source_project=$(grep '"source_project"' "$metadata_file" | sed 's/.*: *"\([^"]*\)".*/\1/')
 
-    # ターゲットプロジェクト名を取得
+    # Get the target project name / ターゲットプロジェクト名を取得
     local target_project
     target_project=$(get_project_name "$yaml_file")
 
-    # 同じ場合は警告
+    # Warn if they're the same / 同じ場合は警告
     if [ -n "$source_project" ] && [ -n "$target_project" ] && [ "$source_project" = "$target_project" ]; then
         echo ""
         echo -e "${YELLOW}========================================"
@@ -412,7 +412,7 @@ check_project_name_conflict() {
         echo "コピーしたワークスペースの場合は、COMPOSE_PROJECT_NAME を設定してください:"
         echo ""
 
-        # 環境タイプに応じたパスを表示
+        # Show the path for the detected environment type / 環境タイプに応じたパスを表示
         local yaml_dir
         yaml_dir="$(dirname "$yaml_file")"
         echo "  echo 'COMPOSE_PROJECT_NAME=new-project-name' >> $yaml_dir/.env"

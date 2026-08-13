@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Copies Claude local data (memory, plans, optionally settings) to a destination directory.
 # @advertise: true
+# ---
+# Claude のローカルデータ（memory、plans、任意で settings）を指定先ディレクトリへコピーする。
 
 set -euo pipefail
 

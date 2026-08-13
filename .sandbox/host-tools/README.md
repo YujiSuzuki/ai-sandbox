@@ -89,6 +89,16 @@ Use `--test-target` to specify a test target explicitly.
 ./xcode-test.sh --test-target MyAppIntegrationTests --only MyFeatureTests
 ```
 
+Recommended: wrap tests in an outer struct named after the file, with inner nested structs. This keeps the struct name matching the file name (so `--only` works as expected) while still letting you group related tests:
+
+```swift
+// FeatureTests.swift
+struct FeatureTests {
+    struct Loading { /* @Test funcs */ }
+    struct Saving { /* @Test funcs */ }
+}
+```
+
 UI tests are skipped by default. Pass `--no-skip-ui-tests` to include them.
 
 ### Checking build errors

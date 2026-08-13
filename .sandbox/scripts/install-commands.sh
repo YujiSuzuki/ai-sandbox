@@ -82,7 +82,7 @@ msg() {
     fi
 }
 
-# ─── Help ─────────────────────────────────────────────────────────
+# ─── Help / ヘルプ ─────────────────────────────────────────────────────────
 
 show_help() {
     if [[ "$LANG_JA" == true ]]; then
@@ -122,7 +122,7 @@ HELP_EN
     fi
 }
 
-# ─── List available commands ──────────────────────────────────────
+# ─── List available commands / 利用可能なコマンド一覧 ──────────────────────────────────────
 
 list_commands() {
     if [[ ! -d "$COMMANDS_SRC_DIR" ]]; then
@@ -164,7 +164,7 @@ list_commands() {
         "全てインストール: .sandbox/scripts/install-commands.sh --all"
 }
 
-# ─── Front matter helpers ─────────────────────────────────────────
+# ─── Front matter helpers / フロントマター・ヘルパー ─────────────────────────────────────────
 
 # Extract a field from YAML front matter
 # Usage: extract_field "file.md" "description"
@@ -205,7 +205,7 @@ localize_file() {
     sed '/^description-ja:/d' "$file"
 }
 
-# ─── Install commands ─────────────────────────────────────────────
+# ─── Install commands / コマンドのインストール ─────────────────────────────────────────────
 
 install_command() {
     local name="$1"
@@ -272,7 +272,7 @@ install_all() {
         "新しいコマンドを使うには Claude Code を再起動してください。"
 }
 
-# ─── Uninstall ────────────────────────────────────────────────────
+# ─── Uninstall / アンインストール ────────────────────────────────────────────────────
 
 uninstall_commands() {
     if [[ ! -d "$COMMANDS_DIR" ]]; then
@@ -306,7 +306,7 @@ uninstall_commands() {
     fi
 }
 
-# ─── Interactive selection ────────────────────────────────────────
+# ─── Interactive selection / 対話選択 ────────────────────────────────────────
 
 interactive_select() {
     local files=()
@@ -363,7 +363,7 @@ interactive_select() {
     fi
 }
 
-# ─── Main ─────────────────────────────────────────────────────────
+# ─── Main / メイン ─────────────────────────────────────────────────────────
 
 main() {
     if [[ $# -eq 0 ]]; then

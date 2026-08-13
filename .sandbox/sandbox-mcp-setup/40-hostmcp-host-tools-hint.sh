@@ -24,6 +24,8 @@ CHECK_TIMEOUT_SECS="${CHECK_TIMEOUT_SECS:-3}"
 
 # Bash glob expansion sorts matches alphabetically, so tools[0] is a stable,
 # deterministic "representative" example, not an arbitrary filesystem order.
+# Bashのglob展開はマッチ結果をアルファベット順に並べるため、tools[0]はファイル
+# システムの並び順に依存しない、安定した「代表例」として使える。
 shopt -s nullglob
 tools=("$HOST_TOOLS_DIR"/*.sh)
 shopt -u nullglob
@@ -39,11 +41,16 @@ case "$status" in
         # 1=not registered, 2=registered but offline, 124=timed out (e.g. a
         # stuck VS Code port forward) -- all three mean host-tools can't be
         # used via run_host_tool right now, so the hint applies to all.
+        # 1=未登録、2=登録済みだがオフライン、124=タイムアウト（VS Codeのポート
+        # フォワードが詰まっている場合など）-- いずれもrun_host_toolでhost-tools
+        # を使えない状態なので、ヒントはこの3つ全てに適用する。
         echo "HostMCP is not connected: .sandbox/host-tools/ has ${#tools[@]} script(s) (e.g. $(basename "${tools[0]}")) that require it to run. Run .sandbox/scripts/setup-hostmcp.sh, and make sure \`hostmcp serve\` is running on the host OS."
         ;;
     *)
         # 0=connected, or any unexpected code -- stay silent rather than
         # guess at an unknown state.
+        # 0=接続済み、またはそれ以外の未知のコード -- 不明な状態を推測するより
+        # 何も出力しない方が安全。
         ;;
 esac
 

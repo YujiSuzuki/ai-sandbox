@@ -22,7 +22,7 @@ else
     LANG_JA=false
 fi
 
-# ─── Raw script list mode (--list) ───────────────────────────────
+# ─── Raw script list mode (--list) / 生スクリプト一覧モード（--list） ───────────────────────────────
 
 show_script_list() {
     local msg_title msg_utility msg_test msg_container msg_host msg_show_tests
@@ -121,7 +121,7 @@ show_script_list() {
     echo ""
 }
 
-# ─── Default: workflow guide ─────────────────────────────────────
+# ─── Default: workflow guide / デフォルト: ワークフローガイド ─────────────────────────────────────
 
 show_workflow_guide() {
     if [[ "$LANG_JA" == true ]]; then
@@ -217,7 +217,7 @@ GUIDE_EN
     fi
 }
 
-# ─── Main ────────────────────────────────────────────────────────
+# ─── Main / メイン ────────────────────────────────────────────────────────
 
 case "${1:-}" in
     --list)

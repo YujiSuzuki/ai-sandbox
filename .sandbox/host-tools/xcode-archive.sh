@@ -1,5 +1,30 @@
 #!/bin/bash
 # xcode-archive.sh
+# Archive an Xcode project on the host OS (macOS).
+# Open the resulting .xcarchive in Xcode Organizer (Window -> Organizer) and
+# use the "Distribute App" button to upload it to TestFlight / App Store.
+# Invoked from the container via HostMCP's run_host_tool.
+#
+# Usage:
+#   ./xcode-archive.sh [options]
+#
+# Options:
+#   --project <path>         Path to the .xcodeproj (auto-detected under WORKSPACE_DIR if omitted)
+#   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
+#   --archive-path <path>    Output path for the .xcarchive (default: ~/Library/Developer/Xcode/Archives/<date>/<Scheme> <date>.xcarchive)
+#   --workspace <path>       Workspace root path (if not auto-detected via .project)
+#   --help, -h               Show this help
+#
+# After completion:
+#   Open Xcode's Window -> Organizer to see the archive.
+#   Use "Distribute App" -> "TestFlight & App Store" -> "Upload" to upload it.
+#
+# Examples:
+#   ./xcode-archive.sh
+#   ./xcode-archive.sh --archive-path ~/Desktop/MyApp.xcarchive
+
+# ---
+# xcode-archive.sh
 # Xcode アーカイブをホスト OS（macOS）上で実行する。
 # 生成した .xcarchive は Xcode Organizer（Window → Organizer）で開いて
 # 「Distribute App」ボタンから TestFlight / App Store にアップロードできる。
@@ -26,7 +51,7 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────
-# カラー出力
+# Color output / カラー出力
 # ────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -40,7 +65,7 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 header()  { echo -e "${BLUE}=== $* ===${NC}"; }
 
 # ────────────────────────────────────────────
-# デフォルト値
+# Defaults / デフォルト値
 # ────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -56,7 +81,7 @@ ARCHIVE_PATH=""
 ARCHIVE_DATE=$(date "+%Y-%m-%d")
 
 # ────────────────────────────────────────────
-# 引数パース
+# Argument parsing / 引数パース
 # ────────────────────────────────────────────
 show_help() {
     sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
@@ -84,7 +109,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# ワークスペースパスの確定
+# Resolve the workspace path / ワークスペースパスの確定
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
     error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
@@ -118,7 +143,7 @@ if [ -z "$ARCHIVE_PATH" ]; then
 fi
 
 # ────────────────────────────────────────────
-# 事前チェック
+# Preflight checks / 事前チェック
 # ────────────────────────────────────────────
 if ! command -v xcodebuild &>/dev/null; then
     error "xcodebuild が見つかりません。Xcode がインストールされているか確認してください。"
@@ -140,7 +165,7 @@ if [ -e "$ARCHIVE_PATH" ]; then
 fi
 
 # ────────────────────────────────────────────
-# xcodebuild コマンド組み立て
+# Build the xcodebuild command / xcodebuild コマンド組み立て
 # ────────────────────────────────────────────
 header "Xcode アーカイブ実行"
 echo "  プロジェクト    : ${XCODEPROJ}"
@@ -160,7 +185,7 @@ CMD=(
 )
 
 # ────────────────────────────────────────────
-# アーカイブ実行
+# Run archive / アーカイブ実行
 # ────────────────────────────────────────────
 LOG_FILE="/tmp/xcode-archive-last.log"
 info "ログ保存先: ${LOG_FILE}"
@@ -172,7 +197,7 @@ EXIT_CODE=$?
 set -e
 
 # ────────────────────────────────────────────
-# 結果表示
+# Show results / 結果表示
 # ────────────────────────────────────────────
 echo ""
 if [ $EXIT_CODE -eq 0 ]; then

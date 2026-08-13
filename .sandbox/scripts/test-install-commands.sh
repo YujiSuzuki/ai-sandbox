@@ -90,7 +90,7 @@ run_script() {
     "$TEST_DIR/.sandbox/scripts/install-commands.sh" "$@"
 }
 
-# ─── Tests ────────────────────────────────────────────────────
+# ─── Tests / テスト ────────────────────────────────────────────────────
 
 # Test 1: --help exits 0 and shows expected options
 # テスト1: --help が exit 0 で終了し、期待するオプションを表示するか

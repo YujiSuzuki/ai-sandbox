@@ -89,6 +89,16 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 ./xcode-test.sh --test-target MyAppIntegrationTests --only MyFeatureTests
 ```
 
+推奨: ファイル名と同名の外枠 struct を作り、内部の struct を入れ子にする方法です。struct 名がファイル名と一致するため `--only` が期待通りに動作しつつ、関連するテストをグループ化できます。
+
+```swift
+// FeatureTests.swift
+struct FeatureTests {
+    struct Loading { /* @Test 関数 */ }
+    struct Saving { /* @Test 関数 */ }
+}
+```
+
 UI テストは `--no-skip-ui-tests` を付けると実行されます（デフォルトはスキップ）。
 
 ### ビルドエラーの確認

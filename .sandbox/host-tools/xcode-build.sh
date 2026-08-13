@@ -1,5 +1,25 @@
 #!/bin/bash
 # xcode-build.sh
+# Build an Xcode project on the host OS (macOS) (for syntax checking, no tests).
+# Invoked from the container via HostMCP's run_host_tool.
+#
+# Usage:
+#   ./xcode-build.sh [options]
+#
+# Options:
+#   --project <path>         Path to the .xcodeproj (auto-detected under WORKSPACE_DIR if omitted)
+#   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
+#   --destination <dest>     xcodebuild destination (default: iOS Simulator, latest iPhone)
+#   --workspace <path>       Workspace root path (if not auto-detected via .project)
+#   --help, -h               Show this help
+#
+# Examples:
+#   ./xcode-build.sh
+#   ./xcode-build.sh --project /path/to/MyApp.xcodeproj
+#   ./xcode-build.sh --scheme MyApp
+
+# ---
+# xcode-build.sh
 # Xcode ビルドをホスト OS（macOS）上で実行する（テスト不要の構文チェック用）。
 # HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #
@@ -21,7 +41,7 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────
-# カラー出力
+# Color output / カラー出力
 # ────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -35,7 +55,7 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 header()  { echo -e "${BLUE}=== $* ===${NC}"; }
 
 # ────────────────────────────────────────────
-# デフォルト値
+# Defaults / デフォルト値
 # ────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -50,7 +70,7 @@ SCHEME=""
 DESTINATION=""
 
 # ────────────────────────────────────────────
-# 引数パース
+# Argument parsing / 引数パース
 # ────────────────────────────────────────────
 show_help() {
     sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
@@ -78,7 +98,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# ワークスペースパスの確定
+# Resolve the workspace path / ワークスペースパスの確定
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
     error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
@@ -107,7 +127,7 @@ if [ -z "$SCHEME" ]; then
 fi
 
 # ────────────────────────────────────────────
-# 事前チェック
+# Preflight checks / 事前チェック
 # ────────────────────────────────────────────
 if ! command -v xcodebuild &>/dev/null; then
     error "xcodebuild が見つかりません。Xcode がインストールされているか確認してください。"
@@ -143,7 +163,7 @@ if [ -z "$DESTINATION" ]; then
 fi
 
 # ────────────────────────────────────────────
-# xcodebuild コマンド組み立て
+# Build the xcodebuild command / xcodebuild コマンド組み立て
 # ────────────────────────────────────────────
 header "Xcode ビルド実行"
 echo "  プロジェクト : ${XCODEPROJ}"
@@ -159,7 +179,7 @@ CMD=(
 )
 
 # ────────────────────────────────────────────
-# ビルド実行
+# Run build / ビルド実行
 # ────────────────────────────────────────────
 LOG_FILE="${WORKSPACE_DIR}/tmp/xcode-build-last.log"
 mkdir -p "${WORKSPACE_DIR}/tmp"
@@ -172,7 +192,7 @@ EXIT_CODE=$?
 set -e
 
 # ────────────────────────────────────────────
-# 結果表示
+# Show results / 結果表示
 # ────────────────────────────────────────────
 ERROR_SUMMARY="${WORKSPACE_DIR}/tmp/xcode-build-errors.txt"
 mkdir -p "$(dirname "$ERROR_SUMMARY")"
@@ -188,13 +208,13 @@ if [ $EXIT_CODE -eq 0 ]; then
     info "サマリー: ${ERROR_SUMMARY}"
 else
     header "ビルド失敗"
-    # エラー行を抽出してファイルに保存（コンテナからも読める）
+    # Extract error lines and save to a file (readable from the container too) / エラー行を抽出してファイルに保存（コンテナからも読める）
     {
         echo "BUILD FAILED (exit code: ${EXIT_CODE})"
         echo "--- エラー一覧 ---"
         grep -E "error:" "$LOG_FILE" | head -60
     } > "$ERROR_SUMMARY" 2>/dev/null || true
-    # 標準出力には先頭20行だけ表示
+    # Show only the first 20 lines on stdout / 標準出力には先頭20行だけ表示
     head -20 "$ERROR_SUMMARY" 2>/dev/null || true
     echo ""
     error "BUILD FAILED (exit code: ${EXIT_CODE})"

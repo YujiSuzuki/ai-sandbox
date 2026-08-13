@@ -361,7 +361,7 @@ while IFS= read -r file; do
 done <<< "$all_matching_files"
 
 # ============================================================
-# Quiet mode: only show if missing files
+# Quiet mode: only show if missing files / クワイエットモード: 未設定ファイルがある場合のみ表示
 # ============================================================
 if is_quiet; then
     if [ ${#missing_files[@]} -gt 0 ]; then
@@ -376,7 +376,7 @@ if is_quiet; then
 fi
 
 # ============================================================
-# Summary mode: problem explanation + action required
+# Summary mode: problem explanation + action required / サマリーモード: 問題の説明と対応が必要な内容を表示
 # ============================================================
 if is_summary; then
     if [ ${#missing_files[@]} -gt 0 ]; then
@@ -406,7 +406,7 @@ if is_summary; then
 fi
 
 # ============================================================
-# Verbose mode: full output
+# Verbose mode: full output / 詳細モード: 全出力を表示
 # ============================================================
 print_title "$MSG_TITLE"
 

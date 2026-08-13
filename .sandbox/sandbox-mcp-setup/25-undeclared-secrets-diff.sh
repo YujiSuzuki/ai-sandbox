@@ -12,6 +12,16 @@
 # sandbox-mcp's runSetupScripts() gives each setup script a 5s budget total
 # and discards output on timeout or non-zero exit -- so the timeout below is
 # capped well under that (same pattern as 40-hostmcp-host-tools-hint.sh).
+# ---
+# 新たに現れた未申告のシークレットらしきファイル（.sandbox/scripts/check-undeclared-secrets.sh
+# 参照）を、MCP起動時コンテキストとして表示する。誰かが手動でスキャンを実行する
+# のを待つのではなく、AIが自発的に指摘できるようにするため。何も新規検出が
+# なければ（初回実行時を含め）何も出力しない（check-undeclared-secrets-diff.sh 参照）。
+#
+# sandbox-mcpのrunSetupScripts()は各セットアップスクリプトに合計5秒のタイム
+# アウトを設けており、タイムアウトや異常終了時は出力を握りつぶす仕様のため、
+# 下のタイムアウト値はそれより十分短く設定してある（40-hostmcp-host-tools-hint.sh
+# と同じパターン）。
 
 WORKSPACE="${WORKSPACE:-/workspace}"
 DIFF_SCRIPT="${DIFF_SCRIPT:-$WORKSPACE/.sandbox/scripts/check-undeclared-secrets-diff.sh}"

@@ -1,5 +1,21 @@
 #!/bin/bash
 # mac-memory.sh
+# Show macOS memory usage.
+# Invoked from the container via HostMCP's run_host_tool.
+#
+# Usage:
+#   ./mac-memory.sh [options]
+#
+# Options:
+#   --top N     Show the top N processes by memory usage (default: 10)
+#   --help, -h  Show this help
+#
+# Examples:
+#   ./mac-memory.sh
+#   ./mac-memory.sh --top 5
+
+# ---
+# mac-memory.sh
 # macOS のメモリ使用状況を表示する。
 # HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #
@@ -39,7 +55,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ────────────────────────────────────────────
-# メモリプレッシャー（normal / warning / critical）
+# Memory pressure (normal / warning / critical) / メモリプレッシャー（normal / warning / critical）
 # ────────────────────────────────────────────
 header "メモリプレッシャー"
 PRESSURE=$(memory_pressure 2>/dev/null | grep "System-wide memory free percentage" | head -1 || true)
@@ -48,7 +64,7 @@ LEVEL=$(memory_pressure 2>/dev/null | grep "The system memory pressure" | head -
 [ -n "$PRESSURE" ] && echo "  $PRESSURE"
 
 # ────────────────────────────────────────────
-# 物理メモリ合計 / vm_stat
+# Total physical memory / vm_stat / 物理メモリ合計 / vm_stat
 # ────────────────────────────────────────────
 header "物理メモリ"
 TOTAL_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
@@ -87,7 +103,7 @@ echo "  使用中     : ${USED_MB} MB  (active: ${ACTIVE_MB} + wired: ${WIRED_MB
 echo "  非アクティブ: ${INACTIVE_MB} MB"
 
 # ────────────────────────────────────────────
-# シミュレーター プロセス
+# Simulator processes / シミュレーター プロセス
 # ────────────────────────────────────────────
 header "起動中のシミュレーター"
 SIM_PROCS=$(ps aux 2>/dev/null | grep -i "Simulator\|simctl\|CoreSimulator" | grep -v grep || true)
@@ -98,7 +114,7 @@ else
 fi
 
 # ────────────────────────────────────────────
-# メモリ使用量上位プロセス
+# Top processes by memory usage / メモリ使用量上位プロセス
 # ────────────────────────────────────────────
 header "メモリ使用量 上位 ${TOP_N} プロセス"
 ps aux 2>/dev/null \

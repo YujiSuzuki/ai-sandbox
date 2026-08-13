@@ -256,7 +256,7 @@ total_secrets=0
 [ -n "$secret_dirs" ] && total_secrets=$((total_secrets + $(echo "$secret_dirs" | grep -c . || true)))
 
 # ============================================================
-# Quiet mode: only show errors
+# Quiet mode: only show errors / クワイエットモード: エラーのみ表示
 # ============================================================
 if is_quiet; then
     if [ ${#ERRORS[@]} -gt 0 ]; then
@@ -269,7 +269,7 @@ if is_quiet; then
 fi
 
 # ============================================================
-# Summary mode: show errors + action required
+# Summary mode: show errors + action required / サマリーモード: エラーと対応が必要な内容を表示
 # ============================================================
 if is_summary; then
     if [ ${#ERRORS[@]} -gt 0 ]; then
@@ -291,7 +291,7 @@ if is_summary; then
 fi
 
 # ============================================================
-# Verbose mode: full output
+# Verbose mode: full output / 詳細モード: 全出力を表示
 # ============================================================
 print_title "$MSG_TITLE"
 

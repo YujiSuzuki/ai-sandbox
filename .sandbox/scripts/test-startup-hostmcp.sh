@@ -52,7 +52,7 @@ TESTS_FAILED=0
 pass() { echo -e "${GREEN}✅ $1${NC}"; TESTS_PASSED=$((TESTS_PASSED + 1)); }
 fail() { echo -e "${RED}❌ $1${NC}"; TESTS_FAILED=$((TESTS_FAILED + 1)); }
 
-# ─── Setup / Cleanup ────────────────────────────────────────
+# ─── Setup / Cleanup / セットアップ / クリーンアップ ────────────────────────────────────────
 
 TEST_DIR=""
 
@@ -137,7 +137,7 @@ STUB
     chmod +x "$TEST_DIR/workspace/.sandbox/scripts/setup-hostmcp.sh"
 }
 
-# ─── Tests ──────────────────────────────────────────────────
+# ─── Tests / テスト ──────────────────────────────────────────────────
 
 # Test 0: SandboxMCP registration shows per-CLI success/failure output
 test_sandboxmcp_registration_output() {
@@ -517,7 +517,7 @@ test_startup_completes_with_hostmcp() {
     cleanup
 }
 
-# ─── Main ───────────────────────────────────────────────────
+# ─── Main / メイン ───────────────────────────────────────────────────
 
 main() {
     echo ""

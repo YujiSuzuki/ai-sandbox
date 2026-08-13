@@ -223,7 +223,7 @@ _cleanup_mocks() {
     safe_rm_rf "$fp" "$mb"
 }
 
-# ─── hostmcp tests ──────────────────────────────────────────────────────────────
+# ─── hostmcp tests / hostmcp テスト ──────────
 
 # Test 22: hostmcp already installed → skip install prompt, run init
 test_interactive_hostmcp_already_installed() {
@@ -1075,7 +1075,7 @@ DEOF
     cleanup
 }
 
-# ─── binary download helper ────────────────────────────────────────────────────
+# ─── binary download helper / バイナリダウンロード・ヘルパー ──────────
 # Set up mocks for binary download scenario: no go, fake curl that writes a hostmcp stub
 _setup_binary_download_mocks() {
     local _home_var="$1" _mb_var="$2"
@@ -1118,7 +1118,7 @@ _cleanup_binary_download_mocks() {
     safe_rm_rf "$home" "$mb"
 }
 
-# ─── binary download tests ──────────────────────────────────────────────────────
+# ─── binary download tests / バイナリダウンロード・テスト ──────────
 
 # Test 40: no go, binary download declined → skip message with GitHub URL
 test_interactive_hostmcp_binary_download_declined() {
@@ -1693,7 +1693,7 @@ CURLEOF
 }
 
 
-# ─── hostmcp update-check tests ──────────────────────────────────────────────
+# ─── hostmcp update-check tests / hostmcp 更新チェック・テスト ──────────
 
 # Build a fake hostmcp binary that responds to `version` with a fixed string,
 # and to `init` the same way the default mock does (so setup_hostmcp_init
@@ -2316,7 +2316,7 @@ test_update_check_empty_installed_version_reinstall_accept() {
     cleanup
 }
 
-# ─── macOS launcher tests ───────────────────────────────────────────────────
+# ─── macOS launcher tests / macOS ランチャー・テスト ──────────
 # Fake `uname` reporting a fixed `-s` value, so the Darwin/non-Darwin branch
 # in _create_macos_launcher is deterministic regardless of the machine
 # actually running this test suite. Other invocations (e.g. `uname -m`, only

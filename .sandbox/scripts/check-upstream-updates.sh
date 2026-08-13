@@ -194,7 +194,7 @@ show_update_notification() {
     fi
 
     # ============================================================
-    # Quiet mode: minimal output
+    # Quiet mode: minimal output / クワイエットモード: 最小限の出力
     # ============================================================
     if is_quiet; then
         echo "📦 $MSG_UPDATE_AVAILABLE: $version_display"
@@ -202,7 +202,7 @@ show_update_notification() {
     fi
 
     # ============================================================
-    # Summary mode: summary with URL
+    # Summary mode: summary with URL / サマリーモード: URL付きサマリー
     # ============================================================
     if is_summary; then
         print_title "$MSG_TITLE"
@@ -222,7 +222,7 @@ show_update_notification() {
     fi
 
     # ============================================================
-    # Verbose mode: full details
+    # Verbose mode: full details / 詳細モード: 詳細情報を全て表示
     # ============================================================
     print_title "$MSG_TITLE"
 

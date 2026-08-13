@@ -1,6 +1,67 @@
 #!/bin/bash
 # xcode-test.sh
 # @timeout: 600
+# Run Xcode tests on the host OS (macOS).
+# Invoked from the container via HostMCP's run_host_tool.
+#
+# The xcresult is always saved to .sandbox/tmp/<Scheme>-all.xcresult, and
+# after the test run xcresulttool prints the full XCTest + Swift Testing results.
+#
+# Usage:
+#   ./xcode-test.sh [options]
+#
+# Options:
+#   --only <TestClass>       Run only a specific test class (e.g. --only MyFeatureTests)
+#   --project <path>         Path to the .xcodeproj (auto-detected under WORKSPACE_DIR if omitted)
+#   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
+#   --test-target <name>     Unit test target name (default: <scheme>Tests)
+#   --no-skip-ui-tests       Also run UI tests (default: UI tests are skipped)
+#   --destination <dest>     xcodebuild destination (default: iOS Simulator, latest iPhone)
+#   --workspace <path>       Workspace root path (if not auto-detected via .project)
+#   --help, -h               Show this help
+#
+# Examples:
+#   ./xcode-test.sh
+#   ./xcode-test.sh --only MyFeatureTests
+#   ./xcode-test.sh --only "MyFeatureTests/test_something"
+#   ./xcode-test.sh --only "MyAppTests/MyFeatureTests"  # TargetName/ClassName form also works
+#
+# Note: this script declares its own timeout as 600s via the "@timeout: 600"
+#   header (hostmcp.yaml's global default is host_access.host_tools.timeout,
+#   60s; rather than raising that shared default, this tool extends its own
+#   timeout individually). The declaration only takes effect once approved
+#   via `hostmcp tools sync`, and is clamped to hostmcp.yaml's
+#   host_access.host_tools.max_tool_timeout (default 1800s). The AI (via MCP)
+#   has no way to change the timeout per-call when invoking run_host_tool.
+#
+# WARNING: --only takes a Swift struct name (the type matching @Suite), not a
+#   filename. If the filename and struct name differ, --only silently matches
+#   0 tests instead of erroring.
+#
+#   Example: a HandleFeatureTests struct inside FeatureTests.swift
+#     WRONG:   --only FeatureTests       -> 0 tests (no struct matches the filename)
+#     CORRECT: --only HandleFeatureTests -> runs normally
+#
+#   Recommended: wrap tests in an outer struct named after the file, with inner nested structs
+#   (see .sandbox/host-tools/README.md).
+#
+# Command-line usage example
+#
+# Note that the `hostmcp client --timeout 600` below is a separate layer from
+# the header's "@timeout: 600" declaration above. `--timeout` is how long the
+# client waits for the HTTP response (hostmcp's own implementation:
+# internal/cli/client.go), independent of the host-side execution time limit
+# that force-kills the tool (what the header's @timeout declaration governs).
+# Extending the server side via @timeout doesn't help if the client's
+# --timeout stays short -- the client gives up waiting first -- so both need
+# to be raised together, to roughly 600.
+# hostmcp client --timeout 600 --url http://host.docker.internal:18080 host-tools run xcode-test.sh
+#   When passing options:
+# hostmcp client --timeout 600 --url http://host.docker.internal:18080 host-tools run xcode-test.sh -- --only MyFeatureTests
+
+# ---
+# xcode-test.sh
+# @timeout: 600
 # Xcode テストをホスト OS（macOS）上で実行する。
 # HostMCP の run_host_tool 経由でコンテナから呼び出す。
 #
@@ -51,14 +112,14 @@
 # 実行時間制限（ヘッダーの@timeout宣言が対象とするもの）とは独立している。
 # サーバー側を@timeout宣言で延ばしても、クライアント側の--timeoutが短いままだと
 # クライアントが先に応答待ちを諦めてしまうため、両方を揃えて600程度にする必要がある。
-# hostmcp client --timeout 600 --url http://host.docker.internal:8888 host-tools run xcode-test.sh
+# hostmcp client --timeout 600 --url http://host.docker.internal:18080 host-tools run xcode-test.sh
 #   オプションを渡す時
-# hostmcp client --timeout 600 --url http://host.docker.internal:8888 host-tools run xcode-test.sh -- --only MyFeatureTests
+# hostmcp client --timeout 600 --url http://host.docker.internal:18080 host-tools run xcode-test.sh -- --only MyFeatureTests
 
 set -euo pipefail
 
 # ────────────────────────────────────────────
-# カラー出力
+# Color output / カラー出力
 # ────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -72,7 +133,7 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 header()  { echo -e "${BLUE}=== $* ===${NC}"; }
 
 # ────────────────────────────────────────────
-# デフォルト値
+# Defaults / デフォルト値
 # ────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -91,7 +152,7 @@ DESTINATION=""
 SKIP_UI_TESTS=true
 
 # ────────────────────────────────────────────
-# 引数パース
+# Argument parsing / 引数パース
 # ────────────────────────────────────────────
 show_help() {
     sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
@@ -127,7 +188,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# ワークスペースパスの確定
+# Resolve the workspace path / ワークスペースパスの確定
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
     error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
@@ -176,7 +237,7 @@ LOG_FILE="${TMP_DIR}/xcode-test-last.log"
 TIMESTAMP_FILE="${TMP_DIR}/xcode-test.timestamp"
 
 # ────────────────────────────────────────────
-# 事前チェック
+# Preflight checks / 事前チェック
 # ────────────────────────────────────────────
 if ! command -v xcodebuild &>/dev/null; then
     error "xcodebuild が見つかりません。Xcode がインストールされているか確認してください。"
@@ -212,7 +273,7 @@ if [ -z "$DESTINATION" ]; then
 fi
 
 # ────────────────────────────────────────────
-# xcodebuild コマンド組み立て
+# Build the xcodebuild command / xcodebuild コマンド組み立て
 # ────────────────────────────────────────────
 header "Xcode テスト実行"
 echo "  プロジェクト    : ${XCODEPROJ}"
@@ -241,7 +302,7 @@ if [ -n "$ONLY_TESTING" ]; then
 fi
 
 # ────────────────────────────────────────────
-# テスト実行（同期。出力はログファイルへ）
+# Run tests (synchronous; output goes to a log file) / テスト実行（同期。出力はログファイルへ）
 # ────────────────────────────────────────────
 mkdir -p "$TMP_DIR"
 
@@ -264,7 +325,7 @@ EXIT_CODE=$?
 set -e
 
 # ────────────────────────────────────────────
-# 結果表示（xcresulttool で XCTest + Swift Testing の全結果を表示）
+# Show results (xcresulttool prints full XCTest + Swift Testing results) / 結果表示（xcresulttool で XCTest + Swift Testing の全結果を表示）
 # ────────────────────────────────────────────
 echo ""
 header "テスト結果"

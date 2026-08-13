@@ -176,7 +176,7 @@ if [ "$volumes_match" = false ] || [ "$tmpfs_match" = false ]; then
 fi
 
 # ============================================================
-# Quiet mode: only show on mismatch
+# Quiet mode: only show on mismatch / クワイエットモード: 不一致がある場合のみ表示
 # ============================================================
 if is_quiet; then
     if [ "$has_mismatch" = true ]; then
@@ -189,7 +189,7 @@ if is_quiet; then
 fi
 
 # ============================================================
-# Summary mode: show differences + action required
+# Summary mode: show differences + action required / サマリーモード: 差分と対応が必要な内容を表示
 # ============================================================
 if is_summary; then
     if [ "$has_mismatch" = true ]; then
@@ -253,7 +253,7 @@ if is_summary; then
 fi
 
 # ============================================================
-# Verbose mode: full output
+# Verbose mode: full output / 詳細モード: 全出力を表示
 # ============================================================
 print_title "$MSG_TITLE"
 

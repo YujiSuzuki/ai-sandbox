@@ -511,7 +511,7 @@ test_same_version_no_renotify() {
 
     local script="$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
 
-    # テスト用の設定ファイル
+    # Test config file / テスト用の設定ファイル
     local mock_config="$TEST_TMP_DIR/.sandbox/config/template-source.conf"
     cat > "$mock_config" <<'EOF'
 TEMPLATE_REPO="YujiSuzuki/ai-sandbox"
@@ -520,12 +520,12 @@ CHECK_UPDATES="true"
 CHECK_INTERVAL_HOURS="0"
 EOF
 
-    # 初回実行（バージョン記録）
+    # First run (records the version) / 初回実行（バージョン記録）
     local mock_state="$TEST_TMP_DIR/state"
     rm -f "$mock_state"
     (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$script") >/dev/null 2>&1 || true
 
-    # 2回目実行（同バージョン → 通知なし）
+    # Second run (same version -> no notification) / 2回目実行（同バージョン → 通知なし）
     local stdout_output
     stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>/dev/null ) || true
     if [ -z "$stdout_output" ]; then

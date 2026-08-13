@@ -1,5 +1,27 @@
 #!/bin/bash
 # xcode-install-app.sh
+# Build a macOS app and copy it from DerivedData's random hash path into a
+# known, fixed directory (default: ~/.hostmcp/Applications).
+# Lets the container always find the build product at the same path.
+# Invoked from the container via HostMCP's run_host_tool.
+#
+# Usage:
+#   ./xcode-install-app.sh [options]
+#
+# Options:
+#   --project <path>         Path to the .xcodeproj (auto-detected under WORKSPACE_DIR if omitted)
+#   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
+#   --configuration <cfg>    Build configuration (default: Debug)
+#   --dest-dir <path>        Install destination directory (default: ~/.hostmcp/Applications)
+#   --workspace <path>       Workspace root path (if not auto-detected via .project)
+#   --help, -h               Show this help
+#
+# Examples:
+#   ./xcode-install-app.sh --project AirDropStatus/AirDropStatus.xcodeproj
+#   ./xcode-install-app.sh --scheme AirDropStatus --dest-dir ~/.hostmcp/Applications
+
+# ---
+# xcode-install-app.sh
 # macOS アプリをビルドし、DerivedData 配下のランダムなハッシュパスから
 # 既知の固定ディレクトリ（デフォルト: ~/.hostmcp/Applications）へコピーする。
 # コンテナ側からは常に同じパスでビルド成果物を参照できるようにするためのツール。
@@ -23,7 +45,7 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────
-# カラー出力
+# Color output / カラー出力
 # ────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -37,8 +59,11 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 header()  { echo -e "${BLUE}=== $* ===${NC}"; }
 
 # ────────────────────────────────────────────
-# パス検証ヘルパー
+# Path validation helper / パス検証ヘルパー
 # ────────────────────────────────────────────
+# HostMCP doesn't validate arguments once a Host Tool is approved, so this
+# check is the only line of defense confirming that a target path (e.g. for
+# rm -rf) stays within the expected range.
 # HostMCP は Host Tool 承認後の引数を検証しないため、rm -rf 等の対象パスが
 # 想定範囲に収まっているかどうかは、このチェックが唯一の防衛線になる。
 require_within() {
@@ -57,7 +82,7 @@ require_within() {
 }
 
 # ────────────────────────────────────────────
-# デフォルト値
+# Defaults / デフォルト値
 # ────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -77,7 +102,7 @@ CONFIGURATION="Debug"
 DEST_DIR="${HOME}/.hostmcp/Applications"
 
 # ────────────────────────────────────────────
-# 引数パース
+# Argument parsing / 引数パース
 # ────────────────────────────────────────────
 show_help() {
     sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
@@ -115,7 +140,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# ワークスペースパスの確定
+# Resolve the workspace path / ワークスペースパスの確定
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
     error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
@@ -144,7 +169,7 @@ if [ -z "$SCHEME" ]; then
 fi
 
 # ────────────────────────────────────────────
-# 事前チェック
+# Preflight checks / 事前チェック
 # ────────────────────────────────────────────
 if ! command -v xcodebuild &>/dev/null; then
     error "xcodebuild が見つかりません。Xcode がインストールされているか確認してください。"
@@ -166,7 +191,7 @@ info "使用 Xcode: ${XCODE_VERSION}"
 DESTINATION="platform=macOS"
 
 # ────────────────────────────────────────────
-# ビルド実行
+# Run build / ビルド実行
 # ────────────────────────────────────────────
 header "Xcode ビルド実行"
 echo "  プロジェクト : ${XCODEPROJ}"
@@ -200,7 +225,7 @@ fi
 info "BUILD SUCCEEDED"
 
 # ────────────────────────────────────────────
-# ビルド成果物のパスを取得
+# Resolve the build product path / ビルド成果物のパスを取得
 # ────────────────────────────────────────────
 if ! command -v jq &>/dev/null; then
     error "jq が見つかりません。"
@@ -258,7 +283,7 @@ if [ ! -d "$SRC_APP" ]; then
 fi
 
 # ────────────────────────────────────────────
-# 固定ディレクトリへコピー
+# Copy to the fixed directory / 固定ディレクトリへコピー
 # ────────────────────────────────────────────
 header "インストール"
 # require_within は cd による解決を要するため、まだ存在しないディレクトリには使えない。

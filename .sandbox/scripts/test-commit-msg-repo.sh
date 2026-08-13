@@ -55,7 +55,7 @@ echo "Testing commit-msg.sh --repo option"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# ─── Test 1: --repo picks up staged changes from target repo ───────────────
+# ─── Test 1: --repo picks up staged changes from target repo / Test 1: --repo で対象リポジトリのステージ済み変更を取得 ───────────────
 echo "Test 1: --repo detects staged changes in target repo"
 REPO=$(make_temp_repo)
 OUTPUT=$("$SCRIPT" --repo "$REPO" 2>&1 || true)
@@ -66,7 +66,7 @@ else
     echo "  Output: $OUTPUT"
 fi
 
-# ─── Test 2: draft file is written inside the target repo ──────────────────
+# ─── Test 2: draft file is written inside the target repo / Test 2: ドラフトファイルが対象リポジトリ内に書き込まれる ──────────────────
 echo "Test 2: draft file is written into the target repo directory"
 REPO=$(make_temp_repo)
 "$SCRIPT" --repo "$REPO" > /dev/null 2>&1 || true
@@ -76,7 +76,7 @@ else
     fail "CommitMsg-draft.md not found in target repo ($REPO)"
 fi
 
-# ─── Test 3: --repo with non-existent path exits with error ────────────────
+# ─── Test 3: --repo with non-existent path exits with error / Test 3: --repo に存在しないパスを指定するとエラー終了 ────────────────
 echo "Test 3: non-existent --repo path exits with error"
 OUTPUT=$("$SCRIPT" --repo /nonexistent/path/xyz 2>&1 || true)
 if echo "$OUTPUT" | grep -qi "not found\|no such\|directory"; then
@@ -86,7 +86,7 @@ else
     echo "  Output: $OUTPUT"
 fi
 
-# ─── Test 4: without --repo, uses current directory's repo ────────────────
+# ─── Test 4: without --repo, uses current directory's repo / Test 4: --repo 未指定時はカレントディレクトリのリポジトリを使用 ────────────────
 echo "Test 4: without --repo, operates on CWD's git repo"
 REPO=$(make_temp_repo)
 # Run from inside the temp repo (no --repo flag)
@@ -98,7 +98,7 @@ else
     echo "  Output: $OUTPUT"
 fi
 
-# ─── Test 5: --repo with --msg-file commits to target repo ────────────────
+# ─── Test 5: --repo with --msg-file commits to target repo / Test 5: --repo と --msg-file の併用で対象リポジトリにコミット ────────────────
 echo "Test 5: --repo with --msg-file commits to target repo"
 REPO=$(make_temp_repo)
 # Generate draft first
@@ -114,7 +114,7 @@ else
     fail "--repo with --msg-file did not create a commit (log count: $COMMIT_COUNT)"
 fi
 
-# ─── Summary ───────────────────────────────────────────────────────────────
+# ─── Summary / まとめ ───────────────────────────────────────────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "Results: ${GREEN}${TESTS_PASSED} passed${NC}, ${RED}${TESTS_FAILED} failed${NC}"
