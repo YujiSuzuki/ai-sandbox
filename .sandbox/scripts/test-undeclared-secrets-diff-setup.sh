@@ -242,6 +242,37 @@ test_always_exits_zero() {
 }
 
 # ============================================================
+# Test: PENDING_FILE is exported scoped to this session's own
+# sandbox-mcp-pids/<pid> spill directory, not a global path
+# PENDING_FILEはグローバルパスではなく、このセッション自身の
+# sandbox-mcp-pids/<pid> 退避ディレクトリ配下にエクスポートされる
+# ============================================================
+test_exports_pending_file_scoped_to_own_pid() {
+    echo ""
+    echo "=== Testing PENDING_FILE is exported scoped to this session's own PID directory ==="
+
+    setup_fake_workspace
+    cat > "$FAKE_WORKSPACE/stub-diff.sh" <<'EOF'
+#!/bin/bash
+printf '%s' "$PENDING_FILE"
+EOF
+    chmod +x "$FAKE_WORKSPACE/stub-diff.sh"
+
+    local output
+    output=$(WORKSPACE="$FAKE_WORKSPACE" \
+        DIFF_SCRIPT="$FAKE_WORKSPACE/stub-diff.sh" \
+        bash "$TARGET_SCRIPT")
+
+    if [[ "$output" =~ ^"$FAKE_WORKSPACE"/\.sandbox/\.state/setup-output/sandbox-mcp-pids/[0-9]+/25-undeclared-secrets-diff\.pending\.json$ ]]; then
+        pass "PENDING_FILE is exported under this session's own sandbox-mcp-pids/<pid>/ directory"
+    else
+        fail "PENDING_FILE should be scoped under sandbox-mcp-pids/<pid>/, got: '$output'"
+    fi
+
+    teardown
+}
+
+# ============================================================
 # Main
 # ============================================================
 main() {
@@ -256,6 +287,7 @@ main() {
     test_hanging_diff_script_capped_by_timeout
     test_default_diff_script_path_under_workspace
     test_always_exits_zero
+    test_exports_pending_file_scoped_to_own_pid
 
     echo ""
     echo "========================================"

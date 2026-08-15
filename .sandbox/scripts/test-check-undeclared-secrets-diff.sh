@@ -97,6 +97,26 @@ state_file_path() {
     echo "$TEST_WORKSPACE/$STATE_FILE_REL"
 }
 
+PENDING_FILE_REL=".sandbox/.state/check-undeclared-secrets.pending.json"
+
+pending_file_path() {
+    echo "$TEST_WORKSPACE/$PENDING_FILE_REL"
+}
+
+# Stand-in for setup-output-reminder.sh's promotion step (pending ->
+# confirmed). Never calls the real hook -- this file only verifies
+# check-undeclared-secrets-diff.sh's own contract (always diff against the
+# confirmed file); the hook's promotion trigger and merge behavior are
+# verified separately in test-setup-output-reminder.sh.
+# setup-output-reminder.shの昇格処理(pending -> confirmed)の代役。実フックは
+# 呼ばない -- ここはcheck-undeclared-secrets-diff.sh自体の契約(常に確定済み
+# ファイルと比較する)を検証する場であり、フック側の昇格トリガーとマージ
+# 挙動はtest-setup-output-reminder.shで別途検証する。
+confirm_pending() {
+    [ -f "$(pending_file_path)" ] && mv "$(pending_file_path)" "$(state_file_path)"
+    return 0
+}
+
 # ========================================
 # Test Cases / テストケース
 # ========================================
@@ -123,10 +143,17 @@ test_first_run_reports_existing_and_writes_baseline() {
         echo "Output: $output"
     fi
 
-    if [ -f "$(state_file_path)" ] && jq -e '.undeclared | index("api/.env")' "$(state_file_path)" > /dev/null; then
-        pass "Baseline state file recorded api/.env"
+    if [ -f "$(pending_file_path)" ] && jq -e '.undeclared | index("api/.env")' "$(pending_file_path)" > /dev/null; then
+        pass "Pending outbox file recorded api/.env"
     else
-        fail "Baseline state file should record api/.env"
+        fail "Pending outbox file should record api/.env"
+        cat "$(pending_file_path)" 2>&1 || true
+    fi
+
+    if [ ! -f "$(state_file_path)" ]; then
+        pass "Confirmed baseline is NOT written until delivery is confirmed"
+    else
+        fail "Confirmed baseline must stay unwritten until delivery is confirmed, or an undelivered finding could vanish forever"
         cat "$(state_file_path)" 2>&1 || true
     fi
 
@@ -145,6 +172,7 @@ test_unchanged_set_is_silent() {
     touch "$TEST_WORKSPACE/api/.env"
 
     run_script > /dev/null
+    confirm_pending
 
     output=$(run_script)
 
@@ -169,6 +197,7 @@ test_new_file_added_notifies() {
     mkdir -p "$TEST_WORKSPACE/api"
     touch "$TEST_WORKSPACE/api/.env"
     run_script > /dev/null
+    confirm_pending
 
     touch "$TEST_WORKSPACE/api/.env.local"
     output=$(run_script)
@@ -202,6 +231,7 @@ test_file_removed_is_silent() {
     touch "$TEST_WORKSPACE/api/.env"
     touch "$TEST_WORKSPACE/api/.env.local"
     run_script > /dev/null
+    confirm_pending
 
     rm "$TEST_WORKSPACE/api/.env.local"
     output=$(run_script)
@@ -229,6 +259,7 @@ test_file_swap_same_count_still_notifies() {
     mkdir -p "$TEST_WORKSPACE/api"
     touch "$TEST_WORKSPACE/api/.env"
     run_script > /dev/null
+    confirm_pending
 
     rm "$TEST_WORKSPACE/api/.env"
     touch "$TEST_WORKSPACE/api/.env.production"
@@ -301,6 +332,96 @@ test_always_exits_zero() {
     cleanup
 }
 
+# Test 8: An unconfirmed finding is re-reported on every subsequent run
+# until something actually confirms it -- the baseline must never advance
+# on detection alone, only once delivery is confirmed
+# テスト8: 未確定の検知は、何かが実際に確定させるまで毎回再報告される
+# -- baselineは検知だけでは絶対に進めず、配送が確定して初めて進む
+test_unconfirmed_finding_resent_until_confirmed() {
+    info "Test 8: Unconfirmed finding is resent on every subsequent run"
+    info "テスト8: 未確定の検知は毎回再送される"
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/api"
+    touch "$TEST_WORKSPACE/api/.env"
+
+    output1=$(run_script)
+    output2=$(run_script)
+
+    if echo "$output1" | grep -q "api/\.env" && echo "$output2" | grep -q "api/\.env"; then
+        pass "Unconfirmed finding was reported again on the second run (no confirm_pending in between)"
+    else
+        fail "Unconfirmed finding should keep being reported until confirmed"
+        echo "Output1: $output1"
+        echo "Output2: $output2"
+    fi
+
+    cleanup
+}
+
+# Test 9: A pending finding that gets remediated before ever being
+# confirmed is cleared from the pending file on the next run
+# テスト9: 一度も確定しないまま是正されたpending検知は、次回実行で
+# pendingファイルから消える
+test_pending_cleared_when_new_count_zero() {
+    info "Test 9: Pending file is cleared once the finding is remediated"
+    info "テスト9: 是正されればpendingファイルはクリアされる"
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/api"
+    touch "$TEST_WORKSPACE/api/.env"
+    run_script > /dev/null
+
+    rm "$TEST_WORKSPACE/api/.env"
+    run_script > /dev/null
+
+    if [ ! -f "$(pending_file_path)" ]; then
+        pass "Pending file cleared after the finding was remediated"
+    else
+        fail "Pending file should be cleared once nothing is outstanding"
+        cat "$(pending_file_path)" 2>&1 || true
+    fi
+
+    cleanup
+}
+
+# Test 10: A still-unconfirmed finding, plus a newly-added one, both show
+# up in the next run's output and in the pending file
+# テスト10: 未確定の検知に加えて新たな検知が増えても、両方が次回の
+# 出力・pendingファイルに含まれる
+test_pending_overwritten_with_latest_full_scan_each_new_detection() {
+    info "Test 10: Pending file mirrors the latest full scan when new findings keep appearing"
+    info "テスト10: 新規検知が続く間、pendingファイルは常に最新のフルスキャンを反映する"
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/api"
+    touch "$TEST_WORKSPACE/api/.env"
+    run_script > /dev/null
+
+    touch "$TEST_WORKSPACE/api/.env.local"
+    output=$(run_script)
+
+    if echo "$output" | grep -q "api/\.env\.local" && echo "$output" | grep -q "api/\.env$"; then
+        pass "Both the still-unconfirmed and newly-added file are reported"
+    else
+        fail "Both files should be reported while nothing has been confirmed"
+        echo "Output: $output"
+    fi
+
+    if jq -e '.undeclared | index("api/.env")' "$(pending_file_path)" > /dev/null 2>&1 && \
+       jq -e '.undeclared | index("api/.env.local")' "$(pending_file_path)" > /dev/null 2>&1; then
+        pass "Pending file contains both entries"
+    else
+        fail "Pending file should contain both entries"
+        cat "$(pending_file_path)" 2>&1 || true
+    fi
+
+    cleanup
+}
+
 # ========================================
 # Run all tests / 全テストの実行
 # ========================================
@@ -319,6 +440,9 @@ test_file_removed_is_silent
 test_file_swap_same_count_still_notifies
 test_claude_settings_only_file_notifies_with_note
 test_always_exits_zero
+test_unconfirmed_finding_resent_until_confirmed
+test_pending_cleared_when_new_count_zero
+test_pending_overwritten_with_latest_full_scan_each_new_detection
 
 echo ""
 echo "=========================================="

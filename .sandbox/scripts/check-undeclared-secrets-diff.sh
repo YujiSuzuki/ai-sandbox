@@ -8,6 +8,20 @@
 # prior state yet), the previous set is treated as empty, so it reports
 # every currently-undeclared file -- giving full visibility right from the
 # start.
+#
+# Two-file outbox scheme: STATE_FILE is the CONFIRMED baseline diffs are
+# always computed against; PENDING_FILE holds the latest full scan whenever
+# there's a newly-detected, not-yet-confirmed finding. STATE_FILE is only
+# advanced once delivery is proven -- this script itself never confirms
+# anything on detection, it only ever mirrors outstanding findings into
+# PENDING_FILE. Confirmation (promoting PENDING_FILE -> STATE_FILE) is done
+# externally by setup-output-reminder.sh's "@confirm-target" handling, once
+# the AI touches "<name>.resolved" for this notice -- i.e. once the AI has
+# actually confirmed telling the human, not merely once the notice has been
+# embedded (see its header comment). Leaving STATE_FILE untouched until then
+# means an unconfirmed finding keeps being reported as new on every
+# subsequent invocation instead of silently disappearing if delivery never
+# happens.
 # ---
 # check-undeclared-secrets.sh --format json をラップし、今回の未宣言ファイル
 # 集合を前回記録と比較して、その集合の中で「新規」のパスのみを報告する
@@ -15,12 +29,24 @@
 # 新規として検出する）。報告すべき新規がなければ無出力。初回実行（まだ前回
 # 記録がない）時は前回集合を空として扱うため、その時点の未宣言ファイルを
 # 最初から漏れなく報告する。
+#
+# 2ファイル制のアウトボックス方式: diffの比較元は常にCONFIRMED済みの
+# STATE_FILE。新規検知があり未確定の間は、今回のフルスキャンを
+# PENDING_FILEへミラーする。STATE_FILEは配送が証明されるまで進めない --
+# 本スクリプト自身は検知した瞬間に何かを確定させることはなく、未確定分を
+# PENDING_FILEへミラーするだけ。確定(PENDING_FILE -> STATE_FILEへの昇格)は
+# setup-output-reminder.shの"@confirm-target"処理が外部で行う。この通知の
+# "<name>.resolved"をAIがtouchした時点 -- つまり通知がembedされた時点では
+# なく、AIが実際に人間へ伝えたことを確認した時点(そのヘッダーコメント
+# 参照)。STATE_FILEをそれまで据え置くことで、未確定の検知は配送されない
+# 限り黙って消えるのではなく、毎回「新規」として再報告され続ける。
 
 set -e
 
 WORKSPACE="${WORKSPACE:-/workspace}"
 CHECK_SCRIPT="${CHECK_SCRIPT:-$WORKSPACE/.sandbox/scripts/check-undeclared-secrets.sh}"
 STATE_FILE="${STATE_FILE:-$WORKSPACE/.sandbox/.state/check-undeclared-secrets.json}"
+PENDING_FILE="${PENDING_FILE:-$WORKSPACE/.sandbox/.state/check-undeclared-secrets.pending.json}"
 
 command -v jq &>/dev/null || exit 0
 [ -x "$CHECK_SCRIPT" ] || exit 0
@@ -45,14 +71,29 @@ curr_undeclared=$(echo "$current_json" | jq -c '.undeclared')
 curr_claude_only=$(echo "$current_json" | jq -c '.claude_only // []')
 
 new_paths_json=$(jq -n --argjson curr "$curr_undeclared" --argjson prev "$prev_undeclared" '$curr - $prev')
-
-# Always record the latest scan, whether or not it triggers a notification,
-# so the next run diffs against what's actually current.
-# 通知の有無に関わらず今回のスキャンを記録し、次回はそれを基準に比較する。
-echo "$current_json" > "$STATE_FILE"
-
 new_count=$(echo "$new_paths_json" | jq 'length')
-[ "$new_count" -eq 0 ] && exit 0
+
+if [ "$new_count" -eq 0 ]; then
+    # Nothing new vs. the confirmed baseline: safe to fold this scan
+    # straight into STATE_FILE (there is no unconfirmed finding to protect
+    # here), and any pending snapshot left by an earlier still-unconfirmed
+    # run is now moot -- everything it named is either already confirmed or
+    # no longer undeclared.
+    # 確定済みbaselineと比べて新規なし: 保護すべき未確定の検知が無いため、
+    # 今回のスキャンをそのままSTATE_FILEへ確定してよい。以前の未確定runが
+    # 残していたpendingスナップショットも、その中身は既に確定済みか、もはや
+    # 未宣言でなくなっているかのどちらかなので、意味を失っている。
+    echo "$current_json" | jq '.' > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+    rm -f "$PENDING_FILE"
+    exit 0
+fi
+
+# New findings exist but delivery is not yet proven: mirror them into the
+# pending/outbox file, never into STATE_FILE (see header comment).
+# 新規検知はあるが配送はまだ証明されていない: STATE_FILEではなく
+# pending/アウトボックスファイルへミラーする(ヘッダーコメント参照)。
+mkdir -p "$(dirname "$PENDING_FILE")"
+echo "$current_json" | jq '.' > "$PENDING_FILE.tmp" && mv "$PENDING_FILE.tmp" "$PENDING_FILE"
 
 if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     echo "⚠️  前回チェック時にはなかった、未宣言の秘密っぽいファイルが見つかりました:"
