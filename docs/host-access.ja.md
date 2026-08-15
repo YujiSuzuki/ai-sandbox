@@ -114,6 +114,7 @@ host_access:
 | `run-host-setup-tests.sh` | ホストOS上で `.sandbox/host-setup/test-*.sh` を実行 |
 | `xcode-build.sh` / `xcode-test.sh` / `xcode-archive.sh` / `xcode-install-app.sh` | Xcode のビルド・テスト・アーカイブ・固定ディレクトリへのインストール（macOS専用） |
 | `docker-compose-up.sh` / `docker-compose-down.sh` / `docker-compose-build.sh` | `docker compose up` / `down` / `build` の汎用ラッパー |
+| `docker-compose-config.sh` | 1つ以上の docker-compose ファイルをマージした結果を検証・表示（読み取り専用） |
 | `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） |
 
 > 各ツールの詳しい使い方は [.sandbox/host-tools/README.ja.md](../.sandbox/host-tools/README.ja.md) を参照してください。

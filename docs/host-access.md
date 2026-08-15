@@ -113,6 +113,7 @@ A tool that regularly needs more time than the global `timeout` (e.g. `xcode-tes
 | `run-host-setup-tests.sh` | Run `.sandbox/host-setup/test-*.sh` suites on the host OS |
 | `xcode-build.sh` / `xcode-test.sh` / `xcode-archive.sh` / `xcode-install-app.sh` | Xcode build / test / archive / install to a fixed directory (macOS only) |
 | `docker-compose-up.sh` / `docker-compose-down.sh` / `docker-compose-build.sh` | Generic wrappers around `docker compose up` / `down` / `build` |
+| `docker-compose-config.sh` | Validate/render the merged config of one or more docker-compose files (read-only) |
 | `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) |
 
 > See [.sandbox/host-tools/README.md](../.sandbox/host-tools/README.md) for full usage details of each tool.

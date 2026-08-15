@@ -20,7 +20,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_META="${SCRIPT_DIR}/.project"
 WORKSPACE_DIR=""
 if [ -f "$PROJECT_META" ]; then
-    WORKSPACE_DIR=$(jq -r '.workspace // ""' "$PROJECT_META" 2>/dev/null)
+    if ! WORKSPACE_DIR=$(jq -r '.workspace // ""' "$PROJECT_META" 2>/dev/null); then
+        echo "Warning: failed to parse ${PROJECT_META} (is jq installed and the file valid JSON?)" >&2
+        WORKSPACE_DIR=""
+    fi
 fi
 
 COMPOSE_FILE="$1"

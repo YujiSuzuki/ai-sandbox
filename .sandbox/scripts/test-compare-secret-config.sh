@@ -69,6 +69,7 @@ setup() {
     # Copy required scripts and config to test workspace
     # 必要なスクリプトと設定をテストワークスペースにコピー
     cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -102,7 +103,7 @@ services:
       - ..:/workspace:cached
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -116,7 +117,7 @@ services:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=1g
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 }
 
@@ -130,7 +131,7 @@ services:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
       - /dev/null:$TEST_WORKSPACE/another-app/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -139,7 +140,7 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 }
 
@@ -152,7 +153,7 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -161,8 +162,8 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
-      - $TEST_WORKSPACE/another-app/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
+      - $TEST_WORKSPACE/another-app/secrets  # @secret
 EOF
 }
 

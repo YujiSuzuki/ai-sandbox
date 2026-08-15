@@ -61,9 +61,9 @@ AI Sandbox + HostMCPは、上記のツールが完全にはカバーしない2�
 
 ```yaml
 volumes:
-  - /dev/null:/workspace/my-app/.env:ro     # AIには空ファイルに見える
+  - /dev/null:/workspace/my-app/.env:ro         # AIには空ファイルに見える
 tmpfs:
-  - /workspace/my-app/secrets:ro            # AIには空ディレクトリに見える
+  - /workspace/my-app/secrets  # @secret（必須タグ） — AIには空ディレクトリに見える
 ```
 
 シークレットはAIの世界に存在しません — ルールでブロックされているのでも、設定でフィルターされているのでもなく、そもそも存在しない。一方、アプリコンテナは実ファイルを通常通りマウントします。

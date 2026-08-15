@@ -92,14 +92,15 @@ services:
       - /dev/null:/workspace/your-api/config/secrets.json:ro
 
     tmpfs:
-      # Make secret directories empty
-      - /workspace/your-api/secrets:ro
-      - /workspace/your-api/keys:ro
+      # Make secret directories empty. The trailing "# @secret" tag marks
+      # each entry for validate-secrets.sh / check-secret-sync.sh.
+      - /workspace/your-api/secrets  # @secret
+      - /workspace/your-api/keys  # @secret
 ```
 
 **Key points:**
 - `.env` files → mount to `/dev/null`
-- `secrets/` directories → `tmpfs` + `:ro` for empty directories
+- `secrets/` directories → `tmpfs` for empty directories, tagged with a trailing `# @secret` comment — **required**: without the tag, `validate-secrets.sh` silently skips the entry, while `check-secret-sync.sh` instead reports it as a visible "missing" error
 - Keep both docker-compose.yml files in sync
 
 ### Custom domains (optional)
@@ -143,7 +144,7 @@ This ensures secret settings are complete before AI accesses any files.
 
 Detection rules:
 - `/dev/null:/workspace/...` in volumes → secret file
-- `/workspace/...:ro` in tmpfs → secret directory
+- `/workspace/...` with a trailing `# @secret` tag in tmpfs → secret directory
 
 ### HostMCP configuration
 

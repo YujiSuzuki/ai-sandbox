@@ -70,6 +70,7 @@ setup() {
     # Copy required scripts and config to test workspace
     # 必要なスクリプトと設定をテストワークスペースにコピー
     cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -284,7 +285,7 @@ test_directory_tmpfs_covered() {
     mkdir -p "$TEST_WORKSPACE/demo-app/secrets"
     touch "$TEST_WORKSPACE/demo-app/secrets/key.txt"
     create_claude_settings '"Read(demo-app/secrets/**)"'
-    create_compose_file "" "      - $TEST_WORKSPACE/demo-app/secrets:ro"
+    create_compose_file "" "      - $TEST_WORKSPACE/demo-app/secrets  # @secret"
 
     local output
     output=$(WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
@@ -295,6 +296,32 @@ test_directory_tmpfs_covered() {
         pass "Script recognizes tmpfs covered directory"
     else
         fail "Script should recognize tmpfs covered directory"
+        echo "Output: $output"
+    fi
+
+    cleanup
+}
+
+# Test 6b: Directory covered by tmpfs with non-":ro" options before the tag
+# テスト6b: タグの前が ":ro" 以外のtmpfsオプションでも隠蔽済みと認識されるか
+test_directory_tmpfs_covered_with_other_options() {
+    echo ""
+    echo "=== Test: Directory covered by tmpfs with non-:ro options before the tag ==="
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/demo-app/secrets"
+    touch "$TEST_WORKSPACE/demo-app/secrets/key.txt"
+    create_claude_settings '"Read(demo-app/secrets/**)"'
+    create_compose_file "" "      - $TEST_WORKSPACE/demo-app/secrets:rw,noexec,nosuid,size=1g  # @secret"
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -qE "all configured|すべての秘匿ファイル|All secret files"; then
+        pass "Script recognizes tmpfs entry with rw,noexec,nosuid,size=1g options"
+    else
+        fail "Script should recognize a tagged tmpfs entry regardless of its tmpfs options"
         echo "Output: $output"
     fi
 
@@ -832,6 +859,7 @@ main() {
     test_no_claude_settings
     test_no_matching_files
     test_directory_tmpfs_covered
+    test_directory_tmpfs_covered_with_other_options
     test_glob_pattern_matching
     test_suggests_sync_script
     test_cli_sandbox_env_uses_cli_compose

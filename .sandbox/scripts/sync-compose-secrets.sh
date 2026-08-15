@@ -41,6 +41,8 @@ WORKSPACE_RE=$(printf '%s' "$WORKSPACE" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
 # 共通関数を読み込み（バックアップユーティリティなど）
 # shellcheck source=/dev/null
 source "${WORKSPACE}/.sandbox/scripts/_startup_common.sh"
+# shellcheck source=/dev/null
+source "${WORKSPACE}/.sandbox/scripts/_secret-tag.sh"
 
 DEVCONTAINER_COMPOSE="$WORKSPACE/.devcontainer/docker-compose.yml"
 CLI_SANDBOX_COMPOSE="$WORKSPACE/cli_sandbox/docker-compose.yml"
@@ -138,11 +140,16 @@ extract_devnull_mounts() {
         sort || true
 }
 
-# Extract tmpfs mounts ($WORKSPACE paths with :ro)
-# tmpfs マウントを抽出（$WORKSPACE パスで :ro 付き）
+# Extract tmpfs mounts ($WORKSPACE paths tagged with "# @secret"); see
+# _secret-tag.sh for the shared matching regex used by all six
+# secret-sync scripts.
+# tmpfs マウントを抽出（$WORKSPACE パスで "# @secret" タグ付き）。共通の
+# マッチング正規表現は _secret-tag.sh を参照（6本のスクリプトすべてで共有）。
 extract_tmpfs_mounts() {
     local file="$1"
     local in_tmpfs=false
+    local prefix_re
+    prefix_re=$(secret_tag_prefix_regex "$WORKSPACE_RE")
 
     while IFS= read -r line; do
         if [[ "$line" =~ ^[[:space:]]*tmpfs: ]]; then
@@ -153,7 +160,7 @@ extract_tmpfs_mounts() {
             in_tmpfs=false
             continue
         fi
-        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*$WORKSPACE_RE && "$line" =~ :ro($|[[:space:]]) ]]; then
+        if [[ "$in_tmpfs" == true && "$line" =~ $prefix_re ]]; then
             echo "$line" | sed -E 's/^[[:space:]]*-[[:space:]]*//'
         fi
     done < "$file" | sort -u

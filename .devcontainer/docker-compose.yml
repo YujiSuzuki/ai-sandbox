@@ -42,9 +42,13 @@ services:
       # - /dev/null:/workspace/<your-project>/.env:ro
 
     # tmpfs:
-      # Example: make a project's secret directory empty via tmpfs.
+      # Example: make a project's secret directory empty via tmpfs. The
+      # trailing "# @secret" tag marks the entry for validate-secrets.sh /
+      # check-secret-sync.sh.
       # 例: プロジェクトの秘匿情報ディレクトリを tmpfs で空にする場合はこう書く。
-      # - /workspace/<your-project>/secrets:ro
+      # 末尾の "# @secret" タグは validate-secrets.sh / check-secret-sync.sh
+      # がこのエントリを秘匿設定として認識するための目印。
+      # - /workspace/<your-project>/secrets  # @secret
 
     # Keep container alive for long-running AI computations
     # AIの長時間の計算や待機を考慮

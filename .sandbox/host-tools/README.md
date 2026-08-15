@@ -45,6 +45,7 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `docker-compose-up.sh` | Start containers from any docker-compose file | Cross-platform |
 | `docker-compose-down.sh` | Stop containers from any docker-compose file | Cross-platform |
 | `docker-compose-build.sh` | Build images from any docker-compose file | Cross-platform |
+| `docker-compose-config.sh` | Validate/render the merged config of one or more docker-compose files (read-only) | Cross-platform |
 | `xcodegen-generate.sh` | Generate an `.xcodeproj` from an XcodeGen `project.yml` spec | macOS only |
 | `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) | Cross-platform |
 
@@ -212,6 +213,26 @@ from inside the AI Sandbox even without Docker socket access — no need to ask 
 to run `docker compose` manually. Copy and adapt these scripts if your project needs
 project-specific defaults (fixed compose file path, extra env vars, service names in
 log messages, etc.).
+
+---
+
+## docker-compose-config.sh
+
+Read-only diagnostic: renders the merged config of one or more docker-compose files via
+`docker compose config`. Makes no changes — no images built, no containers started. Use
+it to validate compose YAML (e.g. an override file meant to be merged with a base
+`docker-compose.yml`) without needing the user to run `docker compose` manually.
+
+```bash
+# Validate a single file
+./docker-compose-config.sh /path/to/docker-compose.yml
+
+# Validate an override merged on top of a base file (order matters, same as -f -f)
+./docker-compose-config.sh ./docker-compose.yml ./docker-compose.override.yml
+
+# Extra docker compose flags after --
+./docker-compose-config.sh ./docker-compose.yml -- --services
+```
 
 ---
 

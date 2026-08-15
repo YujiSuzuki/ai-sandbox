@@ -131,8 +131,10 @@ volumes:
   - /dev/null:/workspace/your-api/.env:ro
 
 tmpfs:
-  # Hide secret directories
-  - /workspace/your-api/secrets:ro
+  # Hide secret directories. The trailing "# @secret" tag is required —
+  # without it, validate-secrets.sh silently skips this entry, while
+  # check-secret-sync.sh instead reports it as a visible "missing" error.
+  - /workspace/your-api/secrets  # @secret
 ```
 
 **Result:**

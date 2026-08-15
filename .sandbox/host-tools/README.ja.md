@@ -45,6 +45,7 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 | `docker-compose-up.sh` | 任意の docker-compose ファイルからコンテナを起動 | クロスプラットフォーム |
 | `docker-compose-down.sh` | 任意の docker-compose ファイルからコンテナを停止 | クロスプラットフォーム |
 | `docker-compose-build.sh` | 任意の docker-compose ファイルからイメージをビルド | クロスプラットフォーム |
+| `docker-compose-config.sh` | 1つ以上の docker-compose ファイルをマージした結果を検証・表示（読み取り専用） | クロスプラットフォーム |
 | `xcodegen-generate.sh` | XcodeGen の `project.yml` から `.xcodeproj` を生成 | macOS のみ |
 | `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） | クロスプラットフォーム |
 
@@ -212,6 +213,27 @@ AI Sandbox 内からでも、ユーザーに `docker compose` の手動実行を
 起動・停止・ビルドができます。プロジェクト固有の要件（compose ファイルパスの固定化、
 追加の環境変数、ログメッセージ中のサービス名など）がある場合は、このスクリプトを
 コピーして調整してください。
+
+---
+
+## docker-compose-config.sh
+
+読み取り専用の診断スクリプト: `docker compose config` で1つ以上の docker-compose
+ファイルをマージした結果を表示・検証します。イメージのビルドやコンテナの起動など、
+変更は一切行いません。ベースの `docker-compose.yml` にマージして使うオーバーライド
+ファイルなどのYAML構文検証に使えます。ユーザーに `docker compose` の手動実行を
+頼む必要がありません。
+
+```bash
+# 単一ファイルを検証
+./docker-compose-config.sh /path/to/docker-compose.yml
+
+# ベースファイルにオーバーライドをマージして検証（順序は -f -f と同じ）
+./docker-compose-config.sh ./docker-compose.yml ./docker-compose.override.yml
+
+# -- の後に docker compose の追加オプションを渡せる
+./docker-compose-config.sh ./docker-compose.yml -- --services
+```
 
 ---
 

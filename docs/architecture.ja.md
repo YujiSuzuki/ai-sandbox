@@ -131,8 +131,10 @@ volumes:
   - /dev/null:/workspace/your-api/.env:ro
 
 tmpfs:
-  # 秘匿ディレクトリを隠す
-  - /workspace/your-api/secrets:ro
+  # 秘匿ディレクトリを隠す。末尾の "# @secret" タグは必須 — 付け忘れると
+  # validate-secrets.sh はサイレントに除外するが、check-secret-sync.sh は
+  # 逆に「欠落」として可視化されたエラーを報告する。
+  - /workspace/your-api/secrets  # @secret
 ```
 
 **結果:**

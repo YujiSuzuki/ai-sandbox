@@ -57,6 +57,7 @@ setup() {
     # Copy required scripts and config to test workspace
     # 必要なスクリプトと設定をテストワークスペースにコピー
     cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -85,7 +86,7 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -95,7 +96,7 @@ services:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=1g
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 }
 
@@ -109,7 +110,7 @@ services:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
       - /dev/null:$TEST_WORKSPACE/another-app/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -118,7 +119,7 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 }
 
@@ -131,7 +132,7 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -140,8 +141,8 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
-      - $TEST_WORKSPACE/another-app/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
+      - $TEST_WORKSPACE/another-app/secrets  # @secret
 EOF
 }
 
@@ -483,7 +484,7 @@ services:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
       - /dev/null:$TEST_WORKSPACE/dc-only-app/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -492,8 +493,8 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
-      - $TEST_WORKSPACE/cli-only-app/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
+      - $TEST_WORKSPACE/cli-only-app/secrets  # @secret
 EOF
 
     # Run with "sync all" option (1)
@@ -554,7 +555,7 @@ services:
       - /dev/null:$TEST_WORKSPACE/app-one/.env:ro
       - /dev/null:$TEST_WORKSPACE/app-two/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -563,7 +564,7 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     # Run with "sync all" option (1)
@@ -740,7 +741,7 @@ services:
       - /dev/null:$TEST_WORKSPACE/app-alpha/.env:ro
       - /dev/null:$TEST_WORKSPACE/app-beta/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
@@ -749,7 +750,7 @@ services:
     volumes:
       - /dev/null:$TEST_WORKSPACE/demo-apps/securenote-api/.env:ro
     tmpfs:
-      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets:ro
+      - $TEST_WORKSPACE/demo-apps/securenote-api/secrets  # @secret
 EOF
 
     # Run with "sync all" option (1) and capture output

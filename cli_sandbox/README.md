@@ -84,8 +84,11 @@ volumes:
   - /dev/null:/workspace/your-api/.env:ro
 
 tmpfs:
-  # Per-directory hiding: tmpfs makes it an empty directory
-  - /workspace/your-api/secrets:ro
+  # Per-directory hiding: tmpfs makes it an empty directory.
+  # The trailing "# @secret" tag marks this entry for validate-secrets.sh /
+  # check-secret-sync.sh — required, since tmpfs has no read-only concept
+  # like bind mounts do, so it can't be inferred from the entry itself.
+  - /workspace/your-api/secrets  # @secret
 ```
 
 For adding and syncing secret settings, see the [Customization Guide](../docs/customization.md).

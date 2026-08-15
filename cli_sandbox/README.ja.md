@@ -85,7 +85,10 @@ volumes:
 
 tmpfs:
   # ディレクトリ単位の隠蔽: tmpfs で空ディレクトリに見える
-  - /workspace/your-api/secrets:ro
+  # 末尾の "# @secret" タグは validate-secrets.sh / check-secret-sync.sh が
+  # このエントリを秘匿設定として認識するための目印です。tmpfsにはbind mount
+  # のような読み取り専用の概念が無く、エントリ自体からは判別できないため必須です。
+  - /workspace/your-api/secrets  # @secret
 ```
 
 秘匿設定の追加・同期については [自分のプロジェクトへの適用](../docs/customization.ja.md) を参照してください。

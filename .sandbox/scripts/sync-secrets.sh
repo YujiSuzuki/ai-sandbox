@@ -46,6 +46,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # sync-ignore サポート用に共通起動関数を読み込み
 # shellcheck source=/dev/null
 source "${WORKSPACE}/.sandbox/scripts/_startup_common.sh"
+# shellcheck source=/dev/null
+source "${WORKSPACE}/.sandbox/scripts/_secret-tag.sh"
 
 # Both docker-compose.yml files
 # 両方の docker-compose.yml
@@ -223,10 +225,23 @@ is_file_in_compose() {
         return 0
     fi
 
+    # Check tmpfs mounts (for directories). Only matches a tmpfs entry
+    # tagged with a trailing "# @secret" comment -- see _secret-tag.sh for
+    # the shared matching regex used by all six secret-sync scripts, so
+    # this check always agrees with validate-secrets.sh / check-secret-sync.sh
+    # / etc. on what counts as a tagged entry.
+    # tmpfs マウントをチェック（ディレクトリ用）。末尾に "# @secret" タグが
+    # 付いているエントリのみを対象とする。共通のマッチング正規表現は
+    # _secret-tag.sh を参照（6本のスクリプトすべてで共有し、
+    # validate-secrets.sh / check-secret-sync.sh 等と判定が常に一致するように
+    # する）。
     local dir_path
     dir_path=$(dirname "$file_path")
     while [ "$dir_path" != "$WORKSPACE" ] && [ "$dir_path" != "/" ]; do
-        if grep -qE "^\s*-\s*${dir_path}:ro$" "$compose_file" 2>/dev/null; then
+        local escaped_dir_path re
+        escaped_dir_path=$(printf '%s' "$dir_path" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
+        re=$(secret_tag_exact_regex "$escaped_dir_path")
+        if grep -qE "$re" "$compose_file" 2>/dev/null; then
             return 0
         fi
         dir_path=$(dirname "$dir_path")
@@ -288,10 +303,10 @@ add_dir_to_compose() {
 
     if [ "$last_tmpfs_line" -gt 0 ]; then
         local indent="      "
-        sed -i "${last_tmpfs_line}a\\${indent}- ${dir_path}:ro" "$compose_file"
+        sed -i "${last_tmpfs_line}a\\${indent}- ${dir_path}  # @secret" "$compose_file"
     else
         echo "Warning: Could not find tmpfs section in $compose_file"
-        echo "Please add manually under tmpfs: - ${dir_path}:ro"
+        echo "Please add manually under tmpfs: - ${dir_path}  # @secret"
         return 1
     fi
 }
@@ -583,7 +598,7 @@ case "$choice" in
                 echo "$MSG_PREVIEW_TMPFS"
                 echo ""
                 for dir in "${local_tmpfs[@]}"; do
-                    echo "      - ${dir}:ro"
+                    echo "      - ${dir}  # @secret"
                 done
                 echo ""
             fi

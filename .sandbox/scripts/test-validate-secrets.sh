@@ -63,6 +63,7 @@ setup() {
     # Copy required scripts and config to test workspace
     # 必要なスクリプトと設定をテストワークスペースにコピー
     cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_COMPOSE_DIR/.sandbox/scripts/"
+    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_COMPOSE_DIR/.sandbox/scripts/"
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_COMPOSE_DIR/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_COMPOSE_DIR/.sandbox/config/" 2>/dev/null || true
 }
@@ -95,7 +96,7 @@ services:
     volumes:
       - /dev/null:$TEST_SECRET_DIR/.env:ro
     tmpfs:
-      - $TEST_SECRET_DIR/secrets:ro
+      - $TEST_SECRET_DIR/secrets  # @secret
 EOF
 }
 
@@ -265,6 +266,73 @@ test_nonexistent_secret_file() {
     cleanup
 }
 
+# Test 8: An untagged tmpfs entry is not picked up as a secret dir to validate
+# テスト8: タグ無しのtmpfsエントリは検証対象の秘匿ディレクトリとして
+# 拾われないことを確認する
+test_untagged_entry_not_validated() {
+    echo ""
+    echo "=== Test: Untagged tmpfs entry is not validated as a secret dir ==="
+
+    setup
+    mkdir -p "$TEST_SECRET_DIR/secrets"
+    cat > "$TEST_COMPOSE_DIR/.devcontainer/docker-compose.yml" << EOF
+services:
+  ai-sandbox:
+    tmpfs:
+      - $TEST_SECRET_DIR/secrets:ro
+EOF
+    # Directory has content, but since the entry has no "# @secret" tag it
+    # must not be picked up as a secret dir to validate -- if it were, the
+    # leaked file inside it would trigger a validation error.
+    # ディレクトリに内容があっても、"# @secret" タグが無いため
+    # 検証対象の秘匿ディレクトリとして拾われてはならない
+    # （拾われた場合、中の漏洩ファイルが検証エラーになるはず）。
+    echo "leaked" > "$TEST_SECRET_DIR/secrets/key.txt"
+
+    if WORKSPACE="$TEST_COMPOSE_DIR" "$SCRIPT" > /dev/null 2>&1; then
+        pass "Untagged entry is not treated as a secret dir (leaked file was not flagged)"
+    else
+        fail "Untagged entry should not be picked up as a secret dir"
+    fi
+
+    cleanup
+}
+
+# Test 9: tmpfs options other than ":ro" before the tag do not corrupt the
+# extracted path
+# テスト9: タグの前の ":ro" 以外のtmpfsオプションが抽出パスを破壊しないか
+test_non_ro_tmpfs_options_are_stripped_correctly() {
+    echo ""
+    echo "=== Test: Non-:ro tmpfs options (e.g. rw,noexec,nosuid,size=1g) are stripped correctly ==="
+
+    setup
+    mkdir -p "$TEST_SECRET_DIR/secrets"
+    cat > "$TEST_COMPOSE_DIR/.devcontainer/docker-compose.yml" << EOF
+services:
+  ai-sandbox:
+    tmpfs:
+      - $TEST_SECRET_DIR/secrets:rw,noexec,nosuid,size=1g  # @secret
+EOF
+    # secrets/ directory is empty, so this should validate successfully --
+    # if the path were corrupted (e.g. left with a trailing ":rw,noexec..."
+    # suffix), [ -d "$path" ] would be false and the entry would be
+    # silently treated as "doesn't exist -- OK" without ever checking the
+    # real directory.
+    # secrets/ は空なので検証は成功するはず -- もしパスが破損していれば
+    # （例: 末尾に ":rw,noexec..." が残っていれば）[ -d "$path" ] は偽になり、
+    # 実際のディレクトリを一度も確認しないまま「存在しない=OK」として
+    # サイレントに扱われてしまう。
+    echo "leaked" > "$TEST_SECRET_DIR/secrets/key.txt"
+
+    if WORKSPACE="$TEST_COMPOSE_DIR" "$SCRIPT" > /dev/null 2>&1; then
+        fail "Script should fail: the real (non-corrupted) path has an exposed file"
+    else
+        pass "Non-:ro tmpfs options handled correctly -- real directory was validated"
+    fi
+
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -280,6 +348,8 @@ main() {
     test_missing_compose_file
     test_no_secret_config
     test_nonexistent_secret_file
+    test_untagged_entry_not_validated
+    test_non_ro_tmpfs_options_are_stripped_correctly
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -63,6 +63,7 @@ setup() {
     # Copy required scripts and config to test workspace
     # 必要なスクリプトと設定をテストワークスペースにコピー
     cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -430,6 +431,36 @@ test_preview_shows_sections() {
     cleanup
 }
 
+# Test 10b: A directory already hidden via a "# @secret"-tagged tmpfs
+# entry must be recognized by is_file_in_compose() for files inside it,
+# so sync-secrets.sh doesn't add redundant per-file /dev/null mounts for
+# files already covered by the tmpfs entry.
+# テスト10b: "# @secret" タグ付きの tmpfs エントリで既に隠蔽されている
+# ディレクトリ内のファイルを is_file_in_compose() が正しく認識し、
+# sync-secrets.sh が冗長な /dev/null マウントを追加しないことを確認する
+test_tagged_tmpfs_directory_recognized_as_already_synced() {
+    echo ""
+    echo "=== Test: Directory hidden via a tagged tmpfs entry is recognized as already synced ==="
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/demo-app/secrets"
+    touch "$TEST_WORKSPACE/demo-app/secrets/key.txt"
+    create_claude_settings '"Read(demo-app/secrets/**)"'
+    create_compose_file "" "      - $TEST_WORKSPACE/demo-app/secrets  # @secret"
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -qE "synced|同期"; then
+        pass "Directory hidden via a tagged tmpfs entry is recognized as already synced"
+    else
+        fail "sync-secrets.sh should recognize the tagged tmpfs entry and report no missing files (got: $output)"
+    fi
+
+    cleanup
+}
+
 # Test 11: Dual-file - adds to both compose files
 # テスト11: 両ファイル - 両方のcompose ファイルに追加
 test_dual_file_add_all() {
@@ -636,6 +667,7 @@ main() {
     test_no_claude_settings
     test_preview_option
     test_preview_shows_sections
+    test_tagged_tmpfs_directory_recognized_as_already_synced
     test_dual_file_add_all
     test_dual_file_shows_missing_labels
     test_dual_file_adds_only_where_missing

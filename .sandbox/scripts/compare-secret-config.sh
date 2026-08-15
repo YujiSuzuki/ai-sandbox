@@ -54,6 +54,8 @@ WORKSPACE_RE=$(printf '%s' "$WORKSPACE" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
 # 共通起動関数を読み込み
 # shellcheck source=/dev/null
 source "${WORKSPACE}/.sandbox/scripts/_startup_common.sh"
+# shellcheck source=/dev/null
+source "${WORKSPACE}/.sandbox/scripts/_secret-tag.sh"
 DEVCONTAINER_COMPOSE="$WORKSPACE/.devcontainer/docker-compose.yml"
 CLI_SANDBOX_COMPOSE="$WORKSPACE/cli_sandbox/docker-compose.yml"
 
@@ -119,12 +121,18 @@ extract_devnull_mounts() {
 }
 
 # Extract tmpfs mounts (secret directory hiding)
-# Only $WORKSPACE paths with :ro are considered secrets
+# A tmpfs: entry is treated as a secret dir only when tagged with a trailing
+# "# @secret" comment; see _secret-tag.sh for the shared matching regex
+# used by all six secret-sync scripts.
 # tmpfs マウントを抽出（秘匿ディレクトリ）
-# $WORKSPACE で始まり :ro で終わるもののみを秘匿とみなす
+# 末尾に "# @secret" タグが付いている tmpfs: エントリのみを秘匿ディレクトリと
+# みなす。共通のマッチング正規表現は _secret-tag.sh を参照
+# （6本のスクリプトすべてで共有）。
 extract_tmpfs_mounts() {
     local file="$1"
     local in_tmpfs=false
+    local prefix_re
+    prefix_re=$(secret_tag_prefix_regex "$WORKSPACE_RE")
 
     while IFS= read -r line; do
         # Check if we're entering tmpfs section
@@ -141,11 +149,9 @@ extract_tmpfs_mounts() {
             continue
         fi
 
-        # If in tmpfs section, extract $WORKSPACE paths with :ro (read-only = secrets)
-        # tmpfs セクション内で $WORKSPACE パスを :ro 付きで抽出（読み取り専用 = 秘匿）
-        # Must start with $WORKSPACE and end with :ro
-        # $WORKSPACE で始まり :ro で終わる必要がある
-        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*$WORKSPACE_RE && "$line" =~ :ro($|[[:space:]]) ]]; then
+        # If in tmpfs section, extract $WORKSPACE paths tagged with "# @secret"
+        # tmpfs セクション内であれば "# @secret" タグ付きの $WORKSPACE パスを抽出
+        if [[ "$in_tmpfs" == true && "$line" =~ $prefix_re ]]; then
             echo "$line" | sed -E 's/^[[:space:]]*-[[:space:]]*//'
         fi
     done < "$file" | sort -u
@@ -336,6 +342,7 @@ if [ "$has_mismatch" = true ]; then
 else
     echo "$MSG_MATCH"
 fi
+
 print_footer
 
 # Return non-zero exit code if mismatch detected

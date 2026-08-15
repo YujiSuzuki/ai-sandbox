@@ -61,9 +61,9 @@ Instead of blocking secret access with rules (which can be misconfigured or bypa
 
 ```yaml
 volumes:
-  - /dev/null:/workspace/my-app/.env:ro     # AI sees an empty file
+  - /dev/null:/workspace/my-app/.env:ro         # AI sees an empty file
 tmpfs:
-  - /workspace/my-app/secrets:ro            # AI sees an empty directory
+  - /workspace/my-app/secrets  # @secret (required tag) — AI sees an empty directory
 ```
 
 The secrets don't exist in AI's world — not blocked by a rule, not filtered by a config, just not there. Meanwhile, your app containers mount the real files normally.

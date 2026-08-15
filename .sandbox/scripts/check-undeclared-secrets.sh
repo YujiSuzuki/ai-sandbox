@@ -68,6 +68,8 @@ WORKSPACE="${WORKSPACE:-/workspace}"
 # 共通起動関数を読み込み
 # shellcheck source=/dev/null
 source "${WORKSPACE}/.sandbox/scripts/_startup_common.sh"
+# shellcheck source=/dev/null
+source "${WORKSPACE}/.sandbox/scripts/_secret-tag.sh"
 
 # Determine which docker-compose.yml to use based on environment
 # 環境に応じて使用する docker-compose.yml を決定
@@ -180,7 +182,14 @@ is_path_hidden_by_compose() {
     while [ "$check_path" != "$WORKSPACE" ] && [ "$check_path" != "/" ] && [ -n "$check_path" ]; do
         local escaped_check_path
         escaped_check_path=$(regex_escape "$check_path")
-        local tmpfs_re="^[[:space:]]*-[[:space:]]*${escaped_check_path}:ro\$"
+        # A tmpfs: entry only hides a path when tagged with a trailing
+        # "# @secret" comment; see _secret-tag.sh for the shared matching
+        # regex used by all six secret-sync scripts.
+        # tmpfs: エントリは末尾に "# @secret" タグが付いている場合のみ隠蔽と
+        # みなす。共通のマッチング正規表現は _secret-tag.sh を参照
+        # （6本のスクリプトすべてで共有）。
+        local tmpfs_re
+        tmpfs_re=$(secret_tag_exact_regex "$escaped_check_path")
         for line in "${COMPOSE_LINES[@]}"; do
             [[ "$line" =~ $tmpfs_re ]] && return 0
         done

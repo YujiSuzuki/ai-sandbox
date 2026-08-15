@@ -58,6 +58,7 @@ setup() {
     mkdir -p "$TEST_WORKSPACE/.sandbox/config"
 
     cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 
@@ -465,7 +466,7 @@ test_tmpfs_dir_not_flagged() {
     touch "$TEST_WORKSPACE/api/secrets/jwt.key"
     {
         echo "    tmpfs:"
-        echo "      - $TEST_WORKSPACE/api/secrets:ro"
+        echo "      - $TEST_WORKSPACE/api/secrets  # @secret"
     } >> "$TEST_WORKSPACE/.devcontainer/docker-compose.yml"
 
     output=$(run_script)

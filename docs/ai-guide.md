@@ -226,7 +226,7 @@ Edit **both** docker-compose files:
 volumes:
   - /dev/null:/workspace/my-api/.env:ro
 tmpfs:
-  - /workspace/my-api/secrets:ro
+  - /workspace/my-api/secrets  # @secret
 ```
 
 ### Step 3: Configure HostMCP
@@ -535,10 +535,12 @@ Source files: `<your-project>/.claude/settings.json` from each subproject direct
 volumes:
   - /dev/null:/workspace/your-api/.env:ro
 tmpfs:
-  - /workspace/your-api/secrets:ro
+  - /workspace/your-api/secrets  # @secret
 ```
 
 AI sees empty files/directories. Real containers access actual secrets.
+
+The trailing `# @secret` tag on a `tmpfs:` entry is required — it's how `validate-secrets.sh` / `check-secret-sync.sh` recognize the entry as secret-hiding, since (unlike a `/dev/null` bind mount, which is unambiguous) a bare tmpfs path under `$WORKSPACE` could plausibly serve some other, non-secret purpose too.
 
 ### HostMCP Security Policy
 

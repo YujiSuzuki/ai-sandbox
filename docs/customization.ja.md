@@ -92,14 +92,16 @@ services:
       - /dev/null:/workspace/your-api/config/secrets.json:ro
 
     tmpfs:
-      # 秘匿ディレクトリを空にする
-      - /workspace/your-api/secrets:ro
-      - /workspace/your-api/keys:ro
+      # 秘匿ディレクトリを空にする。末尾の "# @secret" タグは
+      # validate-secrets.sh / check-secret-sync.sh がこのエントリを
+      # 秘匿設定として認識するための目印。
+      - /workspace/your-api/secrets  # @secret
+      - /workspace/your-api/keys  # @secret
 ```
 
 **ポイント:**
 - `.env` ファイル → `/dev/null` にマウント
-- `secrets/` ディレクトリ → `tmpfs` + `:ro` で空のディレクトリに
+- `secrets/` ディレクトリ → `tmpfs` で空のディレクトリに、末尾の `# @secret` タグを付ける — **必須**: タグを付け忘れると `validate-secrets.sh` はサイレントに除外するが、`check-secret-sync.sh` は逆に「欠落」として可視化されたエラーを報告する
 - 両方の docker-compose.yml を同じ設定にする
 
 ### カスタムドメイン（任意）
@@ -143,7 +145,7 @@ exit
 
 判定ルール：
 - `/dev/null:/workspace/...` の volumes → 秘匿ファイル
-- `/workspace/...:ro` の tmpfs → 秘匿ディレクトリ
+- 末尾に `# @secret` タグが付いた `/workspace/...` の tmpfs → 秘匿ディレクトリ
 
 ### HostMCP設定
 

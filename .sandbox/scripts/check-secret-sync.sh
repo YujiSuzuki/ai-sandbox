@@ -71,6 +71,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 共通起動関数を読み込み
 # shellcheck source=/dev/null
 source "${WORKSPACE}/.sandbox/scripts/_startup_common.sh"
+# shellcheck source=/dev/null
+source "${WORKSPACE}/.sandbox/scripts/_secret-tag.sh"
 
 # Determine which docker-compose.yml to use based on environment
 # 環境に応じて使用する docker-compose.yml を決定
@@ -268,15 +270,24 @@ is_file_in_compose() {
         return 0
     fi
 
-    # Check tmpfs mounts (for directories)
-    # tmpfs マウントをチェック（ディレクトリ用）
+    # Check tmpfs mounts (for directories). Only matches a tmpfs entry
+    # tagged with a trailing "# @secret" comment -- see _secret-tag.sh for
+    # the shared matching regex used by all six secret-sync scripts, so
+    # this check always agrees with validate-secrets.sh /
+    # compare-secret-config.sh / etc. on what counts as a tagged entry.
+    # tmpfs マウントをチェック（ディレクトリ用）。末尾に "# @secret" タグが
+    # 付いているエントリのみを対象とする。共通のマッチング正規表現は
+    # _secret-tag.sh を参照（6本のスクリプトすべてで共有し、
+    # validate-secrets.sh / compare-secret-config.sh 等と判定が
+    # 常に一致するようにする）。
     local dir_path
     dir_path=$(dirname "$file_path")
     while [ "$dir_path" != "$WORKSPACE" ] && [ "$dir_path" != "/" ]; do
         # Escaped for safe use inside a grep -E pattern
-        local escaped_dir_path
+        local escaped_dir_path re
         escaped_dir_path=$(printf '%s' "$dir_path" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
-        if grep -qE "^\s*-\s*${escaped_dir_path}:ro$" "$compose_file" 2>/dev/null; then
+        re=$(secret_tag_exact_regex "$escaped_dir_path")
+        if grep -qE "$re" "$compose_file" 2>/dev/null; then
             return 0
         fi
         dir_path=$(dirname "$dir_path")

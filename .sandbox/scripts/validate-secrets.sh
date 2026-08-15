@@ -40,6 +40,8 @@ WORKSPACE_RE=$(printf '%s' "$WORKSPACE" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
 # 共通起動関数を読み込み
 # shellcheck source=/dev/null
 source "${WORKSPACE}/.sandbox/scripts/_startup_common.sh"
+# shellcheck source=/dev/null
+source "${WORKSPACE}/.sandbox/scripts/_secret-tag.sh"
 EXIT_CODE=0
 ERRORS=()
 
@@ -99,13 +101,18 @@ extract_secret_files() {
 }
 
 # Extract tmpfs mounts for secrets (directories)
-# Only $WORKSPACE paths with :ro are considered secrets
-# Format in docker-compose.yml: - /workspace/path/secrets:ro
+# A tmpfs: entry is treated as a secret dir only when tagged with a trailing
+# "# @secret" comment (see _secret-tag.sh for the shared matching/extraction
+# logic used by all six secret-sync scripts).
+# Format in docker-compose.yml: - /workspace/path/secrets  # @secret
 # tmpfs マウントを抽出（秘匿ディレクトリ）
-# $WORKSPACE で始まり :ro で終わるもののみを秘匿とみなす
+# 末尾に "# @secret" タグが付いている tmpfs: エントリのみを秘匿ディレクトリと
+# みなす（共通のマッチング・抽出ロジックは _secret-tag.sh を参照）。
 extract_secret_dirs() {
     local file="$1"
     local in_tmpfs=false
+    local prefix_re
+    prefix_re=$(secret_tag_prefix_regex "$WORKSPACE_RE")
 
     while IFS= read -r line; do
         # Check if we're entering tmpfs section
@@ -122,12 +129,10 @@ extract_secret_dirs() {
             continue
         fi
 
-        # If in tmpfs section, extract $WORKSPACE paths with :ro (read-only = secrets)
-        # tmpfs セクション内で $WORKSPACE パスを :ro 付きで抽出（読み取り専用 = 秘匿）
-        # Must start with $WORKSPACE and end with :ro
-        # $WORKSPACE で始まり :ro で終わる必要がある
-        if [[ "$in_tmpfs" == true && "$line" =~ ^[[:space:]]*-[[:space:]]*$WORKSPACE_RE && "$line" =~ :ro($|[[:space:]]) ]]; then
-            echo "$line" | sed -E 's/^[[:space:]]*-[[:space:]]*//' | sed -E 's/:ro$//'
+        # If in tmpfs section, extract $WORKSPACE paths tagged with "# @secret"
+        # tmpfs セクション内であれば "# @secret" タグ付きの $WORKSPACE パスを抽出
+        if [[ "$in_tmpfs" == true && "$line" =~ $prefix_re ]]; then
+            secret_tag_extract_path "$line"
         fi
     done < "$file" | sort -u
 }
@@ -321,6 +326,7 @@ if [ ${#ERRORS[@]} -gt 0 ]; then
 else
     echo "$MSG_ALL_OK"
 fi
+
 print_footer
 
 exit $EXIT_CODE
