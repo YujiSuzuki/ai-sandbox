@@ -32,7 +32,7 @@
 #               --repo causes `cd <repo>`, so a relative path resolves inside the repo,
 #               not in your current working directory.
 #               WRONG: --msg-file CommitMsg-draft.md --repo /path/to/repo
-#               RIGHT: --msg-file /workspace/CommitMsg-draft.md --repo /path/to/repo
+#               RIGHT: --msg-file /path/to/repo/CommitMsg-draft.md --repo /path/to/repo
 #
 # Examples:
 #   .sandbox/scripts/commit-msg.sh                              # Generate draft
@@ -69,8 +69,8 @@
 #      注意: --repo を指定する場合、--msg-file は必ず絶対パスにすること。
 #            --repo 指定時にスクリプト内で `cd <repo>` が実行されるため、
 #            相対パスはリポジトリルート基準で解決され、意図しないファイルを読む。
-#            NG: --msg-file CommitMsg-draft.md --repo /workspace/Tokeruyo
-#            OK: --msg-file /workspace/CommitMsg-draft.md --repo /workspace/Tokeruyo
+#            NG: --msg-file CommitMsg-draft.md --repo /path/to/other-repo
+#            OK: --msg-file /path/to/other-repo/CommitMsg-draft.md --repo /path/to/other-repo
 #
 # 環境変数:
 #   COMMIT_MSG_STYLE   デフォルトスタイル ("verb" or "cc")。--style フラグで上書き可能。

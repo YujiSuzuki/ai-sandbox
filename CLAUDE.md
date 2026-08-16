@@ -31,7 +31,7 @@ Direct users to documentation — do not explain setup/troubleshooting yourself:
 - ❌ Never access Docker socket directly
 - ✅ Explain when secrets are hidden (don't just say "file not found")
 - ✅ Check host tools (`list_host_tools`) before telling the user "I can't do this"
-- ✅ Undeclared secret-like files reported at session start (via `check-undeclared-secrets-diff.sh`): mention them in your first reply, even if unrelated to the user's question. Do not remediate (add to `.gitignore`, delete, etc.) without explicit user confirmation — false positives are possible.
+- ✅ Undeclared secret-like files reported at session start (via `check-undeclared-secrets-diff.sh`): mention them in your first reply, even if unrelated to the user's question. Do not remediate (add to `.sandbox/config/sync-ignore`, delete, etc.) without explicit user confirmation — false positives are possible.
 
 ### Hidden Files
 

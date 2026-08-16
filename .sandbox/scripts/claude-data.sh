@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Copies Claude local data (memory, plans, optionally settings) to a destination directory.
+# Lists Claude local data (memory, plans, optionally settings) by default; copies with --copy.
 # @advertise: true
 # ---
-# Claude のローカルデータ（memory、plans、任意で settings）を指定先ディレクトリへコピーする。
+# Claude のローカルデータ（memory、plans、任意で settings）をデフォルトで一覧表示し、--copy 指定時のみコピーする。
 
 set -euo pipefail
 
@@ -13,17 +13,20 @@ SETTINGS_SRC="$CLAUDE_DIR/settings.json"
 PLUGINS_SRC="$CLAUDE_DIR/plugins"
 
 WITH_SETTINGS=false
+COPY=false
 DEST=""
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [OPTIONS] <dest-dir>
+Usage: $(basename "$0") [--with-settings]
+       $(basename "$0") --copy <dest-dir> [--with-settings]
 
 Options:
-  --with-settings    Also copy settings.json and plugins/
+  --copy <dest-dir>  Copy source files to dest-dir instead of listing them
+  --with-settings    Also list/copy settings.json and plugins/
   -h, --help         Show this help
 
-Copied by default:
+Listed/copied by default:
   memory/   ($MEMORY_SRC)
   plans/    ($PLANS_SRC)
 
@@ -32,14 +35,23 @@ With --with-settings:
   plugins/
 
 Example:
-  $(basename "$0") ~/backup/claude
-  $(basename "$0") --with-settings ~/backup/claude
+  $(basename "$0")
+  $(basename "$0") --with-settings
+  $(basename "$0") --copy ~/backup/claude
+  $(basename "$0") --copy ~/backup/claude --with-settings
 EOF
     exit 1
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --copy)
+            COPY=true
+            shift
+            [[ $# -eq 0 || "$1" == -* || -z "$1" ]] && { echo "Error: --copy requires a dest-dir argument" >&2; usage; }
+            DEST="$1"
+            shift
+            ;;
         --with-settings)
             WITH_SETTINGS=true
             shift
@@ -47,18 +59,31 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             usage
             ;;
-        -*)
+        *)
             echo "Error: Unknown option: $1" >&2
             usage
-            ;;
-        *)
-            DEST="$1"
-            shift
             ;;
     esac
 done
 
-[[ -z "$DEST" ]] && { echo "Error: dest-dir is required" >&2; usage; }
+list_path() {
+    local path="$1"
+    if [[ -d "$path" ]]; then
+        find "$path" -type f | sort
+    elif [[ -f "$path" ]]; then
+        echo "$path"
+    fi
+}
+
+if [[ "$COPY" == false ]]; then
+    list_path "$MEMORY_SRC"
+    list_path "$PLANS_SRC"
+    if [[ "$WITH_SETTINGS" == true ]]; then
+        list_path "$SETTINGS_SRC"
+        list_path "$PLUGINS_SRC"
+    fi
+    exit 0
+fi
 
 show_diff_if_changed() {
     local src="$1"

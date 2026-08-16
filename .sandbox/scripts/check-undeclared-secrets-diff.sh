@@ -114,10 +114,10 @@ done < <(jq -n -r --argjson new "$new_paths_json" --argjson claude_only "$curr_c
 
 if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     echo "詳細と対処方法: .sandbox/scripts/check-undeclared-secrets.sh を実行（名前パターンによる検出のため、内容を確認のうえ対処してください）"
-    echo "→ AIへ: このメッセージは必ず今回の最初の返信でユーザーに伝えてください。対処（.gitignoreへの追加・削除など）は必ずユーザーの確認を得てから行い、AI単独で判断・実行しないでください。"
+    echo "→ AIへ: このメッセージは必ず今回の最初の返信でユーザーに伝えてください。対処（.sandbox/config/sync-ignore への追加・削除など）は必ずユーザーの確認を得てから行い、AI単独で判断・実行しないでください。"
 else
     echo "For details and remediation options, run: .sandbox/scripts/check-undeclared-secrets.sh (detected by name pattern -- review the content before acting)"
-    echo "-> AI: mention this in your first reply to the user this session, even if unrelated to their question. Do not remediate (add to .gitignore, delete, etc.) without explicit user confirmation."
+    echo "-> AI: mention this in your first reply to the user this session, even if unrelated to their question. Do not remediate (add to .sandbox/config/sync-ignore, delete, etc.) without explicit user confirmation."
 fi
 
 exit 0
