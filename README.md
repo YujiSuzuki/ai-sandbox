@@ -168,9 +168,8 @@ Run a separate [HostMCP instance per client](https://github.com/YujiSuzuki/hostm
 
 | Setup | Requirements |
 |-------|-------------|
-| **Sandbox (VS Code)** | Docker + VS Code + [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) |
 | **Sandbox (CLI only)** | Docker only |
-| **Sandbox + HostMCP** | Either of the above + [HostMCP](https://github.com/YujiSuzuki/hostmcp) (Go required if using `go install`; not needed with the [prebuilt binary](docs/getting-started.md#step-1-check-prerequisites)) + MCP-compatible AI CLI |
+| **Sandbox + HostMCP** | Docker + [HostMCP](https://github.com/YujiSuzuki/hostmcp) (Go required if using `go install`; not needed with the [prebuilt binary](docs/getting-started.md#step-1-check-prerequisites)) + [MCP-compatible AI tool](#supported-ai-tools) |
 
 ## How It Works (Overview)
 
@@ -196,46 +195,10 @@ Separately from HostMCP, **SandboxMCP** runs inside the container and lets AI au
 > (Host OS only — the script refuses to run inside the container)
 
 
-## Option A: Sandbox
+## Setup
 
-If you only need secret hiding (no HostMCP):
-
-```bash
-# 1. Open in VS Code
-code .
-
-# 2. Reopen in Container (Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container")
-```
-
-<details>
-<summary>If <code>code</code> command is not found</summary>
-
-**Open from VS Code menu:**
-Select "File → Open Folder" and choose this folder.
-
-**Install `code` command (macOS):**
-Open the Command Palette (Cmd+Shift+P) and run `Shell Command: Install 'code' command in PATH`. Restart your terminal.
-
-> Reference: [Visual Studio Code on macOS - Official docs](https://code.visualstudio.com/docs/setup/mac)
-
-</details>
-
-<details>
-<summary>CLI Sandbox (terminal-based)</summary>
-
-```bash
-   ./cli_sandbox/claude.sh # (Claude Code)
-   ./cli_sandbox/gemini.sh # (Gemini CLI)
-```
-
-</details>
-
-**That's it!** AI can access code in `/workspace`, but `.env` and `secrets/` directories are hidden.
-
-
-## Option B: Sandbox + HostMCP
-
-If you also want AI to check logs and run tests in other containers:
+> [!TIP]
+> **💡 Setting up your dev environment from scratch (macOS):** See the [detailed macOS setup guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/macos-setup.md), which walks through installing Homebrew, Docker, and VS Code using the demo app as an example.
 
 ### Step 1: Install and start HostMCP (on host OS)
 
@@ -271,6 +234,19 @@ The `--sync` flag runs the [host tools approval workflow](#host-tools) on startu
 code .
 # Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container"
 ```
+
+<details>
+<summary>If <code>code</code> command is not found</summary>
+
+**Open from VS Code menu:**
+Select "File → Open Folder" and choose this folder.
+
+**Install `code` command (macOS):**
+Open the Command Palette (Cmd+Shift+P) and run `Shell Command: Install 'code' command in PATH`. Restart your terminal.
+
+> Reference: [Visual Studio Code on macOS - Official docs](https://code.visualstudio.com/docs/setup/mac)
+
+</details>
 
 ### Step 3: Register HostMCP as an MCP server (automatic)
 
@@ -441,34 +417,7 @@ AI: ① Runs the tool to aggregate token counts
 
 Slash commands for code review, refactoring, and test generation are included. They work even without a Git repository.
 
-| Command | Purpose |
-|---------|---------|
-| `/ais-local-review` | Code review (bugs, CLAUDE.md compliance, regression analysis) |
-| `/ais-local-security-review` | Security review |
-| `/ais-local-performance-review` | Performance review |
-| `/ais-local-architecture-review` | Architecture review |
-| `/ais-local-test-review` | Test quality review |
-| `/ais-local-doc-review` | Documentation review |
-| `/ais-local-comment-review` | In-code comment quality review (accuracy, clarity, excess/deficiency, necessity) |
-| `/ais-local-prompt-review` | AI command / prompt file review |
-| `/ais-local-spec-review` | Design document (spec) quality review |
-| `/ais-refactor` | Refactoring suggestions |
-| `/ais-test-gen` | Automated test generation |
-| `/ais-local-design-enhance` | Design document brainstorming and enhancement (generates additions) |
-
-**Key features:**
-- Works without a Git repository (review by specifying files directly)
-- Multiple specialized agents review in parallel, with batch scoring + re-validation to reduce false positives
-- Only reports issues with confidence >= 75, keeping noise low
-
-**Installation:**
-
-```bash
-.sandbox/scripts/install-commands.sh --list   # List available commands
-.sandbox/scripts/install-commands.sh --all    # Install all commands
-```
-
-After installation, restart Claude Code and use them as `/ais-local-review`, etc.
+→ See [AI-Sandbox Built-in Custom Commands](.sandbox/commands/README.md) for the full command list and details
 
 > [!TIP]
 > For background on how these commands were created and how to build your own, see [Plugin Guide](docs/plugins.md)

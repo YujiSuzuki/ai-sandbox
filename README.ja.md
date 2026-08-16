@@ -165,9 +165,8 @@ AIは `.env` の中身を一切見ずに、決済ロジックの実装やレビ�
 
 | 構成 | 必要なもの |
 |------|-----------|
-| **Sandbox（VS Code）** | Docker + VS Code + [Dev Containers拡張](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) |
 | **Sandbox（CLIのみ）** | Docker のみ |
-| **Sandbox + HostMCP** | 上記いずれか + [HostMCP](https://github.com/YujiSuzuki/hostmcp)（`go install` の場合はGoが必要。[プレビルド済みバイナリ](docs/getting-started.ja.md#ステップ-1-前提条件を確認する)ならGo不要）+ MCP対応AI CLI |
+| **Sandbox + HostMCP** | Docker + [HostMCP](https://github.com/YujiSuzuki/hostmcp)（`go install` の場合はGoが必要。[プレビルド済みバイナリ](docs/getting-started.ja.md#ステップ-1-前提条件を確認する)ならGo不要）+ [MCP対応AIツール](#対応aiツール) |
 
 ## しくみ（概要）
 
@@ -193,48 +192,11 @@ HostMCP とは別に **SandboxMCP** がコンテナ内で動作し、`.sandbox/`
 > （ホストOS専用 — コンテナ内で実行しようとすると拒否されます）
 
 
-## オプションA: Sandbox
+## セットアップ
 
-秘匿情報の隠蔽だけでよい場合（HostMCPなし）：
+> [!TIP]
+> **💡 開発環境を０（ゼロ）から構築したい場合（macOS）:** デモアプリを例に Homebrew・Docker・VS Code のインストールから順に説明した [macOS 向け 詳細セットアップ手順](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/macos-setup.ja.md) を参照してください。
 
-```bash
-# 1. VS Codeで開く
-code .
-
-# 2. コンテナで再度開く（Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container"）
-```
-
-<details markdown="1">
-
-<summary><code>code</code> コマンドが見つからない場合</summary>
-
-**VS Codeのメニューから開く方法:**
-「ファイル → フォルダーを開く」でこのフォルダーを選択してください。
-
-**`code` コマンドをインストールする方法（macOS）:**
-VS Code上でコマンドパレット（Cmd+Shift+P）を開き、`Shell Command: Install 'code' command in PATH` を実行してください。ターミナルを再起動すると `code` コマンドが使えるようになります。
-
-> 参考: [Visual Studio Code on macOS - 公式ドキュメント](https://code.visualstudio.com/docs/setup/mac)
-
-</details>
-
-<details markdown="1">
-
-<summary>CLI Sandbox 環境（ターミナルベース）の場合</summary>
-
-```bash
-   ./cli_sandbox/claude.sh # (Claude Code)
-   ./cli_sandbox/gemini.sh # (Gemini CLI)
-```
-
-</details>
-
-**これだけです！** AIは `/workspace` 内のコードにアクセスできますが、`.env` と `secrets/` ディレクトリは隠されています。
-
-
-## オプションB: Sandbox + HostMCP
-
-AIに他コンテナのログ確認やテスト実行もさせたい場合：
 
 ### ステップ1: HostMCP をインストールして起動（ホストOS上で）
 
@@ -270,6 +232,20 @@ hostmcp serve --workspace /path/to/your-repo --sync
 code .
 # Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container"
 ```
+
+<details markdown="1">
+
+<summary><code>code</code> コマンドが見つからない場合</summary>
+
+**VS Codeのメニューから開く方法:**
+「ファイル → フォルダーを開く」でこのフォルダーを選択してください。
+
+**`code` コマンドをインストールする方法（macOS）:**
+VS Code上でコマンドパレット（Cmd+Shift+P）を開き、`Shell Command: Install 'code' command in PATH` を実行してください。ターミナルを再起動すると `code` コマンドが使えるようになります。
+
+> 参考: [Visual Studio Code on macOS - 公式ドキュメント](https://code.visualstudio.com/docs/setup/mac)
+
+</details>
 
 ### ステップ3: HostMCPをMCPサーバーとして登録（自動）
 
@@ -442,34 +418,7 @@ AI: ① ツールでトークン数を集計
 
 スラッシュコマンドとして使えるコードレビュー・リファクタ・テスト生成コマンドが付属しています。Git リポジトリがなくても動作します。
 
-| コマンド | 用途 |
-|---------|------|
-| `/ais-local-review` | コードレビュー（バグ・CLAUDE.md準拠・回帰分析） |
-| `/ais-local-security-review` | セキュリティレビュー |
-| `/ais-local-performance-review` | パフォーマンスレビュー |
-| `/ais-local-architecture-review` | アーキテクチャレビュー |
-| `/ais-local-test-review` | テストの品質レビュー |
-| `/ais-local-doc-review` | ドキュメントレビュー |
-| `/ais-local-comment-review` | コードコメントの品質レビュー（客観的妥当性・わかりやすさ・過不足・存在意義） |
-| `/ais-local-prompt-review` | AIコマンド／プロンプトファイルのレビュー |
-| `/ais-local-spec-review` | 設計書（仕様書）の品質レビュー |
-| `/ais-refactor` | リファクタリング提案 |
-| `/ais-test-gen` | テスト自動生成 |
-| `/ais-local-design-enhance` | 設計書のブレインストーミング・強化（追記案を生成） |
-
-**特徴:**
-- Git リポジトリがなくても動作（ファイル指定でレビュー可能）
-- 複数の専門エージェントが並列でレビューし、バッチスコアリング + 再検証の2段階で偽陽性を削減
-- Confidence 75 以上の問題だけを報告するため、ノイズが少ない
-
-**インストール:**
-
-```bash
-.sandbox/scripts/install-commands.sh --list   # 利用可能なコマンドを確認
-.sandbox/scripts/install-commands.sh --all    # 全コマンドをインストール
-```
-
-インストール後、Claude Code を再起動すると `/ais-local-review` のように使えます。
+→ コマンド一覧などの詳細は [AI-Sandbox 付属のカスタムコマンド](.sandbox/commands/README.ja.md) を参照
 
 > [!TIP]
 > コマンドの作成経緯や自作コマンドの作り方は [プラグインガイド](docs/plugins.ja.md) を参照
