@@ -208,6 +208,21 @@ matches_sync_ignore() {
     return 1
 }
 
+# Append a pattern to sync-ignore if not already present (idempotent --
+# avoids duplicate lines when the same item is triaged twice).
+# Usage: add_sync_ignore_pattern "relative/path/to/file"
+# 既に存在しなければ sync-ignore にパターンを追記する（冪等 -- 同じ項目を
+# 2回トリアージしても重複行が増えない）。
+# 使用法: add_sync_ignore_pattern "relative/path/to/file"
+add_sync_ignore_pattern() {
+    local pattern="$1"
+    if [ -f "$SYNC_IGNORE_FILE" ] && grep -qxF "$pattern" "$SYNC_IGNORE_FILE"; then
+        return 0
+    fi
+    mkdir -p "$(dirname "$SYNC_IGNORE_FILE")"
+    echo "$pattern" >> "$SYNC_IGNORE_FILE"
+}
+
 # ============================================================
 # Backup Utility Functions / バックアップユーティリティ関数
 # ============================================================

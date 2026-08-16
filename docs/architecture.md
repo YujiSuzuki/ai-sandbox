@@ -417,7 +417,7 @@ Scripts are classified into two execution environments.
 
 | Environment | Scripts |
 |---|---|
-| `container` (container only) | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.sh`, `check-undeclared-secrets.sh` |
+| `container` (container only) | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.sh`, `check-undeclared-secrets.sh`, `triage-undeclared-secrets.sh` |
 | `any` (either) | All others |
 
 ```

@@ -319,7 +319,7 @@ for f in "${persistent_files[@]}"; do
 
     full_context+=$'\n\n=== PERSISTENT NOTICE: '"$base"$' ('"$((count + 1))"'/'"$PERSISTENT_NOTIFY_CAP"$') ===\n'
     full_context+="$body"
-    full_context+=$'\nThis notice repeats every turn until resolved. Once you have actually done what it asks (e.g. told the user), run: touch "'"$resolved"'"'
+    full_context+=$'\nThis notice repeats every turn until resolved (up to a repeat cap, then it stops on its own). Touching "'"$resolved"'" is not mandatory -- only run: touch "'"$resolved"'" after the user has explicitly given permission to mark it resolved.'
 done
 
 [ -n "${full_context// }" ] || emit_empty

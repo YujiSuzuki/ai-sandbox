@@ -89,9 +89,8 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_NONE_FOUND="疑わしいファイルは見つかりませんでした。"
     MSG_HEADER="⚠️  以下は秘密っぽい名前ですが、docker-compose.yml には未宣言です:"
     MSG_ACTION="対処方法:"
-    MSG_ACTION1="  本当に秘密なら: docker-compose.yml に追記 (.sandbox/scripts/sync-secrets.sh でも可)"
-    MSG_ACTION2="  または: 各プロジェクトの .claude/settings.json の permissions.deny に追記（Readツールは防げるが、ファイル自体はAIから見える状態のままです）"
-    MSG_ACTION3="  秘密でないなら: このメッセージは無視してよい"
+    MSG_ACTION1="  .sandbox/scripts/triage-undeclared-secrets.sh を実行し、"
+    MSG_ACTION2="  docker-compose.yml に追記、または、.sandbox/config/sync-ignore に記載してください"
     MSG_CLAUDE_ONLY_NOTE="（.claude/settings.json では既にカバー済み。ただしdocker-compose.ymlのようにファイル内容自体を隠すものではありません）"
     MSG_IGNORED_HEADER="無視されたファイル (sync-ignore パターンにマッチ):"
     MSG_CHECKED_SUMMARY="チェック対象: %d 件 / docker-compose宣言済み: %d 件 / うち settings.json のみでカバー(未宣言扱い): %d 件 / 無視: %d 件"
@@ -101,9 +100,8 @@ else
     MSG_NONE_FOUND="No suspicious files found."
     MSG_HEADER="⚠️  These look like secrets by name, but are NOT declared in docker-compose.yml:"
     MSG_ACTION="Action:"
-    MSG_ACTION1="  If genuinely secret: add to docker-compose.yml (or run .sandbox/scripts/sync-secrets.sh)"
-    MSG_ACTION2="  Or: add to the relevant project's .claude/settings.json permissions.deny (blocks the Read tool, but the file itself remains visible to AI)"
-    MSG_ACTION3="  If not secret: safe to ignore"
+    MSG_ACTION1="  Run .sandbox/scripts/triage-undeclared-secrets.sh, then"
+    MSG_ACTION2="  add it to docker-compose.yml, or list it in .sandbox/config/sync-ignore"
     MSG_CLAUDE_ONLY_NOTE="(already covered by .claude/settings.json -- but that doesn't hide the file's content the way docker-compose.yml does)"
     MSG_IGNORED_HEADER="Ignored files (matched sync-ignore patterns):"
     MSG_CHECKED_SUMMARY="Checked: %d / Declared in docker-compose.yml: %d / Of those still undeclared, settings.json-only: %d / Ignored: %d"
@@ -397,7 +395,6 @@ else
     echo "$MSG_ACTION"
     echo "$MSG_ACTION1"
     echo "$MSG_ACTION2"
-    echo "$MSG_ACTION3"
 fi
 
 if [ ${#ignored[@]} -gt 0 ]; then

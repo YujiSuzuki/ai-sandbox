@@ -113,10 +113,10 @@ done < <(jq -n -r --argjson new "$new_paths_json" --argjson claude_only "$curr_c
     '$new[] as $p | [$p, (($claude_only | index($p)) != null | tostring)] | @tsv')
 
 if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
-    echo "詳細と対処方法: .sandbox/scripts/check-undeclared-secrets.sh を実行（名前パターンによる検出のため、内容を確認のうえ対処してください）"
+    echo "詳細: .sandbox/scripts/check-undeclared-secrets.sh / 対処: .sandbox/scripts/triage-undeclared-secrets.sh（1件ずつ確認しながら処理します。名前パターンによる検出のため、内容を確認のうえ選択してください）"
     echo "→ AIへ: このメッセージは必ず今回の最初の返信でユーザーに伝えてください。対処（.sandbox/config/sync-ignore への追加・削除など）は必ずユーザーの確認を得てから行い、AI単独で判断・実行しないでください。"
 else
-    echo "For details and remediation options, run: .sandbox/scripts/check-undeclared-secrets.sh (detected by name pattern -- review the content before acting)"
+    echo "For details, run: .sandbox/scripts/check-undeclared-secrets.sh -- to act on findings, run: .sandbox/scripts/triage-undeclared-secrets.sh (reviews each item interactively; detected by name pattern only, so check the content before choosing)"
     echo "-> AI: mention this in your first reply to the user this session, even if unrelated to their question. Do not remediate (add to .sandbox/config/sync-ignore, delete, etc.) without explicit user confirmation."
 fi
 
