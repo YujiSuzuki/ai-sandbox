@@ -38,7 +38,7 @@
   ├─ run_startup_scripts()
   │    ├─ merge-claude-settings.sh    … Claude 設定のマージ
   │    ├─ security-reminder.sh        … AI設定変更の検知
-  │    ├─ compare-secret-config.sh    … DevContainer と CLI の設定差異チェック
+  │    ├─ compare-secret-config.py    … DevContainer と CLI の設定差異チェック
   │    ├─ validate-secrets.py         … 秘匿設定が機能しているか検証
   │    └─ check-secret-sync.sh        … .claude/settings.json との同期チェック
   │
@@ -76,7 +76,7 @@ SANDBOX_MEMORY_LIMIT=4gb  # コンテナのメモリ上限
 
 ### 秘匿情報の隠蔽
 
-DevContainer（`.devcontainer/docker-compose.yml`）と同じ秘匿設定を維持する必要があります。両者に差異があると起動時に `compare-secret-config.sh` が警告を出します。
+DevContainer（`.devcontainer/docker-compose.yml`）と同じ秘匿設定を維持する必要があります。両者に差異があると起動時に `compare-secret-config.py` が警告を出します。
 
 ```yaml
 volumes:

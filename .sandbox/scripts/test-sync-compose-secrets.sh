@@ -596,7 +596,7 @@ test_sync_then_compare() {
     echo "1" | WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" > /dev/null 2>&1 || true
 
     # Run compare script - should return success (exit 0)
-    if WORKSPACE="$TEST_WORKSPACE" "$SCRIPT_DIR/compare-secret-config.sh" > /dev/null 2>&1; then
+    if WORKSPACE="$TEST_WORKSPACE" "$SCRIPT_DIR/compare-secret-config.py" > /dev/null 2>&1; then
         pass "After sync, compare-secret-config shows match"
     else
         fail "After sync, compare-secret-config should show match"

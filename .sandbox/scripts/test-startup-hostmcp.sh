@@ -64,7 +64,7 @@ setup() {
     mkdir -p "$TEST_DIR/workspace/.sandbox/scripts"
 
     # Create no-op stubs for steps 1-5 (not under test)
-    for script in merge-claude-settings.sh compare-secret-config.sh \
+    for script in merge-claude-settings.sh compare-secret-config.py \
                   validate-secrets.py check-secret-sync.sh check-upstream-updates.sh; do
         cat > "$TEST_DIR/workspace/.sandbox/scripts/$script" << 'STUB'
 #!/bin/bash

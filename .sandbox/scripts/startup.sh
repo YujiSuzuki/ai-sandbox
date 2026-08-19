@@ -125,7 +125,7 @@ BANNER
 
 # 2. Compare secret config consistency (report mismatches first)
 # 秘匿設定の整合性チェック（不一致を先に報告）
-"$WORKSPACE/.sandbox/scripts/compare-secret-config.sh" || {
+"$WORKSPACE/.sandbox/scripts/compare-secret-config.py" || {
     echo "$MSG_COMPARE_FAILED"
     echo ""
 }

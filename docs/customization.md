@@ -120,7 +120,7 @@ You'll also need the same entry in your host OS's `/etc/hosts` (or Windows equiv
 
 These checks run automatically at startup:
 1. `validate-secrets.py` - Verifies secrets are actually hidden (auto-reads paths from docker-compose.yml)
-2. `compare-secret-config.sh` - Warns if DevContainer and CLI configurations differ
+2. `compare-secret-config.py` - Warns if DevContainer and CLI configurations differ
 3. `check-secret-sync.sh` - Warns if files blocked in AI settings are not hidden in docker-compose.yml
    - Supports: `.claude/settings.json`, `.aiexclude`, `.geminiignore`
    - Note: `.gitignore` is intentionally **not supported** — it contains many non-secret patterns (`node_modules/`, `dist/`, `*.log`) that would create noise. List only secrets explicitly in AI-specific files.

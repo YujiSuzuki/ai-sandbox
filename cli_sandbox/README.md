@@ -38,7 +38,7 @@ Script starts
   ├─ run_startup_scripts()
   │    ├─ merge-claude-settings.sh    … Merge Claude settings
   │    ├─ security-reminder.sh        … Detect AI config changes
-  │    ├─ compare-secret-config.sh    … Check for differences between DevContainer and CLI configs
+  │    ├─ compare-secret-config.py    … Check for differences between DevContainer and CLI configs
   │    ├─ validate-secrets.py         … Verify secret hiding is working
   │    └─ check-secret-sync.sh        … Check sync with .claude/settings.json
   │
@@ -76,7 +76,7 @@ A variable to identify the current environment inside the container. Different v
 
 ### Secret Hiding
 
-Must be kept in sync with the DevContainer (`.devcontainer/docker-compose.yml`). If they differ, `compare-secret-config.sh` will warn at startup.
+Must be kept in sync with the DevContainer (`.devcontainer/docker-compose.yml`). If they differ, `compare-secret-config.py` will warn at startup.
 
 ```yaml
 volumes:

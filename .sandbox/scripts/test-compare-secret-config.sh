@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-compare-secret-config.sh
-# Test script for compare-secret-config.sh
+# Test script for compare-secret-config.py
 #
-# compare-secret-config.sh のテストスクリプト
+# compare-secret-config.py のテストスクリプト
 #
 # Usage: ./test-compare-secret-config.sh
 # 使用方法: ./test-compare-secret-config.sh
@@ -10,14 +10,14 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/compare-secret-config.sh"
+SCRIPT="$SCRIPT_DIR/compare-secret-config.py"
 TEST_WORKSPACE=""
 
-# compare-secret-config.sh now refuses to run unless $SANDBOX_ENV is set or
+# compare-secret-config.py now refuses to run unless $SANDBOX_ENV is set or
 # /.dockerenv exists. Default it here so this test suite still runs outside
 # the container (plain checkout, CI without a devcontainer) -- the host-OS
 # guard test below overrides it inline per-invocation.
-# compare-secret-config.sh は $SANDBOX_ENV か /.dockerenv が無いと実行を
+# compare-secret-config.py は $SANDBOX_ENV か /.dockerenv が無いと実行を
 # 拒否するようになった。コンテナ外（素のチェックアウトやdevcontainer無しの
 # CI）でもこのテストスイートが動くよう既定値を設定する。下のホストOSガード
 # テストは呼び出しごとにインラインで上書きする。
@@ -66,10 +66,11 @@ setup() {
     mkdir -p "$TEST_WORKSPACE/.sandbox/scripts"
     mkdir -p "$TEST_WORKSPACE/.sandbox/config"
 
-    # Copy required scripts and config to test workspace
-    # 必要なスクリプトと設定をテストワークスペースにコピー
-    cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
-    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    # Copy required config to test workspace (the script imports its own
+    # Python libraries from its real script directory, not $WORKSPACE)
+    # 必要な設定をテストワークスペースにコピー（スクリプトは自身の実際の
+    # ディレクトリからPythonライブラリをimportするため、$WORKSPACE相対では
+    # コピー不要）
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -185,7 +186,7 @@ test_script_executable_and_valid() {
 
     # Check for syntax errors
     # 構文エラーをチェック
-    if bash -n "$SCRIPT" 2>/dev/null; then
+    if python3 -m py_compile "$SCRIPT" 2>/dev/null; then
         pass "Script is executable and has valid syntax"
     else
         fail "Script has syntax errors"
@@ -314,10 +315,17 @@ test_host_os_guard() {
     setup
     create_matching_configs
 
-    local patched_script="$TEST_WORKSPACE/compare-secret-config-patched.sh"
+    local patched_script="$TEST_WORKSPACE/compare-secret-config-patched.py"
     local fake_marker="$TEST_WORKSPACE/no-such-dockerenv"
     sed "s#/\.dockerenv#$fake_marker#" "$SCRIPT" > "$patched_script"
     chmod +x "$patched_script"
+    # The patched copy runs from $TEST_WORKSPACE, so it needs its imported
+    # libraries alongside it there too (Python resolves "from X import Y"
+    # relative to the running script's own directory, not $WORKSPACE).
+    # パッチ済みコピーは$TEST_WORKSPACEから実行されるため、import先の
+    # ライブラリもそこに置く必要がある（Pythonの"from X import Y"は
+    # $WORKSPACEではなく実行スクリプト自身のディレクトリを基準に解決される）。
+    cp "$SCRIPT_DIR/_python_common.py" "$SCRIPT_DIR/_secret_tag.py" "$TEST_WORKSPACE/"
 
     local output exit_code
 
@@ -354,7 +362,7 @@ test_host_os_guard() {
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  compare-secret-config.sh Test Suite"
+    echo "  compare-secret-config.py Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_executable_and_valid

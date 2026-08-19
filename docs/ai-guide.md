@@ -248,7 +248,7 @@ Update `allowed_containers` and `exec_whitelist` in the generated `.sandbox/conf
 
 ```bash
 .sandbox/scripts/validate-secrets.py
-.sandbox/scripts/compare-secret-config.sh
+.sandbox/scripts/compare-secret-config.py
 .sandbox/scripts/check-secret-sync.sh
 ```
 
@@ -425,7 +425,7 @@ A specific bash 3.2 pitfall: a bare `$var` immediately followed by a non-ASCII c
 │   │   ├── help.sh                   # Show script list with descriptions
 │   │   ├── _startup_common.sh        # Common functions for startup scripts
 │   │   ├── validate-secrets.py       # 🐳 Secret hiding verification
-│   │   ├── compare-secret-config.sh  # 🐳 DevContainer/CLI config diff check
+│   │   ├── compare-secret-config.py  # 🐳 DevContainer/CLI config diff check
 │   │   ├── check-secret-sync.sh      # 🐳 Check if Claude deny files are hidden
 │   │   ├── sync-secrets.sh           # 🐳 Interactive secret sync tool
 │   │   ├── sync-compose-secrets.sh   # 🐳 Sync between DevContainer/CLI compose
