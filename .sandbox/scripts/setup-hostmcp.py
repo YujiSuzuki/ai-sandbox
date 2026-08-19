@@ -51,6 +51,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _python_common import is_lang_ja, write_json_atomic
+
 # ─── Colors & helpers / カラー出力・ヘルパー関数 ────────────────
 
 RED = "\033[0;31m"
@@ -84,10 +86,6 @@ def die(msg: str) -> None:
 
 
 # ─── Language detection / 言語検出 ─────────────────────────────
-
-def is_lang_ja() -> bool:
-    return os.environ.get("LANG", "").startswith("ja_JP") or os.environ.get("LC_ALL", "").startswith("ja_JP")
-
 
 def get_messages(lang_ja: bool) -> dict:
     if lang_ja:
@@ -295,6 +293,12 @@ def can_register_gemini() -> bool:
 # ─── Registration detection / 登録検出 ────────────────────────
 
 def _json_has_key(path: Path, *keys: str) -> bool:
+    # Mirrors `jq -e`: a final value of null or false counts as "not found",
+    # not merely "the key is present" -- matches jq -e's own null/false
+    # treatment as failure.
+    # `jq -e` に合わせている: 最終値が null または false の場合は
+    # 「キーが存在する」ではなく「見つからない」扱いとする -- jq -e が
+    # null/false を失敗として扱う挙動に一致させる。
     try:
         node = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError):
@@ -303,7 +307,7 @@ def _json_has_key(path: Path, *keys: str) -> bool:
         if not isinstance(node, dict) or key not in node:
             return False
         node = node[key]
-    return True
+    return node is not None and node is not False
 
 
 def is_claude_registered() -> bool:
@@ -352,14 +356,6 @@ def check_connectivity(url: str) -> bool:
     return http_code not in ("000", "")
 
 
-# ─── Safe JSON write / 安全な JSON 書き込み ───────────────────
-
-def write_json_atomic(target: Path, data: dict) -> None:
-    tmp = target.parent / f"{target.name}.tmp.{os.getpid()}"
-    tmp.write_text(json.dumps(data, indent=2) + "\n")
-    tmp.replace(target)
-
-
 # ─── Registration / 登録 ──────────────────────────────────────
 
 def register_claude(url: str) -> bool:
@@ -381,6 +377,8 @@ def register_claude(url: str) -> bool:
     try:
         data = json.loads(source.read_text())
     except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(data, dict):
         return False
     data.setdefault("mcpServers", {})[DKMCP_NAME] = {"type": "sse", "url": url}
     write_json_atomic(mcp_json, data)
@@ -406,6 +404,8 @@ def register_gemini(url: str) -> bool:
             return False
     else:
         data = {"mcpServers": {}}
+    if not isinstance(data, dict):
+        return False
     data.setdefault("mcpServers", {})[DKMCP_NAME] = {"url": url, "type": "sse"}
     write_json_atomic(settings, data)
     return True

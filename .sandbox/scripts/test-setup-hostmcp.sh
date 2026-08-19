@@ -161,6 +161,39 @@ EOF
     cleanup
 }
 
+# Test 4b: --check returns 1 (not registered) when the hostmcp entry's value
+# is JSON null -- matches jq -e's treatment of a null result as failure;
+# merely finding the key present is not enough.
+# テスト4b: hostmcpエントリの値がJSON nullの場合、--check が1（未登録）を
+# 返すか -- jq -e がnullを失敗として扱う挙動に合わせる。キーが存在する
+# だけでは登録済みと判定してはいけない。
+test_check_null_entry_treated_as_not_registered() {
+    echo ""
+    echo "=== Test: --check treats a null hostmcp entry as not registered ==="
+
+    setup
+
+    cat > "$TEST_WORKSPACE/.mcp.json" << 'EOF'
+{
+  "mcpServers": {
+    "hostmcp": null
+  }
+}
+EOF
+
+    local exit_code=0
+    WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" \
+        "$SCRIPT" --check --url "http://localhost:1/sse" 2>/dev/null || exit_code=$?
+
+    if [ "$exit_code" -eq 1 ]; then
+        pass "--check returns 1 when the hostmcp entry's value is null"
+    else
+        fail "--check returned $exit_code, expected 1 (null entry should not count as registered)"
+    fi
+
+    cleanup
+}
+
 # Test 5: Default mode creates .mcp.json via fallback when claude CLI not in PATH
 # テスト5: claude CLI 不在時にフォールバックで .mcp.json を作成するか
 test_register_fallback_creates_mcp_json() {
@@ -735,6 +768,66 @@ STUB
     cleanup
 }
 
+# Test 16b: Malformed .mcp.json (JSON array, not an object) does not crash
+# the script -- it should be treated as a registration failure, same as
+# invalid JSON, not propagate an unhandled exception.
+# テスト16b: .mcp.json がJSONオブジェクトでない場合（配列など）にクラッシュ
+# せず、不正なJSONと同様に登録失敗として扱われるか
+test_malformed_mcp_json_root_does_not_crash() {
+    echo ""
+    echo "=== Test: Malformed .mcp.json (array root) does not crash ==="
+
+    setup
+
+    # A valid JSON array is not a valid mcpServers root -- register_claude's
+    # fallback path must treat this as failure, not crash with AttributeError.
+    echo '[]' > "$TEST_WORKSPACE/.mcp.json"
+
+    local output
+    local exit_code=0
+    output=$(WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" PATH="/usr/bin:/bin" \
+        "$SCRIPT" 2>&1) || exit_code=$?
+
+    if echo "$output" | grep -qi "traceback\|attributeerror"; then
+        fail "Script crashed with an unhandled Python exception: $output"
+    elif echo "$output" | grep -qi "failed\|失敗"; then
+        pass "Malformed .mcp.json root is treated as a graceful registration failure"
+    else
+        fail "Expected a graceful failure message, got: $output"
+    fi
+
+    cleanup
+}
+
+# Test 16c: Malformed .gemini/settings.json (JSON array, not an object) does
+# not crash the script -- register_gemini's fallback path must treat this as
+# failure, same as register_claude's equivalent guard tested above.
+# テスト16c: .gemini/settings.json がJSONオブジェクトでない場合（配列など）に
+# クラッシュせず、register_claude と同様に登録失敗として扱われるか
+test_gemini_malformed_settings_json_root_does_not_crash() {
+    echo ""
+    echo "=== Test: Malformed .gemini/settings.json (array root) does not crash ==="
+
+    setup
+
+    echo '[]' > "$TEST_WORKSPACE/.gemini/settings.json"
+
+    local output
+    local exit_code=0
+    output=$(WORKSPACE="$TEST_WORKSPACE" HOME="$TEST_WORKSPACE" PATH="/usr/bin:/bin" \
+        "$SCRIPT" 2>&1) || exit_code=$?
+
+    if echo "$output" | grep -qi "traceback\|attributeerror"; then
+        fail "Script crashed with an unhandled Python exception: $output"
+    elif echo "$output" | grep -qi "failed\|失敗"; then
+        pass "Malformed .gemini/settings.json root is treated as a graceful registration failure"
+    else
+        fail "Expected a graceful failure message, got: $output"
+    fi
+
+    cleanup
+}
+
 # Test 17: Gemini CLI failure shows error message (not crash)
 # テスト17: Gemini CLI 失敗時にエラーメッセージが表示されるか
 test_gemini_register_failure_shows_error() {
@@ -780,6 +873,7 @@ main() {
     test_help
     test_check_not_registered
     test_check_registered_but_offline
+    test_check_null_entry_treated_as_not_registered
     test_register_fallback_creates_mcp_json
     test_register_preserves_existing_entries
     test_unregister_removes_hostmcp
@@ -795,6 +889,8 @@ main() {
     test_gemini_unregister
     test_detect_gemini_registered
     test_register_failure_shows_error
+    test_malformed_mcp_json_root_does_not_crash
+    test_gemini_malformed_settings_json_root_does_not_crash
     test_gemini_register_failure_shows_error
 
     echo ""

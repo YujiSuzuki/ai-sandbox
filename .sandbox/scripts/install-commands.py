@@ -60,26 +60,15 @@
 #   2. install-commands.py --all または install-commands.py <name> でインストール
 #   3. Claude Code を再起動して新しいコマンドを認識させる
 
-import os
 import re
 import sys
 from pathlib import Path
 
+from _python_common import is_lang_ja, msg, pick
+
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent
 COMMANDS_SRC_DIR = WORKSPACE_ROOT / ".sandbox" / "commands"
 COMMANDS_DIR = WORKSPACE_ROOT / ".claude" / "commands"
-
-
-def is_lang_ja() -> bool:
-    return os.environ.get("LANG", "").startswith("ja_JP") or os.environ.get("LC_ALL", "").startswith("ja_JP")
-
-
-def pick(lang_ja: bool, en: str, ja: str) -> str:
-    return ja if lang_ja else en
-
-
-def msg(lang_ja: bool, en: str, ja: str) -> None:
-    print(pick(lang_ja, en, ja))
 
 
 # ─── Help / ヘルプ ─────────────────────────────────────────────────────────
@@ -146,7 +135,7 @@ def localize_file(path: Path, lang_ja: bool) -> str:
     for line in path.read_text().split("\n"):
         if line.startswith("description-ja:"):
             continue
-        if ja_desc and line.startswith("description:"):
+        if ja_desc and line.startswith("description: "):
             out.append(f"description: {ja_desc}")
             continue
         out.append(line)

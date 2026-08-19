@@ -47,14 +47,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _python_common import is_lang_ja, write_json_atomic
+
 WORKSPACE = Path(os.environ.get("WORKSPACE", "/workspace"))
 CHECK_SCRIPT = Path(os.environ.get("CHECK_SCRIPT", str(WORKSPACE / ".sandbox" / "scripts" / "check-undeclared-secrets.sh")))
 STATE_FILE = Path(os.environ.get("STATE_FILE", str(WORKSPACE / ".sandbox" / ".state" / "check-undeclared-secrets.json")))
 PENDING_FILE = Path(os.environ.get("PENDING_FILE", str(WORKSPACE / ".sandbox" / ".state" / "check-undeclared-secrets.pending.json")))
-
-
-def is_lang_ja() -> bool:
-    return os.environ.get("LANG", "").startswith("ja_JP") or os.environ.get("LC_ALL", "").startswith("ja_JP")
 
 
 def load_json(path: Path):
@@ -69,13 +67,6 @@ def load_json_str(text: str):
         return json.loads(text)
     except json.JSONDecodeError:
         return None
-
-
-def write_json_atomic(target: Path, data) -> None:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_suffix(target.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-    tmp.replace(target)
 
 
 def main() -> None:

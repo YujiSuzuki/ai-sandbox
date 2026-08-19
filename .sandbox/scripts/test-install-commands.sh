@@ -49,9 +49,14 @@ setup() {
     mkdir -p "$TEST_DIR/.sandbox/commands"
     mkdir -p "$TEST_DIR/.sandbox/scripts"
 
-    # Copy the script under test into the fake workspace
+    # Copy the script under test into the fake workspace, along with its
+    # sibling _python_common.py module (imported at load time -- without
+    # it, the copied script would fail with ModuleNotFoundError).
+    # テスト対象スクリプトを、読み込み時にimportする _python_common.py と
+    # 一緒に偽ワークスペースへコピーする（これがないとModuleNotFoundErrorになる）。
     cp "$SCRIPT" "$TEST_DIR/.sandbox/scripts/$(basename "$SCRIPT")"
     chmod +x "$TEST_DIR/.sandbox/scripts/$(basename "$SCRIPT")"
+    cp "$SCRIPT_DIR/_python_common.py" "$TEST_DIR/.sandbox/scripts/_python_common.py"
 
     # Create sample command files
     cat > "$TEST_DIR/.sandbox/commands/test-cmd-a.md" << 'EOF'
@@ -495,6 +500,44 @@ test_localize_no_ja_field() {
     cleanup
 }
 
+# Test 17: A "description:" line with no space before the value (malformed
+# frontmatter) is left untouched by localization, matching the original
+# sed pattern `^description: .*` which requires the space -- it must not be
+# overwritten with the Japanese description.
+# テスト17: コロンの後にスペースがない「description:」行（不正な
+# フロントマター）は、ローカライズ処理で書き換えられずそのまま残るか
+# -- スペースを要求する元のsedパターン `^description: .*` に合わせる。
+# 日本語のdescriptionで上書きされてはいけない。
+test_localize_no_space_after_colon_untouched() {
+    echo ""
+    echo "=== Test: description line without a space after the colon is untouched ==="
+
+    setup
+
+    cat > "$TEST_DIR/.sandbox/commands/test-cmd-nospace.md" << 'EOF'
+---
+description:no-space-value
+description-ja: 日本語の説明
+---
+# Test Command No Space
+Content here.
+EOF
+
+    LANG=ja_JP.UTF-8 run_script test-cmd-nospace > /dev/null 2>&1
+
+    local installed="$TEST_DIR/.claude/commands/test-cmd-nospace.md"
+    if [ -f "$installed" ] && \
+       grep -q "^description:no-space-value$" "$installed" && \
+       ! grep -q "description-ja:" "$installed"; then
+        pass "Malformed description: line (no space) is left untouched"
+    else
+        fail "Malformed description: line was unexpectedly rewritten"
+        [ -f "$installed" ] && cat "$installed"
+    fi
+
+    cleanup
+}
+
 # ─── Run all tests / 全テスト実行 ─────────────────────────────
 
 main() {
@@ -519,6 +562,7 @@ main() {
     test_localize_en
     test_list_ja_description
     test_localize_no_ja_field
+    test_localize_no_space_after_colon_untouched
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
