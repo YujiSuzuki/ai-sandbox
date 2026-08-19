@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-triage-undeclared-secrets.sh
-# Test script for triage-undeclared-secrets.sh
+# Test script for triage-undeclared-secrets.py
 #
-# triage-undeclared-secrets.sh のテストスクリプト
+# triage-undeclared-secrets.py のテストスクリプト
 #
 # Usage: ./test-triage-undeclared-secrets.sh
 # 使用方法: ./test-triage-undeclared-secrets.sh
@@ -16,7 +16,7 @@ if ! command -v jq &> /dev/null; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/triage-undeclared-secrets.sh"
+SCRIPT="$SCRIPT_DIR/triage-undeclared-secrets.py"
 TEST_WORKSPACE=""
 
 # Colors for output
@@ -58,8 +58,6 @@ setup() {
     mkdir -p "$TEST_WORKSPACE/.sandbox/config"
     mkdir -p "$TEST_WORKSPACE/demo-app"
 
-    cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
-    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/_python_common.py" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/_secret_tag.py" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/check-undeclared-secrets.py" "$TEST_WORKSPACE/.sandbox/scripts/"
@@ -128,7 +126,7 @@ test_script_executable_and_valid() {
         fail "Script is not executable"
         return
     fi
-    if bash -n "$SCRIPT" 2>/dev/null; then
+    if python3 -m py_compile "$SCRIPT" 2>/dev/null; then
         pass "Script is executable and has valid syntax"
     else
         fail "Script has syntax errors"
@@ -211,7 +209,7 @@ test_hide_directory_via_compose() {
     run_script "1" > /dev/null
 
     # shellcheck source=/dev/null
-    source "$TEST_WORKSPACE/.sandbox/scripts/_secret-tag.sh"
+    source "$SCRIPT_DIR/_secret-tag.sh"
     local escaped_path re
     escaped_path=$(printf '%s' "$TEST_WORKSPACE/secrets" | sed -E 's/[][\.^$(){}?+*|]/\\&/g')
     re=$(secret_tag_exact_regex "$escaped_path")
@@ -456,7 +454,7 @@ test_no_duplicate_tag_when_already_hidden_in_other_compose() {
     create_compose_file "" ""
 
     # shellcheck source=/dev/null
-    source "$TEST_WORKSPACE/.sandbox/scripts/_secret-tag.sh"
+    source "$SCRIPT_DIR/_secret-tag.sh"
 
     # Pre-tag the directory in the CLI Sandbox compose only -- the
     # DevContainer compose (created above) lacks it, so
@@ -501,7 +499,7 @@ EOF
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  triage-undeclared-secrets.sh Test Suite"
+    echo "  triage-undeclared-secrets.py Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_executable_and_valid
