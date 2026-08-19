@@ -24,6 +24,12 @@
 #      NOTE: When --repo is used, CommitMsg-draft.md is written INSIDE the repo directory
 #            (e.g., --repo /path/to/repo  =>  /path/to/repo/CommitMsg-draft.md)
 #            Edit that file, NOT a file in the current working directory.
+#      NOTE: Ground every bullet in `git diff --cached` for that file, not in your own
+#            editing-session memory. For files with status A (new), describe what the
+#            code does now -- do NOT use before/after language ("fix", "not just X",
+#            "changed from Y") unless that prior state is an actual commit in `git log`.
+#            A reader of `git log`/`git blame` has no visibility into your pre-commit
+#            editing history, only into the repository's.
 #   4. Show the draft to the user for approval
 #      IMPORTANT: ALL placeholders (<変更内容を記述> / <describe change> etc.) MUST be
 #                 replaced with real text. Do NOT proceed to step 5 with placeholder text.
@@ -62,6 +68,12 @@
 #      注意: --repo を指定した場合、CommitMsg-draft.md はそのリポジトリ内に生成される
 #            （例: --repo /path/to/repo  =>  /path/to/repo/CommitMsg-draft.md）
 #            カレントディレクトリではなく、そのファイルを編集すること。
+#      注意: 各箇条書きは、そのファイルの `git diff --cached` を根拠にすること。自分の
+#            編集セッション中の記憶を根拠にしないこと。status が A（新規）のファイルは
+#            「今のコードが何をするか」を書き、before/after表現（"修正"、"〜だけでなく"、
+#            "〜から変更"）は、その以前の状態が `git log` 上の実際のコミットとして
+#            存在する場合以外は使わないこと。`git log`/`git blame` を見る人には、
+#            コミット前のあなたの編集履歴は見えず、リポジトリの履歴しか見えない。
 #   4. ユーザーにドラフトを提示して承認を得る
 #      重要: <変更内容を記述> などのプレースホルダーを実際の内容に置き換えること。
 #            プレースホルダーが残ったままでステップ5に進んではならない。
@@ -110,6 +122,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_NEXT_STEPS="次のステップ:"
     MSG_STEP1="1. プロジェクトのコミットスタイルを確認:"
     MSG_STEP2="2. ドラフトをスタイルに合わせて推敲"
+    MSG_STEP2_NOTE="→ git diff --cached の実差分を根拠にすること。新規ファイル(A)にbefore/after表現（修正、〜だけでなく等）は使わない"
     MSG_STEP3="3. 推敲が完了したらコミット実行:"
     MSG_RECENT_TITLE="📜 直近 %s 件のコミット"
     MSG_NO_COMMITS="コミットが見つかりません。"
@@ -136,6 +149,7 @@ else
     MSG_NEXT_STEPS="Next steps:"
     MSG_STEP1="1. Check the project's commit style:"
     MSG_STEP2="2. Refine the draft to match the style"
+    MSG_STEP2_NOTE="→ Ground it in git diff --cached, not session memory. Don't use before/after language (\"fix\", \"not just X\") for new (A) files"
     MSG_STEP3="3. When refined, commit:"
     MSG_RECENT_TITLE="📜 Recent %s commits"
     MSG_NO_COMMITS="No commits found."
@@ -569,6 +583,7 @@ if [[ -z "$MSG_FILE" ]]; then
     echo -e "    ${MSG_STEP1}"
     echo -e "      ${CYAN}.sandbox/scripts/commit-msg.sh --log${REPO_FLAG}${NC}"
     echo -e "    ${MSG_STEP2}"
+    echo -e "      ${DIM}${MSG_STEP2_NOTE}${NC}"
     echo -e "    ${MSG_STEP3}"
     echo -e "      ${CYAN}.sandbox/scripts/commit-msg.sh --msg-file ${DRAFT_FILE}${REPO_FLAG}${NC}"
     echo ""
