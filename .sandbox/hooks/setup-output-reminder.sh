@@ -38,7 +38,7 @@
 # after detection, rather than only once delivery is proven, risks silently
 # losing a finding if the session ends before any prompt is ever sent, or
 # if the AI reads the notice but never actually relays it to the human (see
-# 25-undeclared-secrets-diff.sh / check-undeclared-secrets-diff.sh for the
+# 25-undeclared-secrets-diff.sh / check-undeclared-secrets-diff.py for the
 # concrete case this was built for). Keeping the pending file scoped to
 # this notice's own PID directory -- rather than a single shared path --
 # means one session's promotion always reads only its own candidates, never
@@ -87,7 +87,7 @@
 # が一度も送られないままセッションが終わった場合や、AIが通知を読んでも
 # 実際には人間へ伝えなかった場合に、検知が黙って失われてしまう、という
 # プロデューサー側スクリプトのためにある(具体例は25-undeclared-secrets-diff.sh
-# / check-undeclared-secrets-diff.sh 参照)。pendingファイルを単一の
+# / check-undeclared-secrets-diff.py 参照)。pendingファイルを単一の
 # 共有パスではなく、この通知自身のPIDディレクトリに閉じ込めることで、
 # あるセッションの昇格は常に自分自身の候補だけを読み、同時に生存して
 # いる別セッションのものを読むことはない。ただしそれだけでは不十分で、

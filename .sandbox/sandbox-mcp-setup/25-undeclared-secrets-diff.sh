@@ -10,9 +10,9 @@
 # .sandbox/scripts/check-undeclared-secrets.sh) as MCP startup context, so
 # the AI can proactively flag them instead of the finding sitting unnoticed
 # until someone remembers to run the scan by hand. Silent when nothing new
-# was found, including the very first run (see check-undeclared-secrets-diff.sh).
+# was found, including the very first run (see check-undeclared-secrets-diff.py).
 #
-# check-undeclared-secrets-diff.sh never confirms a finding on detection --
+# check-undeclared-secrets-diff.py never confirms a finding on detection --
 # it mirrors not-yet-confirmed findings into a PENDING_FILE, which we point
 # at this session's own spill directory (named after $PPID, sandbox-mcp's
 # own PID, since this script is exec'd directly as its child -- see
@@ -31,9 +31,9 @@
 # 新たに現れた未申告のシークレットらしきファイル（.sandbox/scripts/check-undeclared-secrets.sh
 # 参照）を、MCP起動時コンテキストとして表示する。誰かが手動でスキャンを実行する
 # のを待つのではなく、AIが自発的に指摘できるようにするため。何も新規検出が
-# なければ（初回実行時を含め）何も出力しない（check-undeclared-secrets-diff.sh 参照）。
+# なければ（初回実行時を含め）何も出力しない（check-undeclared-secrets-diff.py 参照）。
 #
-# check-undeclared-secrets-diff.sh は検知した瞬間に何かを確定させることは
+# check-undeclared-secrets-diff.py は検知した瞬間に何かを確定させることは
 # なく、未確定の検知をPENDING_FILEへミラーする。このPENDING_FILEを、
 # このセッション自身の退避ディレクトリ（$PPID = sandbox-mcp自身のPIDに
 # ちなむ名前 -- 本スクリプトはその子プロセスとして直接execされるため。
@@ -51,7 +51,7 @@
 # と同じパターン）。
 
 WORKSPACE="${WORKSPACE:-/workspace}"
-DIFF_SCRIPT="${DIFF_SCRIPT:-$WORKSPACE/.sandbox/scripts/check-undeclared-secrets-diff.sh}"
+DIFF_SCRIPT="${DIFF_SCRIPT:-$WORKSPACE/.sandbox/scripts/check-undeclared-secrets-diff.py}"
 CHECK_TIMEOUT_SECS="${CHECK_TIMEOUT_SECS:-3}"
 
 [ -x "$DIFF_SCRIPT" ] || exit 0

@@ -24,11 +24,11 @@ fail() { echo -e "${RED}FAIL${NC}: $1"; ((TESTS_FAILED++)) || true; }
 
 FAKE_WORKSPACE=""
 
-# Stub for DIFF_SCRIPT: a fake check-undeclared-secrets-diff.sh with
+# Stub for DIFF_SCRIPT: a fake check-undeclared-secrets-diff.py with
 # configurable stdout/exit behavior, so tests don't depend on the real
 # scanner or on scratch-state left in the actual workspace.
 # DIFF_SCRIPT 用スタブ: 標準出力と終了コードを設定できる偽の
-# check-undeclared-secrets-diff.sh。実際のスキャナーやワークスペースの
+# check-undeclared-secrets-diff.py。実際のスキャナーやワークスペースの
 # 状態に依存させない。
 make_stub_diff_script() {
     local dir="$1" stdout="$2"
@@ -200,11 +200,11 @@ test_default_diff_script_path_under_workspace() {
 
     setup_fake_workspace
     mkdir -p "$FAKE_WORKSPACE/.sandbox/scripts"
-    cat > "$FAKE_WORKSPACE/.sandbox/scripts/check-undeclared-secrets-diff.sh" <<'EOF'
+    cat > "$FAKE_WORKSPACE/.sandbox/scripts/check-undeclared-secrets-diff.py" <<'EOF'
 #!/bin/bash
 echo "found via default path"
 EOF
-    chmod +x "$FAKE_WORKSPACE/.sandbox/scripts/check-undeclared-secrets-diff.sh"
+    chmod +x "$FAKE_WORKSPACE/.sandbox/scripts/check-undeclared-secrets-diff.py"
 
     local output
     output=$(WORKSPACE="$FAKE_WORKSPACE" bash "$TARGET_SCRIPT")

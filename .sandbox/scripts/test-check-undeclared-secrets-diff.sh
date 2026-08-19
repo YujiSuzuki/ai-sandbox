@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-check-undeclared-secrets-diff.sh
-# Test script for check-undeclared-secrets-diff.sh
+# Test script for check-undeclared-secrets-diff.py
 #
-# check-undeclared-secrets-diff.sh のテストスクリプト
+# check-undeclared-secrets-diff.py のテストスクリプト
 #
 # Usage: ./test-check-undeclared-secrets-diff.sh
 # 使用方法: ./test-check-undeclared-secrets-diff.sh
@@ -16,7 +16,7 @@ if ! command -v jq &> /dev/null; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/check-undeclared-secrets-diff.sh"
+SCRIPT="$SCRIPT_DIR/check-undeclared-secrets-diff.py"
 TEST_WORKSPACE=""
 
 # Colors for output
@@ -105,11 +105,11 @@ pending_file_path() {
 
 # Stand-in for setup-output-reminder.sh's promotion step (pending ->
 # confirmed). Never calls the real hook -- this file only verifies
-# check-undeclared-secrets-diff.sh's own contract (always diff against the
+# check-undeclared-secrets-diff.py's own contract (always diff against the
 # confirmed file); the hook's promotion trigger and merge behavior are
 # verified separately in test-setup-output-reminder.sh.
 # setup-output-reminder.shの昇格処理(pending -> confirmed)の代役。実フックは
-# 呼ばない -- ここはcheck-undeclared-secrets-diff.sh自体の契約(常に確定済み
+# 呼ばない -- ここはcheck-undeclared-secrets-diff.py自体の契約(常に確定済み
 # ファイルと比較する)を検証する場であり、フック側の昇格トリガーとマージ
 # 挙動はtest-setup-output-reminder.shで別途検証する。
 confirm_pending() {
@@ -428,8 +428,8 @@ test_pending_overwritten_with_latest_full_scan_each_new_detection() {
 
 echo ""
 echo "=========================================="
-echo "Testing check-undeclared-secrets-diff.sh"
-echo "check-undeclared-secrets-diff.sh のテスト"
+echo "Testing check-undeclared-secrets-diff.py"
+echo "check-undeclared-secrets-diff.py のテスト"
 echo "=========================================="
 echo ""
 

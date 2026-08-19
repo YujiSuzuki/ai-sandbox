@@ -280,10 +280,10 @@ is_path_denied_by_claude_settings() {
 # --format json emits a machine-comparable snapshot (sorted relative paths,
 # no emoji/locale text) instead of the human-readable report below. Intended
 # for scripts that diff this scan's result against a previous run (e.g.
-# check-undeclared-secrets-diff.sh) -- not for human reading.
+# check-undeclared-secrets-diff.py) -- not for human reading.
 # --format json は（絵文字やロケール依存の文言を含まない）比較しやすい
 # スニペットを、下記の人間向けレポートの代わりに出力する。このスキャン結果を
-# 前回実行と比較するスクリプト（check-undeclared-secrets-diff.sh 等）向けで、
+# 前回実行と比較するスクリプト（check-undeclared-secrets-diff.py 等）向けで、
 # 人が読むためのものではない。
 FORMAT="text"
 if [ "${1:-}" = "--format" ]; then
