@@ -132,7 +132,7 @@ volumes:
 
 tmpfs:
   # Hide secret directories. The trailing "# @secret" tag is required —
-  # without it, validate-secrets.sh silently skips this entry, while
+  # without it, validate-secrets.py silently skips this entry, while
   # check-secret-sync.sh instead reports it as a visible "missing" error.
   - /workspace/your-api/secrets  # @secret
 ```
@@ -301,8 +301,8 @@ In addition to HostMCP (host-side), **SandboxMCP** runs inside the container.
 | Tool | Description | Example Use |
 |------|-------------|-------------|
 | `list_scripts` | List available scripts | "What scripts can I use?" |
-| `get_script_info` | Get script details | "How do I use validate-secrets.sh?" |
-| `run_script` | Execute a container script | "Run validate-secrets.sh" |
+| `get_script_info` | Get script details | "How do I use validate-secrets.py?" |
+| `run_script` | Execute a container script | "Run validate-secrets.py" |
 | `list_tools` | List available tools | "What tools are available?" |
 | `get_tool_info` | Get tool details | "How do I use search-history?" |
 | `run_tool` | Execute a tool | "Search my conversation history for 'MCP'" |
@@ -417,13 +417,13 @@ Scripts are classified into two execution environments.
 
 | Environment | Scripts |
 |---|---|
-| `container` (container only) | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.sh`, `check-undeclared-secrets.sh`, `triage-undeclared-secrets.sh` |
+| `container` (container only) | `sync-secrets.sh`, `validate-secrets.py`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.sh`, `check-undeclared-secrets.sh`, `triage-undeclared-secrets.sh` |
 | `any` (either) | All others |
 
 ```
 ┌───────────────────────────────────────────────────┐
 │ .sandbox/scripts/                                 │
-│  ├── validate-secrets.sh  ← built-in (container)  │
+│  ├── validate-secrets.py  ← built-in (container)  │
 │  ├── test-*.sh            ← test category         │
 │  ├── _startup_common.sh   ← skipped (library)     │
 │  └── my-script.sh         ← just drop a file here │

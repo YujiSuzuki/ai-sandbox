@@ -8,7 +8,7 @@
 # here -- a path covered solely by permissions.deny still shows up as
 # undeclared, annotated with a note that settings.json already covers it.
 #
-# validate-secrets.sh and check-secret-sync.sh only verify configuration
+# validate-secrets.py and check-secret-sync.sh only verify configuration
 # that already exists; neither one catches a secret file that was never
 # declared anywhere in the first place. This script fills that gap.
 #
@@ -29,7 +29,7 @@
 # -- permissions.denyだけでカバーされているパスも未宣言として表示され、
 # settings.jsonで既にカバーされている旨の注記が付く。
 #
-# validate-secrets.sh と check-secret-sync.sh は「既に存在する設定」を
+# validate-secrets.py と check-secret-sync.sh は「既に存在する設定」を
 # 検証するだけで、そもそも一度も宣言されていない秘密ファイルは検出できない。
 # このスクリプトはその抜け穴を埋めるためのもの。
 #

@@ -39,7 +39,7 @@ Script starts
   │    ├─ merge-claude-settings.sh    … Merge Claude settings
   │    ├─ security-reminder.sh        … Detect AI config changes
   │    ├─ compare-secret-config.sh    … Check for differences between DevContainer and CLI configs
-  │    ├─ validate-secrets.sh         … Verify secret hiding is working
+  │    ├─ validate-secrets.py         … Verify secret hiding is working
   │    └─ check-secret-sync.sh        … Check sync with .claude/settings.json
   │
   ├─ [Validation passes] → Launch AI tool (claude / gemini / bash)
@@ -85,7 +85,7 @@ volumes:
 
 tmpfs:
   # Per-directory hiding: tmpfs makes it an empty directory.
-  # The trailing "# @secret" tag marks this entry for validate-secrets.sh /
+  # The trailing "# @secret" tag marks this entry for validate-secrets.py /
   # check-secret-sync.sh — required, since tmpfs has no read-only concept
   # like bind mounts do, so it can't be inferred from the entry itself.
   - /workspace/your-api/secrets  # @secret

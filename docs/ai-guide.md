@@ -247,7 +247,7 @@ Update `allowed_containers` and `exec_whitelist` in the generated `.sandbox/conf
 ### Step 5: Run validation
 
 ```bash
-.sandbox/scripts/validate-secrets.sh
+.sandbox/scripts/validate-secrets.py
 .sandbox/scripts/compare-secret-config.sh
 .sandbox/scripts/check-secret-sync.sh
 ```
@@ -424,7 +424,7 @@ A specific bash 3.2 pitfall: a bare `$var` immediately followed by a non-ASCII c
 │   ├── scripts/            # Shared scripts (run: .sandbox/scripts/help.sh)
 │   │   ├── help.sh                   # Show script list with descriptions
 │   │   ├── _startup_common.sh        # Common functions for startup scripts
-│   │   ├── validate-secrets.sh       # 🐳 Secret hiding verification
+│   │   ├── validate-secrets.py       # 🐳 Secret hiding verification
 │   │   ├── compare-secret-config.sh  # 🐳 DevContainer/CLI config diff check
 │   │   ├── check-secret-sync.sh      # 🐳 Check if Claude deny files are hidden
 │   │   ├── sync-secrets.sh           # 🐳 Interactive secret sync tool
@@ -543,7 +543,7 @@ tmpfs:
 
 AI sees empty files/directories. Real containers access actual secrets.
 
-The trailing `# @secret` tag on a `tmpfs:` entry is required — it's how `validate-secrets.sh` / `check-secret-sync.sh` recognize the entry as secret-hiding, since (unlike a `/dev/null` bind mount, which is unambiguous) a bare tmpfs path under `$WORKSPACE` could plausibly serve some other, non-secret purpose too.
+The trailing `# @secret` tag on a `tmpfs:` entry is required — it's how `validate-secrets.py` / `check-secret-sync.sh` recognize the entry as secret-hiding, since (unlike a `/dev/null` bind mount, which is unambiguous) a bare tmpfs path under `$WORKSPACE` could plausibly serve some other, non-secret purpose too.
 
 ### HostMCP Security Policy
 

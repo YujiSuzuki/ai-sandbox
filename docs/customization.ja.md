@@ -93,7 +93,7 @@ services:
 
     tmpfs:
       # 秘匿ディレクトリを空にする。末尾の "# @secret" タグは
-      # validate-secrets.sh / check-secret-sync.sh がこのエントリを
+      # validate-secrets.py / check-secret-sync.sh がこのエントリを
       # 秘匿設定として認識するための目印。
       - /workspace/your-api/secrets  # @secret
       - /workspace/your-api/keys  # @secret
@@ -101,7 +101,7 @@ services:
 
 **ポイント:**
 - `.env` ファイル → `/dev/null` にマウント
-- `secrets/` ディレクトリ → `tmpfs` で空のディレクトリに、末尾の `# @secret` タグを付ける — **必須**: タグを付け忘れると `validate-secrets.sh` はサイレントに除外するが、`check-secret-sync.sh` は逆に「欠落」として可視化されたエラーを報告する
+- `secrets/` ディレクトリ → `tmpfs` で空のディレクトリに、末尾の `# @secret` タグを付ける — **必須**: タグを付け忘れると `validate-secrets.py` はサイレントに除外するが、`check-secret-sync.sh` は逆に「欠落」として可視化されたエラーを報告する
 - 両方の docker-compose.yml を同じ設定にする
 
 ### カスタムドメイン（任意）
@@ -120,7 +120,7 @@ services:
 **自動検証:**
 
 起動時に以下のチェックが自動実行されます：
-1. `validate-secrets.sh` - 秘匿が実際に機能しているか検証（docker-compose.yml からパスを自動読み込み）
+1. `validate-secrets.py` - 秘匿が実際に機能しているか検証（docker-compose.yml からパスを自動読み込み）
 2. `compare-secret-config.sh` - DevContainer と CLI の設定に差異があれば警告
 3. `check-secret-sync.sh` - AI設定でブロックされたファイルが docker-compose.yml で隠蔽されていなければ警告
    - 対応: `.claude/settings.json`, `.aiexclude`, `.geminiignore`

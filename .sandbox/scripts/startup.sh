@@ -132,7 +132,7 @@ BANNER
 
 # 3. Validate secrets (critical check, but does not block startup on failure)
 # 秘匿検証（重要チェック。ただし失敗しても起動はブロックしない）
-"$WORKSPACE/.sandbox/scripts/validate-secrets.sh" || {
+"$WORKSPACE/.sandbox/scripts/validate-secrets.py" || {
     echo "$MSG_VALIDATE_FAILED"
     echo ""
 }

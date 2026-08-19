@@ -93,14 +93,14 @@ services:
 
     tmpfs:
       # Make secret directories empty. The trailing "# @secret" tag marks
-      # each entry for validate-secrets.sh / check-secret-sync.sh.
+      # each entry for validate-secrets.py / check-secret-sync.sh.
       - /workspace/your-api/secrets  # @secret
       - /workspace/your-api/keys  # @secret
 ```
 
 **Key points:**
 - `.env` files → mount to `/dev/null`
-- `secrets/` directories → `tmpfs` for empty directories, tagged with a trailing `# @secret` comment — **required**: without the tag, `validate-secrets.sh` silently skips the entry, while `check-secret-sync.sh` instead reports it as a visible "missing" error
+- `secrets/` directories → `tmpfs` for empty directories, tagged with a trailing `# @secret` comment — **required**: without the tag, `validate-secrets.py` silently skips the entry, while `check-secret-sync.sh` instead reports it as a visible "missing" error
 - Keep both docker-compose.yml files in sync
 
 ### Custom domains (optional)
@@ -119,7 +119,7 @@ You'll also need the same entry in your host OS's `/etc/hosts` (or Windows equiv
 **Automatic validation:**
 
 These checks run automatically at startup:
-1. `validate-secrets.sh` - Verifies secrets are actually hidden (auto-reads paths from docker-compose.yml)
+1. `validate-secrets.py` - Verifies secrets are actually hidden (auto-reads paths from docker-compose.yml)
 2. `compare-secret-config.sh` - Warns if DevContainer and CLI configurations differ
 3. `check-secret-sync.sh` - Warns if files blocked in AI settings are not hidden in docker-compose.yml
    - Supports: `.claude/settings.json`, `.aiexclude`, `.geminiignore`

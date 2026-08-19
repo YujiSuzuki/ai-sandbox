@@ -42,7 +42,7 @@ show_script_list() {
     fi
 
     # Scripts that must run in container
-    local container_only="sync-secrets.sh validate-secrets.sh sync-compose-secrets.sh check-undeclared-secrets.sh check-secret-sync.sh compare-secret-config.sh triage-undeclared-secrets.sh"
+    local container_only="sync-secrets.sh validate-secrets.py sync-compose-secrets.sh check-undeclared-secrets.sh check-secret-sync.sh compare-secret-config.sh triage-undeclared-secrets.sh"
 
     get_env_icon() {
         local s="$1"
@@ -90,12 +90,19 @@ show_script_list() {
     echo "━━━ $msg_utility ━━━"
     echo ""
 
-    for script in "$SCRIPT_DIR"/*.sh; do
+    for script in "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR"/*.py; do
+        [[ ! -f "$script" ]] && continue
         local name
         name=$(basename "$script")
         [[ "$name" == test-* ]] && continue
         [[ "$name" == "help.sh" ]] && continue
-        [[ "$name" == "_startup_common.sh" ]] && continue
+        # Library files (source'd/imported by other scripts, not meant to be
+        # run directly) are prefixed with "_", the same convention
+        # sandbox-mcp's own script discovery uses to skip them.
+        # ライブラリファイル（他のスクリプトからsource/importされる、直接実行を
+        # 想定しないもの）は "_" 始まり -- sandbox-mcp自身のスクリプト検出が
+        # 除外に使っているのと同じ規約。
+        [[ "$name" == _* ]] && continue
 
         printf "  %s %-32s %s\n" "$(get_env_icon "$name")" "$name" "$(get_desc "$script")"
     done
@@ -137,7 +144,7 @@ show_workflow_guide() {
 ■ 起動時に自動実行（手動で実行する必要はありません）
 
   シークレットが正しく隠れているか確認:
-    .sandbox/scripts/validate-secrets.sh
+    .sandbox/scripts/validate-secrets.py
 
   AI 設定ファイルと docker-compose の同期チェック:
     .sandbox/scripts/check-secret-sync.sh
@@ -182,7 +189,7 @@ GUIDE_JA
 ■ Auto-run on startup (no need to run manually)
 
   Verify secrets are properly hidden:
-    .sandbox/scripts/validate-secrets.sh
+    .sandbox/scripts/validate-secrets.py
 
   Check if AI config and docker-compose are in sync:
     .sandbox/scripts/check-secret-sync.sh

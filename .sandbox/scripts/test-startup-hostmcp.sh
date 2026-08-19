@@ -65,7 +65,7 @@ setup() {
 
     # Create no-op stubs for steps 1-5 (not under test)
     for script in merge-claude-settings.sh compare-secret-config.sh \
-                  validate-secrets.sh check-secret-sync.sh check-upstream-updates.sh; do
+                  validate-secrets.py check-secret-sync.sh check-upstream-updates.sh; do
         cat > "$TEST_DIR/workspace/.sandbox/scripts/$script" << 'STUB'
 #!/bin/bash
 exit 0

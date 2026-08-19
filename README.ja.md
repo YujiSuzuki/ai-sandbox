@@ -455,7 +455,7 @@ workspace/
 ├── .sandbox/               # 共有サンドボックス基盤
 │   ├── Dockerfile          # コンテナイメージ定義
 │   ├── scripts/            # 共有スクリプト
-│   │   ├── validate-secrets.sh    # 秘匿ファイルが隠蔽されているか確認
+│   │   ├── validate-secrets.py    # 秘匿ファイルが隠蔽されているか確認
 │   │   ├── check-secret-sync.sh   # AI拒否設定との同期チェック
 │   │   └── sync-secrets.sh        # 対話的に設定を同期
 │   ├── commands/            # 付属スラッシュコマンド（コードレビュー等）

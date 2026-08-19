@@ -228,12 +228,12 @@ is_file_in_compose() {
     # Check tmpfs mounts (for directories). Only matches a tmpfs entry
     # tagged with a trailing "# @secret" comment -- see _secret-tag.sh for
     # the shared matching regex used by all six secret-sync scripts, so
-    # this check always agrees with validate-secrets.sh / check-secret-sync.sh
+    # this check always agrees with validate-secrets.py / check-secret-sync.sh
     # / etc. on what counts as a tagged entry.
     # tmpfs マウントをチェック（ディレクトリ用）。末尾に "# @secret" タグが
     # 付いているエントリのみを対象とする。共通のマッチング正規表現は
     # _secret-tag.sh を参照（6本のスクリプトすべてで共有し、
-    # validate-secrets.sh / check-secret-sync.sh 等と判定が常に一致するように
+    # validate-secrets.py / check-secret-sync.sh 等と判定が常に一致するように
     # する）。
     local dir_path
     dir_path=$(dirname "$file_path")

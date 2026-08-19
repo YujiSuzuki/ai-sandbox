@@ -132,7 +132,7 @@ volumes:
 
 tmpfs:
   # 秘匿ディレクトリを隠す。末尾の "# @secret" タグは必須 — 付け忘れると
-  # validate-secrets.sh はサイレントに除外するが、check-secret-sync.sh は
+  # validate-secrets.py はサイレントに除外するが、check-secret-sync.sh は
   # 逆に「欠落」として可視化されたエラーを報告する。
   - /workspace/your-api/secrets  # @secret
 ```
@@ -303,8 +303,8 @@ SandboxMCPは、プロジェクト固有のスクリプトやツールを自動�
 | ツール | 説明 | 使用例 |
 |--------|------|--------|
 | `list_scripts` | スクリプト一覧を表示 | 「使えるスクリプトは？」 |
-| `get_script_info` | スクリプトの詳細情報 | 「validate-secrets.sh の使い方は？」 |
-| `run_script` | コンテナ内スクリプトを実行 | 「validate-secrets.sh を実行して」 |
+| `get_script_info` | スクリプトの詳細情報 | 「validate-secrets.py の使い方は？」 |
+| `run_script` | コンテナ内スクリプトを実行 | 「validate-secrets.py を実行して」 |
 | `list_tools` | ツール一覧を表示 | 「使えるツールは？」 |
 | `get_tool_info` | ツールの詳細情報 | 「search-history の使い方は？」 |
 | `run_tool` | ツールを実行 | 「会話履歴から 'MCP' を検索して」 |
@@ -419,13 +419,13 @@ AI アシスタントは `list_tools` でツールを発見し、`get_tool_info`
 
 | 環境 | 対象スクリプト |
 |---|---|
-| `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.sh`, `check-undeclared-secrets.sh`, `triage-undeclared-secrets.sh` |
+| `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.py`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.sh`, `check-undeclared-secrets.sh`, `triage-undeclared-secrets.sh` |
 | `any`（どちらでも可） | 上記以外のすべて |
 
 ```
 ┌───────────────────────────────────────────────────┐
 │ .sandbox/scripts/                                 │
-│  ├── validate-secrets.sh  ← 組み込み（container） │
+│  ├── validate-secrets.py  ← 組み込み（container） │
 │  ├── test-*.sh            ← テストカテゴリ        │
 │  ├── _startup_common.sh   ← スキップ（ライブラリ）│
 │  └── my-script.sh         ← ファイルを置くだけ    │

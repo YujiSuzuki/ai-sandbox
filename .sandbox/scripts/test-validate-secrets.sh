@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-validate-secrets.sh
-# Test script for validate-secrets.sh
+# Test script for validate-secrets.py
 #
-# validate-secrets.sh のテストスクリプト
+# validate-secrets.py のテストスクリプト
 #
 # Usage: ./test-validate-secrets.sh
 # 使用方法: ./test-validate-secrets.sh
@@ -10,7 +10,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/validate-secrets.sh"
+SCRIPT="$SCRIPT_DIR/validate-secrets.py"
 TEST_COMPOSE_DIR=""
 TEST_SECRET_DIR=""
 
@@ -50,20 +50,23 @@ setup() {
     # Create temporary directories
     # 一時ディレクトリを作成
     TEST_COMPOSE_DIR=$(mktemp -d)
-    # Must be under $TEST_COMPOSE_DIR because validate-secrets.sh (run with
+    # Must be under $TEST_COMPOSE_DIR because validate-secrets.py (run with
     # WORKSPACE="$TEST_COMPOSE_DIR" below) only checks paths under $WORKSPACE in tmpfs
-    # validate-secrets.sh（下記で WORKSPACE="$TEST_COMPOSE_DIR" として実行）は
+    # validate-secrets.py（下記で WORKSPACE="$TEST_COMPOSE_DIR" として実行）は
     # tmpfs で $WORKSPACE 配下のパスのみチェックするため、$TEST_COMPOSE_DIR 配下に作成
     TEST_SECRET_DIR=$(mktemp -d "$TEST_COMPOSE_DIR/.test-secrets-XXXXXX")
 
     mkdir -p "$TEST_COMPOSE_DIR/.devcontainer"
-    mkdir -p "$TEST_COMPOSE_DIR/.sandbox/scripts"
     mkdir -p "$TEST_COMPOSE_DIR/.sandbox/config"
 
-    # Copy required scripts and config to test workspace
-    # 必要なスクリプトと設定をテストワークスペースにコピー
-    cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_COMPOSE_DIR/.sandbox/scripts/"
-    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_COMPOSE_DIR/.sandbox/scripts/"
+    # Copy required config to the test workspace. Unlike the bash original,
+    # validate-secrets.py imports _python_common/_secret_tag from its own
+    # script directory (Python's default sys.path[0] behavior), not from
+    # $WORKSPACE, so those two no longer need to be copied in here.
+    # 必要な設定をテストワークスペースにコピー。bash版と異なり、
+    # validate-secrets.py は _python_common/_secret_tag を（Pythonの
+    # デフォルトのsys.path[0]の挙動により）自分のスクリプトディレクトリから
+    # importするため、$WORKSPACE配下にコピーする必要はもう無い。
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_COMPOSE_DIR/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_COMPOSE_DIR/.sandbox/config/" 2>/dev/null || true
 }
@@ -129,7 +132,7 @@ test_script_executable_and_valid() {
 
     # Check for syntax errors
     # 構文エラーをチェック
-    if bash -n "$SCRIPT" 2>/dev/null; then
+    if python3 -m py_compile "$SCRIPT" 2>/dev/null; then
         pass "Script is executable and has valid syntax"
     else
         fail "Script has syntax errors"
@@ -338,7 +341,7 @@ EOF
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  validate-secrets.sh Test Suite"
+    echo "  validate-secrets.py Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_executable_and_valid

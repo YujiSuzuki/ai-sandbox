@@ -453,7 +453,7 @@ workspace/
 ├── .sandbox/               # Shared sandbox infrastructure
 │   ├── Dockerfile          # Container image definition
 │   ├── scripts/            # Shared scripts
-│   │   ├── validate-secrets.sh    # Verify secret files are hidden
+│   │   ├── validate-secrets.py    # Verify secret files are hidden
 │   │   ├── check-secret-sync.sh   # Sync check with AI deny settings
 │   │   └── sync-secrets.sh        # Interactively sync settings
 │   ├── commands/            # Bundled slash commands (code review, etc.)
