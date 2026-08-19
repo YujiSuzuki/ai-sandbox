@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-commit-msg-repo.sh
-# Test --repo option for commit-msg.sh
+# Test --repo option for commit-msg.py
 #
-# commit-msg.sh の --repo オプションのテスト
+# commit-msg.py の --repo オプションのテスト
 #
 # Usage: .sandbox/scripts/test-commit-msg-repo.sh
 #
@@ -12,7 +12,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/commit-msg.sh"
+SCRIPT="$SCRIPT_DIR/commit-msg.py"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -51,7 +51,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo ""
-echo "Testing commit-msg.sh --repo option"
+echo "Testing commit-msg.py --repo option"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -103,7 +103,7 @@ echo "Test 5: --repo with --msg-file commits to target repo"
 REPO=$(make_temp_repo)
 # Generate draft first
 "$SCRIPT" --repo "$REPO" > /dev/null 2>&1 || true
-# Replace placeholders so commit-msg.sh accepts the draft
+# Replace placeholders so commit-msg.py accepts the draft
 sed -i 's/<変更内容を記述>/test change/g; s/<変更の詳細を記述>/details/g; s/<describe change>/test change/g' "$REPO/CommitMsg-draft.md"
 # Commit using the draft (pipe "y" for confirmation)
 echo "y" | "$SCRIPT" --repo "$REPO" --msg-file "$REPO/CommitMsg-draft.md" > /dev/null 2>&1 || true

@@ -241,7 +241,7 @@ Update `allowed_containers` and `exec_whitelist` in the generated `.sandbox/conf
 - `.claude/settings.json` — Replace demo deny patterns
 - `.aiexclude` / `.geminiignore` — Update secret patterns
 - `CLAUDE.md` — Rewrite project-specific sections
-  - Ask user about `commit-msg.sh` / `github-release.sh`: keep or remove? customize?
+  - Ask user about `commit-msg.py` / `github-release.py`: keep or remove? customize?
 - `GEMINI.md` — Same updates
 
 ### Step 5: Run validation

@@ -32,20 +32,20 @@ Direct users to documentation:
 
 ### Commits and Releases
 
-- **Commits:** Always use `commit-msg.sh` to draft commit messages collaboratively with the user:
+- **Commits:** Always use `commit-msg.py` to draft commit messages collaboratively with the user:
   ```
-  .sandbox/scripts/commit-msg.sh              # Generate draft
-  .sandbox/scripts/commit-msg.sh --log        # Check previous commit style
+  .sandbox/scripts/commit-msg.py              # Generate draft
+  .sandbox/scripts/commit-msg.py --log        # Check previous commit style
   # Refine CommitMsg-draft.md together
-  .sandbox/scripts/commit-msg.sh --msg-file CommitMsg-draft.md  # Commit
+  .sandbox/scripts/commit-msg.py --msg-file CommitMsg-draft.md  # Commit
   ```
   Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
 
-- **Releases:** Use `github-release.sh` to generate release notes:
+- **Releases:** Use `github-release.py` to generate release notes:
   ```
-  .sandbox/scripts/github-release.sh v0.5.0          # Generate draft
-  .sandbox/scripts/github-release.sh --prev           # Check previous release tone
-  .sandbox/scripts/github-release.sh v0.5.0 --notes-file ReleaseNotes-draft.md  # Publish
+  .sandbox/scripts/github-release.py v0.5.0          # Generate draft
+  .sandbox/scripts/github-release.py --prev           # Check previous release tone
+  .sandbox/scripts/github-release.py v0.5.0 --notes-file ReleaseNotes-draft.md  # Publish
   ```
 
 ### Development Approach

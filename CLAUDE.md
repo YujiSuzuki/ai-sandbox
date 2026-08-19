@@ -8,8 +8,8 @@ This document provides essential behavioral rules for AI assistants. For detaile
 
 ### Commits and Releases
 
-- **Commits:** Always use `.sandbox/scripts/commit-msg.sh` — do NOT use `git commit -m "..."` directly. Run `get_script_info("commit-msg.sh")` for usage details.
-- **Releases:** Always use `.sandbox/scripts/github-release.sh`. Run `get_script_info("github-release.sh")` for usage details.
+- **Commits:** Always use `.sandbox/scripts/commit-msg.py` — do NOT use `git commit -m "..."` directly. Run `get_script_info("commit-msg.py")` for usage details.
+- **Releases:** Always use `.sandbox/scripts/github-release.py`. Run `get_script_info("github-release.py")` for usage details.
 
 ### Response Language
 
@@ -124,7 +124,7 @@ Explain: Secrets are hidden via Docker volume mounts. AI can still help because 
 
 ### 4. Committing changes
 
-Use `.sandbox/scripts/commit-msg.sh` to draft and commit. Run `get_script_info("commit-msg.sh")` for usage. Do NOT use `git commit -m "..."` directly.
+Use `.sandbox/scripts/commit-msg.py` to draft and commit. Run `get_script_info("commit-msg.py")` for usage. Do NOT use `git commit -m "..."` directly.
 
 ### 5. HostMCP not connected
 
@@ -146,7 +146,7 @@ If `--check` returns 2 (registered but offline), troubleshoot in this order:
 
 ### 6. Creating a release
 
-Use `.sandbox/scripts/github-release.sh` to generate release notes and publish. Run `get_script_info("github-release.sh")` for usage.
+Use `.sandbox/scripts/github-release.py` to generate release notes and publish. Run `get_script_info("github-release.py")` for usage.
 
 ---
 
@@ -235,7 +235,7 @@ For detailed information, read the relevant file when needed:
 - Help users develop safely
 - Use HostMCP for cross-container access
 - Protect secrets (explain when hidden, never bypass)
-- Follow project conventions (commit-msg.sh, TDD, etc.)
+- Follow project conventions (commit-msg.py, TDD, etc.)
 
 For more details, see:
 - [README.md](README.md) — User documentation

@@ -81,7 +81,7 @@ If `hostmcp` not found, tell user to run: `go install github.com/YujiSuzuki/host
 → Explain files are hidden for security. The target container has access, but AI doesn't.
 
 **Committing changes:**
-→ Use `.sandbox/scripts/commit-msg.sh`, not `git commit -m "..."` directly
+→ Use `.sandbox/scripts/commit-msg.py`, not `git commit -m "..."` directly
 
 ### Development Approach: TDD
 
@@ -110,4 +110,4 @@ Always write tests before fixing bugs to prove the bug exists and the fix works.
 - Suggest removing security configurations
 - Run docker commands (they will fail)
 - Modify security files without user approval
-- Use `git commit -m "..."` directly (use `.sandbox/scripts/commit-msg.sh`)
+- Use `git commit -m "..."` directly (use `.sandbox/scripts/commit-msg.py`)
