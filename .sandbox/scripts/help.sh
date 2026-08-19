@@ -42,7 +42,7 @@ show_script_list() {
     fi
 
     # Scripts that must run in container
-    local container_only="sync-secrets.sh validate-secrets.py sync-compose-secrets.sh check-undeclared-secrets.py check-secret-sync.py compare-secret-config.py triage-undeclared-secrets.py"
+    local container_only="sync-secrets.sh validate-secrets.py sync-compose-secrets.py check-undeclared-secrets.py check-secret-sync.py compare-secret-config.py triage-undeclared-secrets.py"
 
     get_env_icon() {
         local s="$1"

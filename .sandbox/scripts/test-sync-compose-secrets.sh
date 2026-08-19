@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-sync-compose-secrets.sh
-# Test script for sync-compose-secrets.sh
+# Test script for sync-compose-secrets.py
 #
-# sync-compose-secrets.sh のテストスクリプト
+# sync-compose-secrets.py のテストスクリプト
 #
 # Usage: ./test-sync-compose-secrets.sh
 # 使用方法: ./test-sync-compose-secrets.sh
@@ -10,7 +10,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/sync-compose-secrets.sh"
+SCRIPT="$SCRIPT_DIR/sync-compose-secrets.py"
 TEST_WORKSPACE=""
 
 # Colors for output
@@ -54,10 +54,11 @@ setup() {
     mkdir -p "$TEST_WORKSPACE/.sandbox/scripts"
     mkdir -p "$TEST_WORKSPACE/.sandbox/config"
 
-    # Copy required scripts and config to test workspace
-    # 必要なスクリプトと設定をテストワークスペースにコピー
-    cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
-    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    # Copy required config to test workspace (the script imports its own
+    # Python libraries from its real script directory, not $WORKSPACE)
+    # 必要な設定をテストワークスペースにコピー（スクリプトは自身の実際の
+    # ディレクトリからPythonライブラリをimportするため、$WORKSPACE相対では
+    # コピー不要）
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -164,7 +165,7 @@ test_script_executable_and_valid() {
 
     # Check for syntax errors
     # 構文エラーをチェック
-    if bash -n "$SCRIPT" 2>/dev/null; then
+    if python3 -m py_compile "$SCRIPT" 2>/dev/null; then
         pass "Script is executable and has valid syntax"
     else
         fail "Script has syntax errors"
@@ -774,7 +775,7 @@ EOF
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  sync-compose-secrets.sh Test Suite"
+    echo "  sync-compose-secrets.py Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_executable_and_valid

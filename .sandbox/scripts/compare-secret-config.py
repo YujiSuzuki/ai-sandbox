@@ -79,7 +79,7 @@ def get_messages(lang_ja: bool) -> dict:
             "FILE_NOT_FOUND": "ファイルが見つかりません:",
             "ACTION": "対処方法:",
             "ACTION1": "  手動で docker-compose.yml を編集する（ホストOS側で）",
-            "ACTION2": "  または: .sandbox/scripts/sync-compose-secrets.sh を実行（この環境内で）",
+            "ACTION2": "  または: .sandbox/scripts/sync-compose-secrets.py を実行（この環境内で）",
         }
     return {
         "TITLE": "🔍 Secret Config Consistency Check",
@@ -94,7 +94,7 @@ def get_messages(lang_ja: bool) -> dict:
         "FILE_NOT_FOUND": "File not found:",
         "ACTION": "How to fix:",
         "ACTION1": "  Manually edit docker-compose.yml (on host OS)",
-        "ACTION2": "  Or run: .sandbox/scripts/sync-compose-secrets.sh (inside this environment)",
+        "ACTION2": "  Or run: .sandbox/scripts/sync-compose-secrets.py (inside this environment)",
     }
 
 

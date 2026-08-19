@@ -5,12 +5,12 @@
 # suffix, since tmpfs has no read-only concept in Compose's short syntax
 # and a bare path could plausibly serve some other purpose).
 #
-# Two remaining bash scripts (sync-compose-secrets.sh, sync-secrets.sh) need
-# to agree on exactly what counts as a tagged entry, so the
+# One remaining bash script (sync-secrets.sh) still needs this, so the
 # matching/extraction logic lives here once instead of being re-implemented
 # per script. Python-migrated scripts (validate-secrets.py,
 # check-undeclared-secrets.py, compare-secret-config.py, check-secret-sync.py,
-# triage-undeclared-secrets.py) use the equivalent _secret_tag.py instead.
+# triage-undeclared-secrets.py, sync-compose-secrets.py) use the equivalent
+# _secret_tag.py instead.
 #
 # Usage: source this file, then call secret_tag_* functions.
 #
@@ -21,12 +21,11 @@
 # Compose の短縮構文上、読み取り専用の概念が無く、裸のパスは秘匿目的以外にも
 # 使われ得るため）。
 #
-# 残り2本のbashスクリプト（sync-compose-secrets.sh, sync-secrets.sh）は
-# 「タグ付きエントリ」の定義について一致している必要があるため、判定・抽出
-# ロジックをスクリプトごとに個別実装せず、ここに集約している。Python移行済みの
-# スクリプト（validate-secrets.py, check-undeclared-secrets.py,
-# compare-secret-config.py, check-secret-sync.py, triage-undeclared-secrets.py）
-# は同等の _secret_tag.py を使う。
+# 残り1本のbashスクリプト（sync-secrets.sh）がまだこれを必要としているため、
+# 判定・抽出ロジックをスクリプトごとに個別実装せず、ここに集約している。
+# Python移行済みのスクリプト（validate-secrets.py, check-undeclared-secrets.py,
+# compare-secret-config.py, check-secret-sync.py, triage-undeclared-secrets.py,
+# sync-compose-secrets.py）は同等の _secret_tag.py を使う。
 #
 # 使用法: このファイルを source してから secret_tag_* 関数を呼ぶ。
 
