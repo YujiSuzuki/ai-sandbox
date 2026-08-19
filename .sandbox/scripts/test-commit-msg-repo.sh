@@ -114,6 +114,27 @@ else
     fail "--repo with --msg-file did not create a commit (log count: $COMMIT_COUNT)"
 fi
 
+# ─── Test 6: git commit failure is reported, not shown as false success / Test 6: git commit失敗を偽の成功と表示しない ───
+echo "Test 6: git commit failure (rejected by pre-commit hook) is reported, not shown as success"
+REPO=$(make_temp_repo)
+mkdir -p "$REPO/.git/hooks"
+printf '#!/bin/sh\nexit 1\n' > "$REPO/.git/hooks/pre-commit"
+chmod +x "$REPO/.git/hooks/pre-commit"
+"$SCRIPT" --repo "$REPO" > /dev/null 2>&1 || true
+sed -i 's/<変更内容を記述>/test change/g; s/<変更の詳細を記述>/details/g; s/<describe change>/test change/g' "$REPO/CommitMsg-draft.md"
+COMMIT_COUNT_BEFORE=$(git -C "$REPO" log --oneline | wc -l | tr -d ' ')
+set +e
+OUTPUT=$(echo "y" | "$SCRIPT" --repo "$REPO" --msg-file "$REPO/CommitMsg-draft.md" 2>&1)
+EXIT_CODE=$?
+set -e
+COMMIT_COUNT_AFTER=$(git -C "$REPO" log --oneline | wc -l | tr -d ' ')
+if [[ "$EXIT_CODE" -ne 0 && "$COMMIT_COUNT_AFTER" -eq "$COMMIT_COUNT_BEFORE" ]] && ! echo "$OUTPUT" | grep -qi "successfully\|コミット成功"; then
+    pass "git commit failure exits non-zero and does not claim success"
+else
+    fail "git commit failure was not surfaced correctly (exit=$EXIT_CODE, commits before=$COMMIT_COUNT_BEFORE after=$COMMIT_COUNT_AFTER)"
+    echo "  Output: $OUTPUT"
+fi
+
 # ─── Summary / まとめ ───────────────────────────────────────────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

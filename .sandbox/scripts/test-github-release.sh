@@ -126,6 +126,12 @@ if git -C "$REPO" tag | grep -qx "v0.1.0"; then
 else
     fail "publish mode did not create the local tag v0.1.0"
 fi
+BARE_REMOTE=$(git -C "$REPO" remote get-url origin)
+if git -C "$BARE_REMOTE" tag | grep -qx "v0.1.0"; then
+    pass "publish mode pushed the tag to the remote"
+else
+    fail "publish mode did not push the tag v0.1.0 to the remote"
+fi
 
 # ─── Test 6: publish mode refuses to recreate an existing tag / Test 6: 既存タグの再作成を拒否 ───
 echo "Test 6: publish mode refuses a version whose tag already exists"
@@ -145,6 +151,25 @@ if echo "$OUTPUT" | grep -qi "not found\|見つかりません"; then
     pass "non-existent --notes-file exits with error message"
 else
     fail "non-existent --notes-file did not produce expected error"
+    echo "  Output: $OUTPUT"
+fi
+
+# ─── Test 8: git push failure is reported, not shown as false success / Test 8: git push失敗を偽の成功と表示しない ───
+echo "Test 8: git push failure (broken remote) is reported, not shown as false success"
+REPO=$(make_temp_repo)
+"$SCRIPT" v0.3.0 --repo "$REPO" > /dev/null 2>&1 || true
+sed -i.bak 's/<describe change>/Test release/g' "$REPO/ReleaseNotes-draft.md" && rm -f "$REPO/ReleaseNotes-draft.md.bak"
+git -C "$REPO" add -A
+git -C "$REPO" commit -q -m "Add release notes"
+git -C "$REPO" remote set-url origin /nonexistent/bare/path/xyz
+set +e
+OUTPUT=$(echo "y" | "$SCRIPT" v0.3.0 --repo "$REPO" --notes-file "$REPO/ReleaseNotes-draft.md" 2>&1)
+EXIT_CODE=$?
+set -e
+if [[ "$EXIT_CODE" -ne 0 ]] && ! echo "$OUTPUT" | grep -qi "pushed to origin\|originにpush"; then
+    pass "git push failure exits non-zero and does not claim the tag was pushed"
+else
+    fail "git push failure was not surfaced correctly (exit=$EXIT_CODE)"
     echo "  Output: $OUTPUT"
 fi
 

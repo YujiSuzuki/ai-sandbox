@@ -156,6 +156,7 @@ def get_messages(lang_ja: bool) -> dict:
             "CONFIRM": "コミットしますか？",
             "CANCELLED": "キャンセルしました。",
             "COMMITTED": "コミット成功！",
+            "COMMIT_FAILED": "git commit に失敗しました。",
             "EXTRACT_FAILED": "コミットメッセージを抽出できません:",
             "DRAFT_SUBJECT_HINT": "<変更内容を記述>",
             "DRAFT_BODY_HINT": "<変更の詳細を記述>",
@@ -184,6 +185,7 @@ def get_messages(lang_ja: bool) -> dict:
         "CONFIRM": "Commit?",
         "CANCELLED": "Cancelled.",
         "COMMITTED": "Committed successfully!",
+        "COMMIT_FAILED": "git commit failed.",
         "EXTRACT_FAILED": "Could not extract commit message from:",
         "DRAFT_SUBJECT_HINT": "<describe change>",
         "DRAFT_BODY_HINT": "<describe details>",
@@ -695,9 +697,12 @@ def main() -> None:
         commit_args = ["commit", "-F", temp_msg]
         if opts["amend"]:
             commit_args.append("--amend")
-        subprocess.run(["git", *commit_args])
+        result = subprocess.run(["git", *commit_args])
     finally:
         os.unlink(temp_msg)
+
+    if result.returncode != 0:
+        die(msgs["COMMIT_FAILED"])
 
     print()
     ok(msgs["COMMITTED"])

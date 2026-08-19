@@ -137,7 +137,9 @@ def get_messages(lang_ja: bool) -> dict:
             "CONFIRM_TAG": "タグ %s を作成して push しますか？",
             "CANCELLED": "キャンセルしました。",
             "TAG_CREATED": "タグ %s を作成しました",
+            "TAG_FAILED": "タグ %s の作成に失敗しました。",
             "TAG_PUSHED": "タグ %s を origin に push しました",
+            "PUSH_FAILED": "タグ %s の push に失敗しました。",
             "GH_CREATED": "GitHub Release を作成しました",
             "GH_FAILED": "gh release create に失敗しました（GitHub 未認証の可能性があります。gh auth status で確認してください）。",
             "GH_NOT_FOUND": "gh CLI が見つかりません。",
@@ -175,7 +177,9 @@ def get_messages(lang_ja: bool) -> dict:
         "CONFIRM_TAG": "Create tag %s and push?",
         "CANCELLED": "Cancelled.",
         "TAG_CREATED": "Tag %s created",
+        "TAG_FAILED": "Failed to create tag %s.",
         "TAG_PUSHED": "Tag %s pushed to origin",
+        "PUSH_FAILED": "Failed to push tag %s.",
         "GH_CREATED": "GitHub Release created",
         "GH_FAILED": "gh release create failed (this may be due to a GitHub authentication issue — check with 'gh auth status').",
         "GH_NOT_FOUND": "gh CLI not found.",
@@ -544,10 +548,14 @@ def main() -> None:
         info(msgs["CANCELLED"])
         return
 
-    subprocess.run(["git", "tag", "-a", opts["version"], "-m", notes])
+    tag_result = subprocess.run(["git", "tag", "-a", opts["version"], "-m", notes])
+    if tag_result.returncode != 0:
+        die(msgs["TAG_FAILED"] % opts["version"])
     ok(msgs["TAG_CREATED"] % opts["version"])
 
-    subprocess.run(["git", "push", "origin", opts["version"]])
+    push_result = subprocess.run(["git", "push", "origin", opts["version"]])
+    if push_result.returncode != 0:
+        die(msgs["PUSH_FAILED"] % opts["version"])
     ok(msgs["TAG_PUSHED"] % opts["version"])
 
     print()
