@@ -34,14 +34,14 @@ Use HostMCP MCP tools to interact with other containers:
 If MCP tools are not available, diagnose with:
 
 ```bash
-.sandbox/scripts/setup-hostmcp.sh --status
+.sandbox/scripts/setup-hostmcp.py --status
 ```
 
 | Result | Symptom | Cause | Solution |
 |--------|---------|-------|----------|
 | ✅ Registered + connected | Status OK | - | - |
 | ⚠️ Registered but offline | Timeout / No response | Port forwarding interference | Stop port 18080 in VS Code Ports panel, restart |
-| ❌ Not registered | "Client not initialized" | HostMCP not set up | Run `.sandbox/scripts/setup-hostmcp.sh` |
+| ❌ Not registered | "Client not initialized" | HostMCP not set up | Run `.sandbox/scripts/setup-hostmcp.py` |
 
 ### Fallback: HostMCP Client Commands
 

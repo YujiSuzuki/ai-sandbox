@@ -1,17 +1,17 @@
 #!/bin/bash
 # test-setup-hostmcp.sh
-# Test script for setup-hostmcp.sh
+# Test script for setup-hostmcp.py
 #
 # Usage: ./test-setup-hostmcp.sh
 # ---
-# setup-hostmcp.sh のテストスクリプト
+# setup-hostmcp.py のテストスクリプト
 #
 # 使用方法: ./test-setup-hostmcp.sh
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/setup-hostmcp.sh"
+SCRIPT="$SCRIPT_DIR/setup-hostmcp.py"
 TEST_WORKSPACE=""
 
 # Colors for output
@@ -773,7 +773,7 @@ STUB
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  setup-hostmcp.sh Test Suite"
+    echo "  setup-hostmcp.py Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_runs_and_shows_help

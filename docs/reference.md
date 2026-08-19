@@ -265,27 +265,27 @@ sudo spctl --add --label hostmcp $(which hostmcp)
 ```
 Or via the GUI: System Settings → Privacy & Security → "Allow Anyway" next to the hostmcp warning.
 
-### Auto-setup with setup-hostmcp.sh
+### Auto-setup with setup-hostmcp.py
 
 You can use the setup script inside AI Sandbox to check registration status and register HostMCP automatically:
 
 ```bash
 # Check current status (silent, useful for scripting)
-.sandbox/scripts/setup-hostmcp.sh --check
+.sandbox/scripts/setup-hostmcp.py --check
 # Exit codes: 0 = connected, 1 = not registered, 2 = registered but offline
 
 # Show human-readable status
-.sandbox/scripts/setup-hostmcp.sh --status
+.sandbox/scripts/setup-hostmcp.py --status
 
 # Register HostMCP with detected AI tools + verify connectivity
-.sandbox/scripts/setup-hostmcp.sh
+.sandbox/scripts/setup-hostmcp.py
 
 # Use a custom URL (auto-detected from .sandbox/config/hostmcp.yaml's
 # server.port when possible; pass --url to override that detection)
-.sandbox/scripts/setup-hostmcp.sh --url http://host.docker.internal:9090/sse
+.sandbox/scripts/setup-hostmcp.py --url http://host.docker.internal:9090/sse
 
 # Remove HostMCP registration from all AI tools
-.sandbox/scripts/setup-hostmcp.sh --unregister
+.sandbox/scripts/setup-hostmcp.py --unregister
 ```
 
 The script automatically detects available AI tools (Claude Code, Gemini CLI) and registers HostMCP as an SSE MCP server. After registration, follow the "Next Steps" shown by the script (e.g., `/mcp` → Reconnect in Claude Code).

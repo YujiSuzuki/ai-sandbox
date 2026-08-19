@@ -223,7 +223,7 @@ fi
 # 9. Register HostMCP if not registered, or show one-liner status
 # HostMCP 登録（未登録なら登録、登録済みなら1行サマリー）
 hostmcp_check=0
-"$WORKSPACE/.sandbox/scripts/setup-hostmcp.sh" --check 2>/dev/null || hostmcp_check=$?
+"$WORKSPACE/.sandbox/scripts/setup-hostmcp.py" --check 2>/dev/null || hostmcp_check=$?
 if [ "$hostmcp_check" -eq 0 ]; then
     # Registered + connected → one-liner
     # 登録済み＋接続OK → 1行サマリー
@@ -238,7 +238,7 @@ else
     # Not registered → full registration
     # 未登録 → フル登録出力
     echo ""
-    "$WORKSPACE/.sandbox/scripts/setup-hostmcp.sh" || {
+    "$WORKSPACE/.sandbox/scripts/setup-hostmcp.py" || {
         echo "$MSG_DKMCP_REGISTER_FAILED"
         echo ""
     }

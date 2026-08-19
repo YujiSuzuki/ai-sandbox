@@ -131,12 +131,12 @@ Use `.sandbox/scripts/commit-msg.sh` to draft and commit. Run `get_script_info("
 If HostMCP MCP tools (`mcp__hostmcp__*`) are not available, proactively check registration and offer setup:
 
 ```
-.sandbox/scripts/setup-hostmcp.sh --check   # Silent check (exit: 0=ok, 1=not registered, 2=offline)
-.sandbox/scripts/setup-hostmcp.sh            # Register if needed + verify connectivity
-.sandbox/scripts/setup-hostmcp.sh --status   # Show detailed status
+.sandbox/scripts/setup-hostmcp.py --check   # Silent check (exit: 0=ok, 1=not registered, 2=offline)
+.sandbox/scripts/setup-hostmcp.py            # Register if needed + verify connectivity
+.sandbox/scripts/setup-hostmcp.py --status   # Show detailed status
 ```
 
-If `--check` returns 1 (not registered), offer to run `setup-hostmcp.sh` for the user.
+If `--check` returns 1 (not registered), offer to run `setup-hostmcp.py` for the user.
 If `--check` returns 2 (registered but offline), troubleshoot in this order:
 1. **Find the configured port** — read `server.port` from `.sandbox/config/hostmcp.yaml` (defaults to 18080 if unset)
 2. **Check VS Code Ports panel** — stop forwarding that port if listed (most common cause)

@@ -156,7 +156,7 @@ show_workflow_guide() {
     cd hostmcp && make install && hostmcp serve
 
   AI Sandbox 内から接続:
-    .sandbox/scripts/setup-hostmcp.sh
+    .sandbox/scripts/setup-hostmcp.py
 
   接続後は AI がログ確認・テスト実行などを自動で行います。
 
@@ -201,7 +201,7 @@ GUIDE_JA
     cd hostmcp && make install && hostmcp serve
 
   Connect from AI Sandbox:
-    .sandbox/scripts/setup-hostmcp.sh
+    .sandbox/scripts/setup-hostmcp.py
 
   Once connected, AI can check logs, run tests, etc. automatically.
 

@@ -32,7 +32,7 @@ ENV GOPATH="/home/node/go"
 ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
 
 # Install yq (mikefarah/yq, the Go-based YAML processor most tooling means by
-# "yq"). Required by .sandbox/scripts/setup-hostmcp.sh's detect_hostmcp_port(),
+# "yq"). Required by .sandbox/scripts/setup-hostmcp.py's detect_hostmcp_port(),
 # which reads server.port from hostmcp.yaml to compute the default HostMCP URL
 # — do not remove without checking that call site (it has an awk-based
 # fallback, but yq is the primary, more robust path). Debian's apt package
@@ -41,7 +41,7 @@ ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
 # instead, downloading it straight to its final path (no archive to extract,
 # unlike the tarball-based Go install above).
 # yq（mikefarah/yq、一般的に「yq」と呼ばれるGo版のYAMLプロセッサ）をインストール。
-# .sandbox/scripts/setup-hostmcp.sh の detect_hostmcp_port() が、HostMCPの
+# .sandbox/scripts/setup-hostmcp.py の detect_hostmcp_port() が、HostMCPの
 # デフォルトURLを求めるためhostmcp.yamlのserver.portを読み取るのに使用する。
 # 削除する場合は呼び出し箇所を必ず確認すること（awkベースのフォールバックは
 # あるが、yqがより堅牢な主経路）。Debianのaptパッケージ「yq」は別物の

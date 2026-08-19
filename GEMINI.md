@@ -120,12 +120,12 @@ If MCP tools are unavailable, use `hostmcp client` commands via Bash. See [docs/
 If HostMCP MCP tools are not available, proactively check registration and offer setup:
 
 ```
-.sandbox/scripts/setup-hostmcp.sh --check   # Silent check (exit: 0=ok, 1=not registered, 2=offline)
-.sandbox/scripts/setup-hostmcp.sh            # Register if needed + verify connectivity
-.sandbox/scripts/setup-hostmcp.sh --status   # Show detailed status
+.sandbox/scripts/setup-hostmcp.py --check   # Silent check (exit: 0=ok, 1=not registered, 2=offline)
+.sandbox/scripts/setup-hostmcp.py            # Register if needed + verify connectivity
+.sandbox/scripts/setup-hostmcp.py --status   # Show detailed status
 ```
 
-If `--check` returns 1 (not registered), offer to run `setup-hostmcp.sh` for the user.
+If `--check` returns 1 (not registered), offer to run `setup-hostmcp.py` for the user.
 If `--check` returns 2 (registered but offline), troubleshoot in this order:
 1. **Check VS Code Ports panel** — stop forwarding port 18080 if listed (most common cause)
 2. **Verify HostMCP is running on host**: `curl http://localhost:18080/health`

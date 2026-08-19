@@ -173,10 +173,10 @@ test_not_registered_hints() {
         fail "Should include example filename, got: '$output'"
     fi
 
-    if echo "$output" | grep -q "setup-hostmcp.sh"; then
-        pass "Hint tells the user how to fix it (setup-hostmcp.sh)"
+    if echo "$output" | grep -q "setup-hostmcp.py"; then
+        pass "Hint tells the user how to fix it (setup-hostmcp.py)"
     else
-        fail "Should mention setup-hostmcp.sh as the fix, got: '$output'"
+        fail "Should mention setup-hostmcp.py as the fix, got: '$output'"
     fi
 
     teardown

@@ -18,7 +18,7 @@
 # 常にexit 0で終わる。
 
 WORKSPACE="${WORKSPACE:-/workspace}"
-HOSTMCP_CHECK_SCRIPT="${HOSTMCP_CHECK_SCRIPT:-$WORKSPACE/.sandbox/scripts/setup-hostmcp.sh}"
+HOSTMCP_CHECK_SCRIPT="${HOSTMCP_CHECK_SCRIPT:-$WORKSPACE/.sandbox/scripts/setup-hostmcp.py}"
 HOST_TOOLS_DIR="$WORKSPACE/.sandbox/host-tools"
 CHECK_TIMEOUT_SECS="${CHECK_TIMEOUT_SECS:-3}"
 
@@ -44,7 +44,7 @@ case "$status" in
         # 1=未登録、2=登録済みだがオフライン、124=タイムアウト（VS Codeのポート
         # フォワードが詰まっている場合など）-- いずれもrun_host_toolでhost-tools
         # を使えない状態なので、ヒントはこの3つ全てに適用する。
-        echo "HostMCP is not connected: .sandbox/host-tools/ has ${#tools[@]} script(s) (e.g. $(basename "${tools[0]}")) that require it to run. Run .sandbox/scripts/setup-hostmcp.sh, and make sure \`hostmcp serve\` is running on the host OS."
+        echo "HostMCP is not connected: .sandbox/host-tools/ has ${#tools[@]} script(s) (e.g. $(basename "${tools[0]}")) that require it to run. Run .sandbox/scripts/setup-hostmcp.py, and make sure \`hostmcp serve\` is running on the host OS."
         ;;
     *)
         # 0=connected, or any unexpected code -- stay silent rather than

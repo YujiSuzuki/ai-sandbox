@@ -117,14 +117,14 @@ cleanup() {
 
 trap cleanup EXIT
 
-# Helper: create setup-hostmcp.sh stub with specified exit codes
+# Helper: create setup-hostmcp.py stub with specified exit codes
 # --check 時と通常実行時の exit code をそれぞれ指定
 create_hostmcp_stub() {
     local check_exit="$1"     # exit code for --check
     local register_exit="${2:-0}"  # exit code for default mode (register)
     local register_output="${3:-HostMCP full registration output}"  # output for default mode
 
-    cat > "$TEST_DIR/workspace/.sandbox/scripts/setup-hostmcp.sh" << STUB
+    cat > "$TEST_DIR/workspace/.sandbox/scripts/setup-hostmcp.py" << STUB
 #!/bin/bash
 for arg in "\$@"; do
     if [ "\$arg" = "--check" ]; then
@@ -134,7 +134,7 @@ done
 echo "$register_output"
 exit $register_exit
 STUB
-    chmod +x "$TEST_DIR/workspace/.sandbox/scripts/setup-hostmcp.sh"
+    chmod +x "$TEST_DIR/workspace/.sandbox/scripts/setup-hostmcp.py"
 }
 
 # ─── Tests / テスト ──────────────────────────────────────────────────

@@ -265,26 +265,26 @@ sudo spctl --add --label hostmcp $(which hostmcp)
 ```
 またはGUIで：システム設定 → プライバシーとセキュリティ → hostmcp の警告の横にある「このまま開く」をクリック。
 
-### setup-hostmcp.sh による自動セットアップ
+### setup-hostmcp.py による自動セットアップ
 
 AI Sandbox 内でセットアップスクリプトを使うと、HostMCP の登録状態の確認や自動登録ができます：
 
 ```bash
 # 現在の状態を確認（サイレント、スクリプト連携向き）
-.sandbox/scripts/setup-hostmcp.sh --check
+.sandbox/scripts/setup-hostmcp.py --check
 # 終了コード: 0 = 接続済み, 1 = 未登録, 2 = 登録済みだがオフライン
 
 # 人向けのステータス表示
-.sandbox/scripts/setup-hostmcp.sh --status
+.sandbox/scripts/setup-hostmcp.py --status
 
 # 検出した AI ツールに HostMCP を登録 + 接続確認
-.sandbox/scripts/setup-hostmcp.sh
+.sandbox/scripts/setup-hostmcp.py
 
 # カスタム URL を指定（デフォルトは .sandbox/config/hostmcp.yaml の server.port から自動検出）
-.sandbox/scripts/setup-hostmcp.sh --url http://host.docker.internal:9090/sse
+.sandbox/scripts/setup-hostmcp.py --url http://host.docker.internal:9090/sse
 
 # 全 AI ツールから HostMCP の登録を解除
-.sandbox/scripts/setup-hostmcp.sh --unregister
+.sandbox/scripts/setup-hostmcp.py --unregister
 ```
 
 スクリプトは利用可能な AI ツール（Claude Code, Gemini CLI）を自動検出し、HostMCP を SSE MCP サーバーとして登録します。登録後は、スクリプトが表示する「次のステップ」に従ってください（例：Claude Code で `/mcp` → Reconnect）。
