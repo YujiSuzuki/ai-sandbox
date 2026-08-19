@@ -379,6 +379,8 @@ This is a particularly common failure mode in AI-authored refactor comments: rig
 
 If a sentence mixes both — history plus a live constraint (e.g. a warning against re-merging two concerns) — keep the constraint and cut the narrative rather than deleting the whole comment.
 
+The same "why did I just do this" reasoning being maximally active is just as likely to leak into the commit message itself, not only code comments — moving the narrative out of the comment doesn't automatically make it good commit-message content. A commit message should still state the rationale for the change directly (what changed, why it was needed now), not narrate the discovery process that led there. "Found and fixed X while testing Y" or "the fix learned during Z's earlier work" adds no information beyond just stating X — cut the discovery-journey framing and keep the fact.
+
 `/ais-local-comment-review`'s Agent #4 (Whether It's Worth Having) checks for this.
 
 ---

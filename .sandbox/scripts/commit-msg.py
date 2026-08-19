@@ -509,6 +509,7 @@ def generate_draft(msgs: dict, style: str, draft_file: str, repo: str) -> str:
 <!-- Lines starting with # or <!-- are stripped when committing -->
 {style_comment}
 <!-- Scope hint: {scope_hint} -->
+<!-- {msgs['STEP2_NOTE']} -->
 <!-- To commit: .sandbox/scripts/commit-msg.py --msg-file {draft_file} -->
 
 {subject_hint}
