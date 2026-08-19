@@ -244,35 +244,23 @@ def find_matching_files(pattern: str, workspace: Path) -> list:
     prefixed) path pattern to its literal location rather than matching by
     basename anywhere in the workspace.
 
-    Fixes two bugs present in the bash original (ported byte-for-byte in an
-    earlier commit before being fixed here at the user's request): (1) any
-    "/" in the pattern routed matching into an unscoped "search everywhere
-    by basename" mode even for patterns with no "**" at all, so e.g.
-    "demo-app/.env" incorrectly matched any ".env" file anywhere in the
-    workspace, not just demo-app/.env; (2) a plain trailing-slash directory
-    pattern like "secrets/" (no "**" prefix) was swept into that same
-    unscoped mode and, after being stripped down to an empty string,
-    matched zero files -- silently missing every file under that directory.
-
     Convention: a "**/" prefix means "at any depth"; anything else is a
-    literal path (or glob) relative to $WORKSPACE.
+    literal path (or glob) relative to $WORKSPACE. Without this scoping, a
+    specific pattern like "demo-app/.env" would match any ".env" file
+    anywhere in the workspace instead of just demo-app/.env, and a
+    trailing-slash directory pattern like "secrets/" would need to be
+    handled by the same unscoped logic and end up matching nothing at all.
 
     deny パターンに一致するファイルを検索する。"**/"接頭辞を伴わない特定の
     パスパターンを、ワークスペース内のどこでもベース名一致させるのではなく、
     その文字通りの場所にスコープする。
 
-    bash版に元々あった（そして以前のコミットではバイト単位でそのまま移植して
-    いた）2つのバグを、ユーザーの依頼によりここで修正する: (1) パターンに
-    "/"が含まれてさえいれば（"**"を一切含まないパターンでも）無スコープの
-    「ワークスペース全体をベース名で検索」モードに入ってしまい、例えば
-    "demo-app/.env" が demo-app/.env だけでなくワークスペース中のどの
-    ".env" ファイルにも誤ってマッチしていた。(2) "secrets/" のような単純な
-    末尾スラッシュのディレクトリパターン（"**"接頭辞なし）も同じ無スコープ
-    モードに巻き込まれ、空文字列まで削ぎ落とされた結果ゼロ件マッチとなり、
-    そのディレクトリ配下のファイルを一切検出できていなかった。
-
     規約: "**/"接頭辞は「任意の深さで」を意味する。それ以外は $WORKSPACE
-    からのリテラルなパス（またはglob）として扱う。
+    からのリテラルなパス（またはglob）として扱う。このスコープが無いと、
+    "demo-app/.env"のような特定パターンがdemo-app/.envだけでなくワークスペース
+    中のどの".env"ファイルにもマッチしてしまい、"secrets/"のような末尾スラッシュ
+    のディレクトリパターンも同じ無スコープロジックに巻き込まれてゼロ件マッチに
+    なってしまう。
     """
     # Directory patterns (trailing slash) / ディレクトリパターン（末尾スラッシュ）
     if pattern.endswith("/"):

@@ -8,12 +8,10 @@
 # IMPORTANT: Must run inside AI Sandbox container (not on host OS).
 #
 # Note: is_file_in_compose() below escapes file_path before embedding it in
-# a grep -E-equivalent regex. The bash original (and an earlier byte-for-
-# byte Python port of it) did NOT escape it, unlike every other secret-sync
-# script -- a real bug where a path containing a regex metacharacter (e.g.
-# a "+") could be misreported as "not configured" even when it was already
-# correctly declared in docker-compose.yml. Fixed here at the user's
-# request rather than preserved for bash parity.
+# a grep -E-equivalent regex, since a path containing a regex metacharacter
+# (e.g. a "+") would otherwise be misreported as "not configured" even when
+# correctly declared in docker-compose.yml. Every other secret-sync script
+# does the same.
 # @env: container
 # ---
 # .claude/settings.json から docker-compose.yml へ秘匿ファイルを同期する対話式スクリプト
@@ -21,11 +19,9 @@
 # ファイルを見つけ、対話式で追加を提案します。DevContainer と CLI Sandbox の両方を更新します。
 #
 # 注意: 下記の is_file_in_compose() は、file_pathを正規表現（grep -E相当）に
-# 埋め込む前にエスケープしている。bash版（および以前のバイト単位Python移植）
-# はエスケープしておらず、他のsecret-sync系スクリプトと異なる実バグだった --
-# パスに正規表現メタ文字（例: "+"）が含まれると、docker-compose.ymlに正しく
-# 宣言済みでも「未設定」と誤って報告されることがあった。bash版とのパリティ
-# より、ユーザーの依頼によりここで修正した。
+# 埋め込む前にエスケープしている。エスケープしないと、正規表現メタ文字
+# （例: "+"）を含むパスが、docker-compose.ymlに正しく宣言済みでも「未設定」
+# と誤って報告されることがある。他のsecret-sync系スクリプトも同様。
 
 import fnmatch
 import glob as globmod
@@ -210,40 +206,28 @@ def find_matching_files(pattern: str, workspace: Path) -> list:
     prefixed) path pattern to its literal location rather than matching by
     basename anywhere in the workspace.
 
-    Fixes two bugs present in the bash original (ported byte-for-byte in an
-    earlier commit before being fixed here at the user's request): (1) any
-    "/" in the pattern routed matching into an unscoped "search everywhere
-    by basename" mode even for patterns with no "**" at all, so e.g.
-    "demo-app/.env" incorrectly matched any ".env" file anywhere in the
-    workspace, not just demo-app/.env; (2) this script's original had no
-    trailing-slash directory-pattern branch at all, so a plain directory
-    pattern like "secrets/" fell into that same unscoped mode and, after
-    being stripped down to an empty string, matched zero files -- silently
-    missing every file under that directory. This version adds the
-    trailing-slash branch (matching check-secret-sync.py's, which already
-    had one) and fixes the same underlying stripping bug there too.
-
     Convention: a "**/" prefix means "at any depth"; anything else is a
-    literal path (or glob) relative to $WORKSPACE.
+    literal path (or glob) relative to $WORKSPACE, including a
+    trailing-slash directory pattern like "secrets/". Without this
+    scoping, a specific pattern like "demo-app/.env" would match any
+    ".env" file anywhere in the workspace instead of just demo-app/.env,
+    and a directory pattern with no "**" would need to fall back to the
+    same unscoped logic and end up matching nothing at all. Mirrors
+    check-secret-sync.py's matcher, including its trailing-slash
+    directory-pattern branch.
 
     deny パターンに一致するファイルを検索する。"**/"接頭辞を伴わない特定の
     パスパターンを、ワークスペース内のどこでもベース名一致させるのではなく、
     その文字通りの場所にスコープする。
 
-    bash版に元々あった（そして以前のコミットではバイト単位でそのまま移植して
-    いた）2つのバグを、ユーザーの依頼によりここで修正する: (1) パターンに
-    "/"が含まれてさえいれば（"**"を一切含まないパターンでも）無スコープの
-    「ワークスペース全体をベース名で検索」モードに入ってしまい、例えば
-    "demo-app/.env" が demo-app/.env だけでなくワークスペース中のどの
-    ".env" ファイルにも誤ってマッチしていた。(2) このスクリプトの原本には
-    末尾スラッシュのディレクトリパターン分岐が元々無く、"secrets/"のような
-    単純なディレクトリパターンも同じ無スコープモードに巻き込まれ、空文字列
-    まで削ぎ落とされた結果ゼロ件マッチとなっていた。この版では
-    check-secret-sync.py（既に分岐を持っていた）と同様に末尾スラッシュ分岐を
-    追加し、そちらにあった同種の削ぎ落としバグも合わせて修正した。
-
     規約: "**/"接頭辞は「任意の深さで」を意味する。それ以外は $WORKSPACE
-    からのリテラルなパス（またはglob）として扱う。
+    からのリテラルなパス（またはglob）として扱う（"secrets/"のような末尾
+    スラッシュのディレクトリパターンも含む）。このスコープが無いと、
+    "demo-app/.env"のような特定パターンがdemo-app/.envだけでなくワークスペース
+    中のどの".env"ファイルにもマッチしてしまい、"**"を含まないディレクトリ
+    パターンも同じ無スコープロジックに巻き込まれてゼロ件マッチになって
+    しまう。check-secret-sync.pyのマッチャー（末尾スラッシュのディレクトリ
+    パターン分岐も含め）と同じ構造。
     """
     # Directory patterns (trailing slash) / ディレクトリパターン（末尾スラッシュ）
     if pattern.endswith("/"):
