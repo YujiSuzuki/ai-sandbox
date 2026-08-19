@@ -588,6 +588,83 @@ EOF
     cleanup
 }
 
+# Test: A specific (non-glob, non-"**/") path pattern must be scoped to its
+# literal location, not match any file with the same basename anywhere in
+# the workspace (regression test for a real bug in the bash original --
+# and an earlier byte-for-byte Python port of it -- where any "/" in a
+# pattern routed matching into an unscoped basename search).
+# テスト: 特定の（globでも"**/"でもない）パスパターンは、その文字通りの
+# 場所にスコープされるべきで、ワークスペース内の同名ファイルすべてに
+# マッチしてはいけない（bash版原本、およびそれを以前バイト単位で移植した
+# Python版に実際にあったバグの回帰テスト -- パターンに"/"が含まれてさえ
+# いれば無スコープのベース名検索に入ってしまっていた）。
+test_specific_pattern_scoped_to_its_path() {
+    echo ""
+    echo "=== Test: Specific pattern (demo-app/.env) doesn't match other-app/.env ==="
+
+    setup
+
+    touch "$TEST_WORKSPACE/demo-app/.env"
+    mkdir -p "$TEST_WORKSPACE/other-app"
+    touch "$TEST_WORKSPACE/other-app/.env"
+    create_claude_settings '"Read(demo-app/.env)"'
+    create_compose_file "" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" SANDBOX_ENV=devcontainer "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -q "demo-app/.env"; then
+        pass "Specific pattern correctly flags demo-app/.env"
+    else
+        fail "Specific pattern should flag demo-app/.env"
+        echo "Output: $output"
+    fi
+
+    if echo "$output" | grep -q "other-app/.env"; then
+        fail "Specific pattern demo-app/.env should NOT match other-app/.env (over-broad matching bug)"
+        echo "Output: $output"
+    else
+        pass "Specific pattern does not over-broadly match other-app/.env"
+    fi
+
+    cleanup
+}
+
+# Test: A trailing-slash directory pattern with a nested path segment (e.g.
+# "app/secrets/**") must scope to that exact directory, not match any
+# directory sharing just the last segment's name anywhere in the workspace
+# (regression test for the same over-broad "/" routing bug applying to
+# directory patterns too).
+# テスト: ネストしたパスを持つ末尾スラッシュ/globのディレクトリパターン
+# （例: "app/secrets/**"）は、そのディレクトリに正確にスコープされるべきで、
+# 最後のセグメント名だけが一致するワークスペース内の他のディレクトリに
+# マッチしてはいけない（同じ過剰マッチバグがディレクトリパターンにも
+# 及んでいたことの回帰テスト）。
+test_nested_directory_glob_pattern_scoped() {
+    echo ""
+    echo "=== Test: Nested directory glob pattern (app/secrets/**) is scoped correctly ==="
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/app/secrets" "$TEST_WORKSPACE/other/secrets"
+    touch "$TEST_WORKSPACE/app/secrets/key.txt"
+    touch "$TEST_WORKSPACE/other/secrets/key.txt"
+    create_claude_settings '"Read(app/secrets/**)"'
+    create_compose_file "" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" SANDBOX_ENV=devcontainer "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -q "app/secrets/key.txt" && ! echo "$output" | grep -q "^   📄 other/secrets/key.txt"; then
+        pass "Nested directory glob pattern correctly scoped to app/secrets only"
+    else
+        fail "Nested directory glob pattern should match only app/secrets/key.txt, not other/secrets/key.txt"
+        echo "Output: $output"
+    fi
+
+    cleanup
+}
+
 # Test 14: Root-level glob pattern only matches workspace root
 # テスト14: ルートレベルのglobパターンはワークスペース直下のみマッチ
 test_root_glob_only_matches_root() {
@@ -875,6 +952,8 @@ main() {
     test_aiexclude_patterns
     test_geminiignore_patterns
     test_combined_patterns
+    test_specific_pattern_scoped_to_its_path
+    test_nested_directory_glob_pattern_scoped
     test_root_glob_only_matches_root
     test_recursive_glob_matches_subdirs
     test_aiexclude_directory_trailing_slash

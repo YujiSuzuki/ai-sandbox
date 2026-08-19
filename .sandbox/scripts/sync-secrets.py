@@ -7,26 +7,25 @@
 #
 # IMPORTANT: Must run inside AI Sandbox container (not on host OS).
 #
-# Note: is_file_in_compose() below embeds file_path directly into a
-# grep -E pattern without escaping regex metacharacters, unlike the
-# equivalent function in every other Python-migrated secret-sync script
-# (check-secret-sync.py, triage-undeclared-secrets.py, etc.), which all
-# escape it. This is a pre-existing bash-original bug (the bash version
-# has the same unescaped interpolation) that this port replicates exactly
-# rather than silently fixing, matching this migration's byte-for-byte
-# parity policy. Flag to the user as a possible follow-up fix.
+# Note: is_file_in_compose() below escapes file_path before embedding it in
+# a grep -E-equivalent regex. The bash original (and an earlier byte-for-
+# byte Python port of it) did NOT escape it, unlike every other secret-sync
+# script -- a real bug where a path containing a regex metacharacter (e.g.
+# a "+") could be misreported as "not configured" even when it was already
+# correctly declared in docker-compose.yml. Fixed here at the user's
+# request rather than preserved for bash parity.
 # @env: container
 # ---
 # .claude/settings.json から docker-compose.yml へ秘匿ファイルを同期する対話式スクリプト
 # このスクリプトは Claude 設定でブロックされているが docker-compose.yml で隠蔽されていない
 # ファイルを見つけ、対話式で追加を提案します。DevContainer と CLI Sandbox の両方を更新します。
 #
-# 注意: 下記の is_file_in_compose() は、他のPython移行済みsecret-sync系
-# スクリプト（check-secret-sync.py, triage-undeclared-secrets.py 等）と異なり、
-# file_pathを正規表現メタ文字のエスケープなしにそのままgrep -Eパターンへ
-# 埋め込んでいる。これはbash版に元々あったバグ（bash版も同様に未エスケープで
-# 埋め込んでいる）で、この移行のバイト単位パリティ方針に従いそのまま移植して
-# いる（黙って修正しない）。ユーザーへの追加修正候補として報告すること。
+# 注意: 下記の is_file_in_compose() は、file_pathを正規表現（grep -E相当）に
+# 埋め込む前にエスケープしている。bash版（および以前のバイト単位Python移植）
+# はエスケープしておらず、他のsecret-sync系スクリプトと異なる実バグだった --
+# パスに正規表現メタ文字（例: "+"）が含まれると、docker-compose.ymlに正しく
+# 宣言済みでも「未設定」と誤って報告されることがあった。bash版とのパリティ
+# より、ユーザーの依頼によりここで修正した。
 
 import fnmatch
 import glob as globmod
@@ -185,55 +184,116 @@ def _walk_files(root: Path) -> list:
     return results
 
 
-def _find_dirs_named(workspace: Path, name: str) -> list:
+def _find_dirs_matching_suffix(workspace: Path, suffix: str) -> list:
+    """All directories anywhere under workspace whose path relative to
+    workspace equals `suffix` or ends with "/" + suffix -- i.e. a match at
+    any depth that respects path-segment boundaries.
+
+    workspace配下のディレクトリのうち、workspace相対パスが`suffix`と完全
+    一致するか、"/" + `suffix` で終わるものすべて -- パスの区切りを尊重した
+    任意の深さでのマッチ。
+    """
     results = []
+    workspace_str = str(workspace)
     for dirpath, dirs, _files in os.walk(workspace):
         dirs[:] = [d for d in dirs if d not in _PRUNE_DIRS]
         for d in dirs:
-            if d == name:
-                results.append(os.path.join(dirpath, d))
+            full = os.path.join(dirpath, d)
+            rel = full[len(workspace_str) + 1:]
+            if rel == suffix or rel.endswith("/" + suffix):
+                results.append(full)
     return results
 
 
 def find_matching_files(pattern: str, workspace: Path) -> list:
-    """Line-by-line port of the bash original's find_matching_files(). Note
-    this script's version (unlike check-secret-sync.py's) has NO
-    trailing-slash directory-pattern branch -- a pattern like "secrets/"
-    falls through to the generic "/" branch below and is treated as a
-    literal path, not a directory shorthand. This is a pre-existing
-    difference from check-secret-sync.sh's matcher, kept as-is. Also
-    preserves the same quirks documented in check-secret-sync.py: any "/"
-    anywhere in the pattern (not specifically a "**/" prefix) routes it
-    into the "recursive" branch, and `${var##**/}`-style stripping keeps
-    only the last path segment.
+    """Find files matching a deny pattern, scoping a specific (non-"**/"-
+    prefixed) path pattern to its literal location rather than matching by
+    basename anywhere in the workspace.
 
-    bash版find_matching_files()のほぼ1行単位の移植。このスクリプト版は
-    （check-secret-sync.pyと違い）末尾スラッシュのディレクトリパターン分岐が
-    無い -- "secrets/"のようなパターンは下の汎用"/"分岐に落ち、ディレクトリの
-    省略形ではなくリテラルパスとして扱われる。check-secret-sync.shの
-    マッチャーとのこの違いはbash版に元々あるもので、そのまま維持している。
-    check-secret-sync.pyで文書化したのと同じ癖（パターン中のどこかに"/"が
-    含まれてさえいれば"**/"接頭辞でなくても「再帰」分岐に入る、
-    `${var##**/}`的な削ぎ落としが最後のパスセグメントしか残さない）も
-    そのまま維持している。
+    Fixes two bugs present in the bash original (ported byte-for-byte in an
+    earlier commit before being fixed here at the user's request): (1) any
+    "/" in the pattern routed matching into an unscoped "search everywhere
+    by basename" mode even for patterns with no "**" at all, so e.g.
+    "demo-app/.env" incorrectly matched any ".env" file anywhere in the
+    workspace, not just demo-app/.env; (2) this script's original had no
+    trailing-slash directory-pattern branch at all, so a plain directory
+    pattern like "secrets/" fell into that same unscoped mode and, after
+    being stripped down to an empty string, matched zero files -- silently
+    missing every file under that directory. This version adds the
+    trailing-slash branch (matching check-secret-sync.py's, which already
+    had one) and fixes the same underlying stripping bug there too.
+
+    Convention: a "**/" prefix means "at any depth"; anything else is a
+    literal path (or glob) relative to $WORKSPACE.
+
+    deny パターンに一致するファイルを検索する。"**/"接頭辞を伴わない特定の
+    パスパターンを、ワークスペース内のどこでもベース名一致させるのではなく、
+    その文字通りの場所にスコープする。
+
+    bash版に元々あった（そして以前のコミットではバイト単位でそのまま移植して
+    いた）2つのバグを、ユーザーの依頼によりここで修正する: (1) パターンに
+    "/"が含まれてさえいれば（"**"を一切含まないパターンでも）無スコープの
+    「ワークスペース全体をベース名で検索」モードに入ってしまい、例えば
+    "demo-app/.env" が demo-app/.env だけでなくワークスペース中のどの
+    ".env" ファイルにも誤ってマッチしていた。(2) このスクリプトの原本には
+    末尾スラッシュのディレクトリパターン分岐が元々無く、"secrets/"のような
+    単純なディレクトリパターンも同じ無スコープモードに巻き込まれ、空文字列
+    まで削ぎ落とされた結果ゼロ件マッチとなっていた。この版では
+    check-secret-sync.py（既に分岐を持っていた）と同様に末尾スラッシュ分岐を
+    追加し、そちらにあった同種の削ぎ落としバグも合わせて修正した。
+
+    規約: "**/"接頭辞は「任意の深さで」を意味する。それ以外は $WORKSPACE
+    からのリテラルなパス（またはglob）として扱う。
     """
-    if "/" in pattern:
-        if pattern.endswith("/**"):
-            dir_name = pattern[: -len("/**")]
-            dir_name = dir_name.rsplit("/", 1)[-1]
+    # Directory patterns (trailing slash) / ディレクトリパターン（末尾スラッシュ）
+    if pattern.endswith("/"):
+        dir_pattern = pattern[:-1]
+        if dir_pattern.startswith("**/"):
+            suffix = dir_pattern[3:]
             results = []
-            for d in _find_dirs_named(workspace, dir_name):
+            for d in _find_dirs_matching_suffix(workspace, suffix):
                 results.extend(_walk_files(Path(d)))
             return results
-        file_pattern = pattern.rsplit("/", 1)[-1]
+        full_dir = workspace / dir_pattern
+        if full_dir.is_dir():
+            return _walk_files(full_dir)
+        return []
+
+    # Directory-recursive-glob suffix, e.g. "secrets/**" or "**/secrets/**"
+    # ディレクトリ再帰glob接尾辞（例: "secrets/**", "**/secrets/**"）
+    if pattern.endswith("/**"):
+        dir_part = pattern[: -len("/**")]
+        if dir_part.startswith("**/"):
+            suffix = dir_part[3:]
+            results = []
+            for d in _find_dirs_matching_suffix(workspace, suffix):
+                results.extend(_walk_files(Path(d)))
+            return results
+        full_dir = workspace / dir_part
+        if full_dir.is_dir():
+            return _walk_files(full_dir)
+        return []
+
+    # Recursive file glob, e.g. "**/*.env" or "**/sub/*.key"
+    # 再帰ファイルglob（例: "**/*.env", "**/sub/*.key"）
+    if pattern.startswith("**/"):
+        suffix = pattern[3:]
         results = []
         for dirpath, dirs, files in os.walk(workspace):
             dirs[:] = [d for d in dirs if d not in _PRUNE_DIRS]
             for f in files:
-                if fnmatch.fnmatchcase(f, file_pattern):
-                    results.append(os.path.join(dirpath, f))
+                full = os.path.join(dirpath, f)
+                rel = full[len(str(workspace)) + 1:]
+                if fnmatch.fnmatchcase(rel, suffix) or fnmatch.fnmatchcase(rel, "*/" + suffix):
+                    results.append(full)
         return results
 
+    # Specific path pattern relative to $WORKSPACE, e.g. "demo-app/.env", or
+    # a root-level glob like "*.key" (glob.glob doesn't cross "/" boundaries,
+    # so this only ever matches at the exact directory level named).
+    # $WORKSPACE からの具体的パスパターン（例: "demo-app/.env"）、または
+    # ルートレベルのglob（例: "*.key"。glob.globは"/"境界を越えないため、
+    # 指定した階層でのみマッチする）。
     full_path = workspace / pattern
     if "*" in pattern:
         return sorted(globmod.glob(str(full_path)))
@@ -269,30 +329,15 @@ def extract_deny_patterns(settings_file: Path) -> list:
 # ─── docker-compose.yml edit helpers / 編集ヘルパー ──────────────
 
 def is_file_in_compose(file_path: str, compose_file: Path) -> bool:
-    # Intentionally unescaped -- see module docstring above. bash's
-    # `grep -E` degrades gracefully (non-zero exit, treated as "no match")
-    # on a pathological path that isn't valid regex syntax; Python's
-    # re.compile raises instead, so that specific failure mode is caught
-    # here to match bash's graceful behavior without actually escaping
-    # (which would fix, not replicate, the underlying quirk).
-    # 意図的に未エスケープ -- モジュール先頭のdocstring参照。bashの
-    # `grep -E`は、正規表現として不正なパスに対しても穏やかに失敗する
-    # （非ゼロ終了、「マッチなし」として扱われる）が、Pythonのre.compileは
-    # 例外を送出するため、この特定の失敗モードだけはここで捕捉しbashの
-    # 穏やかな挙動に合わせる（エスケープして直すのではなく、この癖自体は
-    # 再現する）。
-    try:
-        devnull_re = re.compile(r"^\s*-\s*/dev/null:" + file_path + r"(:ro)?$")
-    except re.error:
-        devnull_re = None
+    escaped_file_path = re.escape(file_path)
+    devnull_re = re.compile(r"^\s*-\s*/dev/null:" + escaped_file_path + r"(:ro)?$")
     try:
         compose_lines = compose_file.read_text().splitlines()
     except OSError:
         compose_lines = []
-    if devnull_re is not None:
-        for line in compose_lines:
-            if devnull_re.search(line):
-                return True
+    for line in compose_lines:
+        if devnull_re.search(line):
+            return True
 
     dir_path = os.path.dirname(file_path)
     while dir_path != WORKSPACE_STR and dir_path != "/":

@@ -216,89 +216,113 @@ def _walk_files(root: Path) -> list:
     return results
 
 
-def _find_dirs_named(workspace: Path, name: str) -> list:
-    """All directories anywhere under workspace with exactly this basename,
-    pruning the same ignored dirs.
+def _find_dirs_matching_suffix(workspace: Path, suffix: str) -> list:
+    """All directories anywhere under workspace whose path relative to
+    workspace equals `suffix` or ends with "/" + suffix -- i.e. a match at
+    any depth that respects path-segment boundaries (a single- or
+    multi-segment suffix like "secrets" or "app/secrets" both work).
 
-    workspace配下で、この名前と完全一致するディレクトリすべて（除外対象の
-    ディレクトリは除く）。
+    workspace配下のディレクトリのうち、workspace相対パスが`suffix`と完全
+    一致するか、"/" + `suffix` で終わるものすべて -- パスの区切りを尊重した
+    任意の深さでのマッチ（"secrets" のような単一セグメントでも
+    "app/secrets" のような複数セグメントのサフィックスでも動作する）。
     """
     results = []
+    workspace_str = str(workspace)
     for dirpath, dirs, _files in os.walk(workspace):
         dirs[:] = [d for d in dirs if d not in _FIND_MATCHING_PRUNE_DIRS]
         for d in dirs:
-            if d == name:
-                results.append(os.path.join(dirpath, d))
+            full = os.path.join(dirpath, d)
+            rel = full[len(workspace_str) + 1:]
+            if rel == suffix or rel.endswith("/" + suffix):
+                results.append(full)
     return results
 
 
 def find_matching_files(pattern: str, workspace: Path) -> list:
-    """Find files matching a deny pattern. This is a line-by-line port of
-    the bash original's find_matching_files(), including its quirks (e.g.
-    ANY "/" in the pattern -- not specifically a "**/" prefix -- routes it
-    into the "recursive" branch below, and `${var##**/}`-style stripping
-    keeps only the last path segment even for a plain "dir/file" pattern
-    with no "**"). These are pre-existing behaviors of the bash version,
-    kept as-is for parity rather than "fixed" here.
+    """Find files matching a deny pattern, scoping a specific (non-"**/"-
+    prefixed) path pattern to its literal location rather than matching by
+    basename anywhere in the workspace.
 
-    deny パターンに一致するファイルを検索する。bash版のfind_matching_files()を
-    ほぼ1行単位で移植している。パターンにどこかに"/"が含まれてさえいれば
-    （"**/"接頭辞に限らず）下の「再帰」分岐に入ってしまう点や、
-    `${var##**/}`的な削ぎ落としが"**"なしの単純な"dir/file"パターンでも
-    最後のパスセグメントしか残さない点など、bash版に元々ある癖も含めて
-    そのまま移植している（挙動を変えないため「修正」はしない）。
+    Fixes two bugs present in the bash original (ported byte-for-byte in an
+    earlier commit before being fixed here at the user's request): (1) any
+    "/" in the pattern routed matching into an unscoped "search everywhere
+    by basename" mode even for patterns with no "**" at all, so e.g.
+    "demo-app/.env" incorrectly matched any ".env" file anywhere in the
+    workspace, not just demo-app/.env; (2) a plain trailing-slash directory
+    pattern like "secrets/" (no "**" prefix) was swept into that same
+    unscoped mode and, after being stripped down to an empty string,
+    matched zero files -- silently missing every file under that directory.
+
+    Convention: a "**/" prefix means "at any depth"; anything else is a
+    literal path (or glob) relative to $WORKSPACE.
+
+    deny パターンに一致するファイルを検索する。"**/"接頭辞を伴わない特定の
+    パスパターンを、ワークスペース内のどこでもベース名一致させるのではなく、
+    その文字通りの場所にスコープする。
+
+    bash版に元々あった（そして以前のコミットではバイト単位でそのまま移植して
+    いた）2つのバグを、ユーザーの依頼によりここで修正する: (1) パターンに
+    "/"が含まれてさえいれば（"**"を一切含まないパターンでも）無スコープの
+    「ワークスペース全体をベース名で検索」モードに入ってしまい、例えば
+    "demo-app/.env" が demo-app/.env だけでなくワークスペース中のどの
+    ".env" ファイルにも誤ってマッチしていた。(2) "secrets/" のような単純な
+    末尾スラッシュのディレクトリパターン（"**"接頭辞なし）も同じ無スコープ
+    モードに巻き込まれ、空文字列まで削ぎ落とされた結果ゼロ件マッチとなり、
+    そのディレクトリ配下のファイルを一切検出できていなかった。
+
+    規約: "**/"接頭辞は「任意の深さで」を意味する。それ以外は $WORKSPACE
+    からのリテラルなパス（またはglob）として扱う。
     """
-    # Handle trailing slash = directory pattern (e.g., secrets/, **/secrets/)
-    # 末尾スラッシュ = ディレクトリパターンの処理（例: secrets/, **/secrets/）
+    # Directory patterns (trailing slash) / ディレクトリパターン（末尾スラッシュ）
     if pattern.endswith("/"):
         dir_pattern = pattern[:-1]
-
-        if "/" in dir_pattern:
-            # Recursive directory pattern like **/secrets/
-            # **/secrets/ のような再帰ディレクトリパターン
-            dir_name = dir_pattern.rsplit("/", 1)[-1]
+        if dir_pattern.startswith("**/"):
+            suffix = dir_pattern[3:]
             results = []
-            for d in _find_dirs_named(workspace, dir_name):
+            for d in _find_dirs_matching_suffix(workspace, suffix):
                 results.extend(_walk_files(Path(d)))
             return results
-        # Root-level directory pattern like secrets/
-        # secrets/ のようなルートレベルディレクトリパターン
         full_dir = workspace / dir_pattern
         if full_dir.is_dir():
             return _walk_files(full_dir)
         return []
 
-    # Convert glob pattern to find-compatible format
-    # **/ -> recursive, * -> single level
-    # グロブパターンを find 互換形式に変換
-    # **/ -> recursive, * -> single level
-    if "/" in pattern:
-        # Pattern like **/*.env or **/secrets/**
-        # **/*.env や **/secrets/** のようなパターン
-        if pattern.endswith("/**"):
-            # Directory pattern like **/secrets/**
-            # **/secrets/** のようなディレクトリパターン
-            dir_name = pattern[: -len("/**")]
-            dir_name = dir_name.rsplit("/", 1)[-1]
+    # Directory-recursive-glob suffix, e.g. "secrets/**" or "**/secrets/**"
+    # ディレクトリ再帰glob接尾辞（例: "secrets/**", "**/secrets/**"）
+    if pattern.endswith("/**"):
+        dir_part = pattern[: -len("/**")]
+        if dir_part.startswith("**/"):
+            suffix = dir_part[3:]
             results = []
-            for d in _find_dirs_named(workspace, dir_name):
+            for d in _find_dirs_matching_suffix(workspace, suffix):
                 results.extend(_walk_files(Path(d)))
             return results
-        # File pattern like **/*.env
-        # **/*.env のようなファイルパターン
-        file_pattern = pattern.rsplit("/", 1)[-1]
+        full_dir = workspace / dir_part
+        if full_dir.is_dir():
+            return _walk_files(full_dir)
+        return []
+
+    # Recursive file glob, e.g. "**/*.env" or "**/sub/*.key"
+    # 再帰ファイルglob（例: "**/*.env", "**/sub/*.key"）
+    if pattern.startswith("**/"):
+        suffix = pattern[3:]
         results = []
         for dirpath, dirs, files in os.walk(workspace):
             dirs[:] = [d for d in dirs if d not in _FIND_MATCHING_PRUNE_DIRS]
             for f in files:
-                if fnmatch.fnmatchcase(f, file_pattern):
-                    results.append(os.path.join(dirpath, f))
+                full = os.path.join(dirpath, f)
+                rel = full[len(str(workspace)) + 1:]
+                if fnmatch.fnmatchcase(rel, suffix) or fnmatch.fnmatchcase(rel, "*/" + suffix):
+                    results.append(full)
         return results
 
-    # Specific path pattern like securenote-api/.env (only actually reached
-    # when the pattern has no "/" at all -- see the docstring above)
-    # securenote-api/.env のような具体的パスパターン（実際には"/"を全く
-    # 含まないパターンのときのみ到達する -- 上のdocstring参照）
+    # Specific path pattern relative to $WORKSPACE, e.g. "demo-app/.env", or
+    # a root-level glob like "*.key" (glob.glob doesn't cross "/" boundaries,
+    # so this only ever matches at the exact directory level named).
+    # $WORKSPACE からの具体的パスパターン（例: "demo-app/.env"）、または
+    # ルートレベルのglob（例: "*.key"。glob.globは"/"境界を越えないため、
+    # 指定した階層でのみマッチする）。
     full_path = workspace / pattern
     if "*" in pattern:
         return sorted(globmod.glob(str(full_path)))

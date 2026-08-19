@@ -650,6 +650,108 @@ test_shows_detected_compose_files() {
     cleanup
 }
 
+# Test: A specific (non-glob, non-"**/") path pattern must be scoped to its
+# literal location, not match any file with the same basename anywhere in
+# the workspace (regression test for a real bug in the bash original --
+# and an earlier byte-for-byte Python port of it -- where any "/" in a
+# pattern routed matching into an unscoped basename search).
+# テスト: 特定のパスパターンは、その文字通りの場所にスコープされるべきで、
+# ワークスペース内の同名ファイルすべてにマッチしてはいけない（bash版原本、
+# およびそれを以前バイト単位で移植したPython版に実際にあったバグの
+# 回帰テスト）。
+test_specific_pattern_scoped_to_its_path() {
+    echo ""
+    echo "=== Test: Specific pattern (demo-app/.env) doesn't match other-app/.env ==="
+
+    setup
+
+    touch "$TEST_WORKSPACE/demo-app/.env"
+    mkdir -p "$TEST_WORKSPACE/other-app"
+    touch "$TEST_WORKSPACE/other-app/.env"
+    create_claude_settings '"Read(demo-app/.env)"'
+    create_compose_file "" ""
+
+    local output
+    output=$(echo "3" | WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -q "demo-app/.env"; then
+        pass "Specific pattern correctly flags demo-app/.env"
+    else
+        fail "Specific pattern should flag demo-app/.env"
+        echo "Output: $output"
+    fi
+
+    if echo "$output" | grep -q "other-app/.env"; then
+        fail "Specific pattern demo-app/.env should NOT match other-app/.env (over-broad matching bug)"
+        echo "Output: $output"
+    else
+        pass "Specific pattern does not over-broadly match other-app/.env"
+    fi
+
+    cleanup
+}
+
+# Test: A path containing a regex metacharacter (e.g. "+") that is already
+# correctly declared in docker-compose.yml must be recognized as synced,
+# not misreported as missing (regression test for is_file_in_compose()
+# embedding the raw path into a regex without escaping it).
+# テスト: 正規表現メタ文字（例: "+"）を含み、docker-compose.ymlに正しく
+# 宣言済みのパスは同期済みと認識されるべきで、未設定と誤報告されては
+# ならない（is_file_in_compose()が生パスをエスケープせず正規表現へ埋め込んで
+# いたことの回帰テスト）。
+test_regex_metacharacter_in_path_synced_correctly() {
+    echo ""
+    echo "=== Test: path with regex metacharacter (+) is correctly matched ==="
+
+    setup
+
+    touch "$TEST_WORKSPACE/demo-app/.env+special"
+    create_claude_settings '"Read(demo-app/.env+special)"'
+    create_compose_file "      - /dev/null:$TEST_WORKSPACE/demo-app/.env+special:ro" ""
+
+    local output
+    output=$(echo "3" | WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -qE "すべての秘匿|All secret files are synced|No additions needed"; then
+        pass "Path containing a regex metacharacter is correctly recognized as synced"
+    else
+        fail "Path containing a regex metacharacter should be recognized as synced, got: $output"
+    fi
+
+    cleanup
+}
+
+# Test: A trailing-slash directory deny pattern (e.g. "Read(secrets/)")
+# must detect files underneath that directory, not silently match zero
+# files (regression test for this script's find_matching_files() having no
+# trailing-slash directory-pattern branch at all in the bash original).
+# テスト: 末尾スラッシュのディレクトリdenyパターン（例: "Read(secrets/)"）は
+# 配下のファイルを検出すべきで、ゼロ件マッチに黙って失敗してはならない
+# （bash版原本のfind_matching_files()に末尾スラッシュのディレクトリパターン
+# 分岐が全く無かったことの回帰テスト）。
+test_trailing_slash_directory_pattern_detects_files() {
+    echo ""
+    echo "=== Test: Trailing-slash directory pattern (secrets/) detects files underneath ==="
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/secrets"
+    touch "$TEST_WORKSPACE/secrets/api-key.txt"
+    create_claude_settings '"Read(secrets/)"'
+    create_compose_file "" ""
+
+    local output
+    output=$(echo "3" | WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -q "secrets/api-key.txt"; then
+        pass "Trailing-slash directory pattern detects files underneath it"
+    else
+        fail "Trailing-slash directory pattern should detect secrets/api-key.txt, got: $output"
+    fi
+
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -675,6 +777,9 @@ main() {
     test_dual_file_backups
     test_dual_file_all_synced
     test_shows_detected_compose_files
+    test_specific_pattern_scoped_to_its_path
+    test_regex_metacharacter_in_path_synced_correctly
+    test_trailing_slash_directory_pattern_detects_files
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
