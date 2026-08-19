@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-claude-data.sh
-# Test script for claude-data.sh
+# Test script for claude-data.py
 #
-# claude-data.sh のテストスクリプト
+# claude-data.py のテストスクリプト
 #
 # Usage: ./test-claude-data.sh
 # 使用方法: ./test-claude-data.sh
@@ -10,7 +10,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/claude-data.sh"
+SCRIPT="$SCRIPT_DIR/claude-data.py"
 
 # Colors for output
 RED='\033[0;31m'
@@ -42,7 +42,7 @@ test_help() {
     info "--help shows usage"
 
     local output
-    output=$(bash "$SCRIPT" --help 2>&1) || true
+    output=$("$SCRIPT" --help 2>&1) || true
 
     if echo "$output" | grep -q "Usage"; then
         pass "--help shows usage"
@@ -57,7 +57,7 @@ test_default_lists() {
     info "No arguments lists memory/plans (does not copy)"
 
     local output
-    output=$(bash "$SCRIPT" 2>&1)
+    output=$("$SCRIPT" 2>&1)
 
     if echo "$output" | grep -q "^Done"; then
         fail "Default invocation should not copy (found 'Done' message)"
@@ -79,7 +79,7 @@ test_default_lists_memory() {
     fi
 
     local output
-    output=$(bash "$SCRIPT" 2>&1)
+    output=$("$SCRIPT" 2>&1)
 
     if echo "$output" | grep -q "$memory_dir"; then
         pass "Default invocation lists memory/ files"
@@ -94,7 +94,7 @@ test_default_excludes_settings() {
     info "Default invocation excludes settings.json"
 
     local output
-    output=$(bash "$SCRIPT" 2>&1)
+    output=$("$SCRIPT" 2>&1)
 
     if echo "$output" | grep -q "settings.json"; then
         fail "Default invocation should not list settings.json without --with-settings"
@@ -116,7 +116,7 @@ test_with_settings_lists_settings() {
     fi
 
     local output
-    output=$(bash "$SCRIPT" --with-settings 2>&1)
+    output=$("$SCRIPT" --with-settings 2>&1)
 
     if echo "$output" | grep -q "$settings_file"; then
         pass "--with-settings lists settings.json"
@@ -131,7 +131,7 @@ test_copy_missing_destdir() {
     info "--copy without dest-dir shows error"
 
     local output
-    output=$(bash "$SCRIPT" --copy 2>&1) || true
+    output=$("$SCRIPT" --copy 2>&1) || true
 
     if echo "$output" | grep -q "requires a dest-dir"; then
         pass "--copy without dest-dir shows error"
@@ -146,7 +146,7 @@ test_copy_followed_by_flag() {
     info "--copy followed by --with-settings (no dest-dir) shows error"
 
     local output
-    output=$(bash "$SCRIPT" --copy --with-settings 2>&1) || true
+    output=$("$SCRIPT" --copy --with-settings 2>&1) || true
 
     if echo "$output" | grep -q "requires a dest-dir"; then
         pass "--copy followed by a flag shows error"
@@ -161,7 +161,7 @@ test_copy_empty_destdir() {
     info "--copy with an empty string dest-dir shows error"
 
     local output
-    output=$(bash "$SCRIPT" --copy "" 2>&1) || true
+    output=$("$SCRIPT" --copy "" 2>&1) || true
 
     if echo "$output" | grep -q "requires a dest-dir"; then
         pass "--copy with an empty string dest-dir shows error"
@@ -176,7 +176,7 @@ test_unknown_option() {
     info "Unknown option shows error"
 
     local output
-    output=$(bash "$SCRIPT" --bogus-flag 2>&1) || true
+    output=$("$SCRIPT" --bogus-flag 2>&1) || true
 
     if echo "$output" | grep -q "Unknown option"; then
         pass "Unknown option shows error"
@@ -201,7 +201,7 @@ test_copy_copies_files() {
     dest_dir=$(mktemp -d)
 
     local output
-    output=$(bash "$SCRIPT" --copy "$dest_dir" 2>&1)
+    output=$("$SCRIPT" --copy "$dest_dir" 2>&1)
 
     if echo "$output" | grep -q "^Done" && [ -d "$dest_dir/memory" ]; then
         pass "--copy <dest-dir> copies memory/ into dest-dir"
@@ -227,7 +227,7 @@ test_copy_excludes_settings_by_default() {
     local dest_dir
     dest_dir=$(mktemp -d)
 
-    bash "$SCRIPT" --copy "$dest_dir" > /dev/null 2>&1 || true
+    "$SCRIPT" --copy "$dest_dir" > /dev/null 2>&1 || true
 
     if [ -f "$dest_dir/settings.json" ]; then
         fail "--copy without --with-settings should not copy settings.json"
@@ -241,8 +241,8 @@ test_copy_excludes_settings_by_default() {
 # Run all tests
 main() {
     echo "========================================"
-    echo "Testing claude-data.sh"
-    echo "claude-data.sh のテスト"
+    echo "Testing claude-data.py"
+    echo "claude-data.py のテスト"
     echo "========================================"
     echo ""
 
