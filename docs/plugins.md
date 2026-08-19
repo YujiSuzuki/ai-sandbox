@@ -157,7 +157,7 @@ $ claude  --allow-dangerously-skip-permissions
 
 ## Usage Example of Custom Command Created Above
 
-The command names in the examples below use the built-in commands installed via `install-commands.sh`.
+The command names in the examples below use the built-in commands installed via `install-commands.py`.
 
 **Scenario: iOS app login feature not working**
 

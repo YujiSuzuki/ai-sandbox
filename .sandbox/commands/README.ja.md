@@ -14,12 +14,12 @@
 
 ## インストール方法
 
-Claude Code に「カスタムコマンドをインストールして」と頼むか、`install-commands.sh` を直接使用します：
+Claude Code に「カスタムコマンドをインストールして」と頼むか、`install-commands.py` を直接使用します：
 
 ```bash
-.sandbox/scripts/install-commands.sh --list             # 利用可能なコマンドを確認
-.sandbox/scripts/install-commands.sh ais-local-review    # ais-local-review をインストール
-.sandbox/scripts/install-commands.sh --all               # 全コマンドをインストール
+.sandbox/scripts/install-commands.py --list             # 利用可能なコマンドを確認
+.sandbox/scripts/install-commands.py ais-local-review    # ais-local-review をインストール
+.sandbox/scripts/install-commands.py --all               # 全コマンドをインストール
 ```
 
 ## 付属コマンド一覧

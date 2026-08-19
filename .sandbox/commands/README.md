@@ -14,12 +14,12 @@
 
 ## Installation
 
-Ask Claude Code to "install the custom commands," or use `install-commands.sh` directly:
+Ask Claude Code to "install the custom commands," or use `install-commands.py` directly:
 
 ```bash
-.sandbox/scripts/install-commands.sh --list             # List available commands
-.sandbox/scripts/install-commands.sh ais-local-review    # Install ais-local-review
-.sandbox/scripts/install-commands.sh --all               # Install all commands
+.sandbox/scripts/install-commands.py --list             # List available commands
+.sandbox/scripts/install-commands.py ais-local-review    # Install ais-local-review
+.sandbox/scripts/install-commands.py --all               # Install all commands
 ```
 
 ## Built-in Command List

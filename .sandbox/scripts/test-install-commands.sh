@@ -1,17 +1,17 @@
 #!/bin/bash
 # test-install-commands.sh
-# Test script for install-commands.sh
+# Test script for install-commands.py
 #
 # Usage: ./test-install-commands.sh
 # ---
-# install-commands.sh のテストスクリプト
+# install-commands.py のテストスクリプト
 #
 # 使用方法: ./test-install-commands.sh
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/install-commands.sh"
+SCRIPT="$SCRIPT_DIR/install-commands.py"
 TEST_DIR=""
 
 # Colors for output
@@ -50,8 +50,8 @@ setup() {
     mkdir -p "$TEST_DIR/.sandbox/scripts"
 
     # Copy the script under test into the fake workspace
-    cp "$SCRIPT" "$TEST_DIR/.sandbox/scripts/install-commands.sh"
-    chmod +x "$TEST_DIR/.sandbox/scripts/install-commands.sh"
+    cp "$SCRIPT" "$TEST_DIR/.sandbox/scripts/$(basename "$SCRIPT")"
+    chmod +x "$TEST_DIR/.sandbox/scripts/$(basename "$SCRIPT")"
 
     # Create sample command files
     cat > "$TEST_DIR/.sandbox/commands/test-cmd-a.md" << 'EOF'
@@ -87,7 +87,7 @@ trap cleanup EXIT
 # Helper to run script in test workspace
 # テストワークスペース内でスクリプトを実行するヘルパー
 run_script() {
-    "$TEST_DIR/.sandbox/scripts/install-commands.sh" "$@"
+    "$TEST_DIR/.sandbox/scripts/$(basename "$SCRIPT")" "$@"
 }
 
 # ─── Tests / テスト ────────────────────────────────────────────────────
@@ -500,7 +500,7 @@ test_localize_no_ja_field() {
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  install-commands.sh Test Suite"
+    echo "  install-commands.py Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_help

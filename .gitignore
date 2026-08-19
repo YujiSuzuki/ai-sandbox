@@ -51,14 +51,14 @@ secrets/
 # https://docs.anthropic.com/en/docs/claude-code/settings
 #
 # Personal settings go in .claude/settings.local.json, personal commands in ~/.claude/commands/
-# Install custom commands: .sandbox/scripts/install-commands.sh --list
+# Install custom commands: .sandbox/scripts/install-commands.py --list
 #
 # To share .claude/settings.json or .claude/commands/ with your team,
 # comment out the line below and exclude only .claude/settings.local.json instead:
 #   .claude/settings.local.json
 #
 # 個人設定は .claude/settings.local.json に、個人用コマンドは ~/.claude/commands/ に配置
-# カスタムコマンドのインストール: .sandbox/scripts/install-commands.sh --list
+# カスタムコマンドのインストール: .sandbox/scripts/install-commands.py --list
 #
 # チームで .claude/settings.json や .claude/commands/ を共有したい場合は、
 # 下の行をコメントアウトし、代わりに .claude/settings.local.json のみ除外してください:

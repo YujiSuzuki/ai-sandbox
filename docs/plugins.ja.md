@@ -159,7 +159,7 @@ $ claude  --allow-dangerously-skip-permissions
 
 ## 上記で作成したカスタムコマンドの活用例
 
-- 下記の例では `install-commands.sh` でインストールした付属コマンドを使用しています。
+- 下記の例では `install-commands.py` でインストールした付属コマンドを使用しています。
 
 **シナリオ: iOS アプリのログイン機能がうまくいかない**
 

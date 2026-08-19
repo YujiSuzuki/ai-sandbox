@@ -285,7 +285,7 @@ git clone https://github.com/YujiSuzuki/ai-sandbox-demo
 - **セキュリティ機能を体験したい** → [ai-sandbox-demo ハンズオン](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.ja.md)
 - **自分のプロジェクトで使いたい** → [自分のプロジェクトへの適用](docs/customization.ja.md)
 - **設定漏れを検出したい** → `.sandbox/scripts/check-secret-sync.sh`（AI拒否設定とdocker-compose.ymlの同期チェック）
-- **SandboxMCPを体験したい** → AIに「カスタムコマンドをインストールして」と頼むだけで、`.sandbox/scripts/install-commands.sh`をAIが自動で見つけて実行します
+- **SandboxMCPを体験したい** → AIに「カスタムコマンドをインストールして」と頼むだけで、`.sandbox/scripts/install-commands.py`をAIが自動で見つけて実行します
 
 ---
 
