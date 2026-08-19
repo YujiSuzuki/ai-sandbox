@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # check-undeclared-secrets-diff.py
-# Wraps check-undeclared-secrets.sh --format json: compares this run's
+# Wraps check-undeclared-secrets.py --format json: compares this run's
 # undeclared-file set against the previous recorded run and reports only
 # paths that are NEW in that set (a set difference, not a count comparison --
 # a file swap that keeps the total count the same still counts as new).
@@ -23,7 +23,7 @@
 # subsequent invocation instead of silently disappearing if delivery never
 # happens.
 # ---
-# check-undeclared-secrets.sh --format json をラップし、今回の未宣言ファイル
+# check-undeclared-secrets.py --format json をラップし、今回の未宣言ファイル
 # 集合を前回記録と比較して、その集合の中で「新規」のパスのみを報告する
 # （件数比較ではなく集合差分 -- 合計件数が変わらないファイルの入れ替えでも
 # 新規として検出する）。報告すべき新規がなければ無出力。初回実行（まだ前回
@@ -50,7 +50,7 @@ from pathlib import Path
 from _python_common import is_lang_ja, write_json_atomic
 
 WORKSPACE = Path(os.environ.get("WORKSPACE", "/workspace"))
-CHECK_SCRIPT = Path(os.environ.get("CHECK_SCRIPT", str(WORKSPACE / ".sandbox" / "scripts" / "check-undeclared-secrets.sh")))
+CHECK_SCRIPT = Path(os.environ.get("CHECK_SCRIPT", str(WORKSPACE / ".sandbox" / "scripts" / "check-undeclared-secrets.py")))
 STATE_FILE = Path(os.environ.get("STATE_FILE", str(WORKSPACE / ".sandbox" / ".state" / "check-undeclared-secrets.json")))
 PENDING_FILE = Path(os.environ.get("PENDING_FILE", str(WORKSPACE / ".sandbox" / ".state" / "check-undeclared-secrets.pending.json")))
 
@@ -139,10 +139,10 @@ def main() -> None:
             print(f"   📄 {path}")
 
     if is_lang_ja():
-        print("詳細: .sandbox/scripts/check-undeclared-secrets.sh / 対処: .sandbox/scripts/triage-undeclared-secrets.sh（1件ずつ確認しながら処理します。名前パターンによる検出のため、内容を確認のうえ選択してください）")
+        print("詳細: .sandbox/scripts/check-undeclared-secrets.py / 対処: .sandbox/scripts/triage-undeclared-secrets.sh（1件ずつ確認しながら処理します。名前パターンによる検出のため、内容を確認のうえ選択してください）")
         print("→ AIへ: このメッセージは必ず今回の最初の返信でユーザーに伝えてください。対処（.sandbox/config/sync-ignore への追加・削除など）は必ずユーザーの確認を得てから行い、AI単独で判断・実行しないでください。")
     else:
-        print("For details, run: .sandbox/scripts/check-undeclared-secrets.sh -- to act on findings, run: .sandbox/scripts/triage-undeclared-secrets.sh (reviews each item interactively; detected by name pattern only, so check the content before choosing)")
+        print("For details, run: .sandbox/scripts/check-undeclared-secrets.py -- to act on findings, run: .sandbox/scripts/triage-undeclared-secrets.sh (reviews each item interactively; detected by name pattern only, so check the content before choosing)")
         print("-> AI: mention this in your first reply to the user this session, even if unrelated to their question. Do not remediate (add to .sandbox/config/sync-ignore, delete, etc.) without explicit user confirmation.")
 
     sys.exit(0)

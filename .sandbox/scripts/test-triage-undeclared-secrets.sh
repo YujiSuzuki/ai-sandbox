@@ -60,8 +60,10 @@ setup() {
 
     cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
-    cp "$SCRIPT_DIR/check-undeclared-secrets.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
-    chmod +x "$TEST_WORKSPACE/.sandbox/scripts/check-undeclared-secrets.sh"
+    cp "$SCRIPT_DIR/_python_common.py" "$TEST_WORKSPACE/.sandbox/scripts/"
+    cp "$SCRIPT_DIR/_secret_tag.py" "$TEST_WORKSPACE/.sandbox/scripts/"
+    cp "$SCRIPT_DIR/check-undeclared-secrets.py" "$TEST_WORKSPACE/.sandbox/scripts/"
+    chmod +x "$TEST_WORKSPACE/.sandbox/scripts/check-undeclared-secrets.py"
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -458,7 +460,7 @@ test_no_duplicate_tag_when_already_hidden_in_other_compose() {
 
     # Pre-tag the directory in the CLI Sandbox compose only -- the
     # DevContainer compose (created above) lacks it, so
-    # check-undeclared-secrets.sh (which only scans the DevContainer compose
+    # check-undeclared-secrets.py (which only scans the DevContainer compose
     # in this test's default SANDBOX_ENV) reports it as undeclared.
     cat > "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml" << EOF
 services:

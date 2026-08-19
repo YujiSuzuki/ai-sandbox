@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-check-undeclared-secrets.sh
-# Test script for check-undeclared-secrets.sh
+# Test script for check-undeclared-secrets.py
 #
-# check-undeclared-secrets.sh のテストスクリプト
+# check-undeclared-secrets.py のテストスクリプト
 #
 # Usage: ./test-check-undeclared-secrets.sh
 # 使用方法: ./test-check-undeclared-secrets.sh
@@ -16,7 +16,7 @@ if ! command -v jq &> /dev/null; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/check-undeclared-secrets.sh"
+SCRIPT="$SCRIPT_DIR/check-undeclared-secrets.py"
 TEST_WORKSPACE=""
 
 # Colors for output
@@ -57,8 +57,6 @@ setup() {
     mkdir -p "$TEST_WORKSPACE/.sandbox/scripts"
     mkdir -p "$TEST_WORKSPACE/.sandbox/config"
 
-    cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
-    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 
@@ -583,8 +581,8 @@ test_always_exits_zero() {
 
 echo ""
 echo "=========================================="
-echo "Testing check-undeclared-secrets.sh"
-echo "check-undeclared-secrets.sh のテスト"
+echo "Testing check-undeclared-secrets.py"
+echo "check-undeclared-secrets.py のテスト"
 echo "=========================================="
 echo ""
 

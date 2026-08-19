@@ -7,7 +7,7 @@
 #   setup-output-reminder.sh -- once the AI touches "<name>.resolved" for
 #   this notice, its not-yet-confirmed pending file gets merged into here)
 # Surface newly-appeared undeclared-secret-like files (see
-# .sandbox/scripts/check-undeclared-secrets.sh) as MCP startup context, so
+# .sandbox/scripts/check-undeclared-secrets.py) as MCP startup context, so
 # the AI can proactively flag them instead of the finding sitting unnoticed
 # until someone remembers to run the scan by hand. Silent when nothing new
 # was found, including the very first run (see check-undeclared-secrets-diff.py).
@@ -28,7 +28,7 @@
 # and discards output on timeout or non-zero exit -- so the timeout below is
 # capped well under that (same pattern as 40-hostmcp-host-tools-hint.sh).
 # ---
-# 新たに現れた未申告のシークレットらしきファイル（.sandbox/scripts/check-undeclared-secrets.sh
+# 新たに現れた未申告のシークレットらしきファイル（.sandbox/scripts/check-undeclared-secrets.py
 # 参照）を、MCP起動時コンテキストとして表示する。誰かが手動でスキャンを実行する
 # のを待つのではなく、AIが自発的に指摘できるようにするため。何も新規検出が
 # なければ（初回実行時を含め）何も出力しない（check-undeclared-secrets-diff.py 参照）。

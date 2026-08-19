@@ -1,6 +1,6 @@
 #!/bin/bash
 # triage-undeclared-secrets.sh
-# Interactively triage findings from check-undeclared-secrets.sh: per item, the user judges
+# Interactively triage findings from check-undeclared-secrets.py: per item, the user judges
 # it a real secret (hide via docker-compose.yml), not a secret (add to sync-ignore), or skip.
 #
 # Usage: .sandbox/scripts/triage-undeclared-secrets.sh [--dry-run]
@@ -9,7 +9,7 @@
 # IMPORTANT: Must run inside AI Sandbox container (not on host OS).
 # @env: container
 # ---
-# check-undeclared-secrets.sh の検出結果を1件ずつ対話式に処理する:
+# check-undeclared-secrets.py の検出結果を1件ずつ対話式に処理する:
 # ユーザーが中身を確認し、本物の秘密なら docker-compose.yml で隠蔽 / 秘密でなければ
 # sync-ignore に追記 / 判断しないならスキップ、を選ぶ。
 #
@@ -50,7 +50,7 @@ source "${WORKSPACE}/.sandbox/scripts/_startup_common.sh"
 # shellcheck source=/dev/null
 source "${WORKSPACE}/.sandbox/scripts/_secret-tag.sh"
 
-CHECK_SCRIPT="${CHECK_SCRIPT:-$WORKSPACE/.sandbox/scripts/check-undeclared-secrets.sh}"
+CHECK_SCRIPT="${CHECK_SCRIPT:-$WORKSPACE/.sandbox/scripts/check-undeclared-secrets.py}"
 
 DEVCONTAINER_COMPOSE="$WORKSPACE/.devcontainer/docker-compose.yml"
 CLI_SANDBOX_COMPOSE="$WORKSPACE/cli_sandbox/docker-compose.yml"
@@ -134,7 +134,7 @@ fi
 # docker-compose.yml edit helpers
 #
 # Intentionally duplicated from sync-secrets.sh rather than extracted into
-# a shared lib: check-undeclared-secrets.sh already has its own independent
+# a shared lib: check-undeclared-secrets.py already has its own independent
 # compose-detection logic (is_path_hidden_by_compose) rather than reusing
 # sync-secrets.sh's, so per-script duplication of this straightforward
 # sed-based editing is the existing convention here -- only the "# @secret"
@@ -142,7 +142,7 @@ fi
 # file (_secret-tag.sh). If a third caller needs this logic, extract it then.
 #
 # sync-secrets.sh から意図的に複製している（共通ライブラリへは切り出さない）:
-# check-undeclared-secrets.sh も sync-secrets.sh とは別に独自の compose 検出
+# check-undeclared-secrets.py も sync-secrets.sh とは別に独自の compose 検出
 # ロジック(is_path_hidden_by_compose)を持っており、この程度の sed 編集は
 # スクリプトごとに複製するのがこのプロジェクトの既存の流儀。6本のスクリプトが
 # 完全一致で合意する必要がある "# @secret" タグの正規表現だけが共通ファイル

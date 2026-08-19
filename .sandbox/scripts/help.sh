@@ -42,7 +42,7 @@ show_script_list() {
     fi
 
     # Scripts that must run in container
-    local container_only="sync-secrets.sh validate-secrets.py sync-compose-secrets.sh check-undeclared-secrets.sh check-secret-sync.sh compare-secret-config.sh triage-undeclared-secrets.sh"
+    local container_only="sync-secrets.sh validate-secrets.py sync-compose-secrets.sh check-undeclared-secrets.py check-secret-sync.sh compare-secret-config.sh triage-undeclared-secrets.sh"
 
     get_env_icon() {
         local s="$1"
@@ -155,7 +155,7 @@ show_workflow_guide() {
     .sandbox/scripts/sync-secrets.sh
 
   そもそも隠蔽設定に入っていない秘密ファイルがないか確認（名前パターンによる検出 -- 対処前に確認が必要）:
-    .sandbox/scripts/check-undeclared-secrets.sh
+    .sandbox/scripts/check-undeclared-secrets.py
 
 ■ HostMCP（他コンテナとの連携）
 
@@ -200,7 +200,7 @@ GUIDE_JA
     .sandbox/scripts/sync-secrets.sh
 
   Check for secret files never declared anywhere (name-pattern detection -- review before acting):
-    .sandbox/scripts/check-undeclared-secrets.sh
+    .sandbox/scripts/check-undeclared-secrets.py
 
 ■ HostMCP (Cross-Container Access)
 

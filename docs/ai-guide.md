@@ -430,7 +430,7 @@ A specific bash 3.2 pitfall: a bare `$var` immediately followed by a non-ASCII c
 │   │   ├── sync-secrets.sh           # 🐳 Interactive secret sync tool
 │   │   ├── sync-compose-secrets.sh   # 🐳 Sync between DevContainer/CLI compose
 │   │   ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
-│   │   ├── check-undeclared-secrets.sh # 🐳 Manual scan for secrets declared nowhere
+│   │   ├── check-undeclared-secrets.py # 🐳 Manual scan for secrets declared nowhere
 │   │   ├── triage-undeclared-secrets.sh # 🐳 Interactively act on that scan's findings
 │   │   ├── run-all-tests.sh          # Run all test scripts
 │   │   └── test-*.sh                 # Test scripts
@@ -508,7 +508,7 @@ See [docs/reference.md](reference.md) → "Running Multiple DevContainers" for d
 
 ### Secret Sync
 
-`check-undeclared-secrets.sh` (heuristic scan) only reports files that look like secrets but aren't hidden in `docker-compose.yml`; it never determines whether a finding is a real secret. To act on those findings, run `triage-undeclared-secrets.sh`, which walks through them one at a time and lets the user judge each — hide it via `docker-compose.yml` if it's a real secret, or add it to `sync-ignore` if it's not — and never writes without that per-item confirmation.
+`check-undeclared-secrets.py` (heuristic scan) only reports files that look like secrets but aren't hidden in `docker-compose.yml`; it never determines whether a finding is a real secret. To act on those findings, run `triage-undeclared-secrets.sh`, which walks through them one at a time and lets the user judge each — hide it via `docker-compose.yml` if it's a real secret, or add it to `sync-ignore` if it's not — and never writes without that per-item confirmation.
 
 `check-secret-sync.sh` reads patterns from:
 - `.claude/settings.json` — Claude Code
