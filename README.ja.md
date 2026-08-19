@@ -457,7 +457,7 @@ workspace/
 │   ├── scripts/            # 共有スクリプト
 │   │   ├── validate-secrets.py    # 秘匿ファイルが隠蔽されているか確認
 │   │   ├── check-secret-sync.py   # AI拒否設定との同期チェック
-│   │   └── sync-secrets.sh        # 対話的に設定を同期
+│   │   └── sync-secrets.py        # 対話的に設定を同期
 │   ├── commands/            # 付属スラッシュコマンド（コードレビュー等）
 │   ├── config/              # hostmcp.yaml等の設定ファイル
 │   ├── host-setup/          # ホストOS専用セットアップ（install-hostmcp.sh等）

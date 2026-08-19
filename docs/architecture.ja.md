@@ -419,7 +419,7 @@ AI アシスタントは `list_tools` でツールを発見し、`get_tool_info`
 
 | 環境 | 対象スクリプト |
 |---|---|
-| `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.py`, `sync-compose-secrets.py`, `check-secret-sync.py`, `compare-secret-config.py`, `check-undeclared-secrets.py`, `triage-undeclared-secrets.py` |
+| `container`（コンテナ専用） | `sync-secrets.py`, `validate-secrets.py`, `sync-compose-secrets.py`, `check-secret-sync.py`, `compare-secret-config.py`, `check-undeclared-secrets.py`, `triage-undeclared-secrets.py` |
 | `any`（どちらでも可） | 上記以外のすべて |
 
 ```

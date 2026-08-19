@@ -363,11 +363,11 @@ test_glob_pattern_matching() {
     cleanup
 }
 
-# Test 8: Suggests sync-secrets.sh
-# テスト8: sync-secrets.sh を提案する
+# Test 8: Suggests sync-secrets.py
+# テスト8: sync-secrets.py を提案する
 test_suggests_sync_script() {
     echo ""
-    echo "=== Test: Suggests sync-secrets.sh ==="
+    echo "=== Test: Suggests sync-secrets.py ==="
 
     setup
 

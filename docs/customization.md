@@ -125,7 +125,7 @@ These checks run automatically at startup:
    - Supports: `.claude/settings.json`, `.aiexclude`, `.geminiignore`
    - Note: `.gitignore` is intentionally **not supported** — it contains many non-secret patterns (`node_modules/`, `dist/`, `*.log`) that would create noise. List only secrets explicitly in AI-specific files.
 
-**Manual sync tool:** If `check-secret-sync.py` reports unconfigured files, run `.sandbox/scripts/sync-secrets.sh` to interactively add them. Use option `4` (preview) to check settings without modifying files.
+**Manual sync tool:** If `check-secret-sync.py` reports unconfigured files, run `.sandbox/scripts/sync-secrets.py` to interactively add them. Use option `4` (preview) to check settings without modifying files.
 
 **Recommended first-time setup flow:**
 ```bash
@@ -133,7 +133,7 @@ These checks run automatically at startup:
 ./cli_sandbox/ai_sandbox.sh
 
 # 2. Inside container: interactively sync secret settings
-.sandbox/scripts/sync-secrets.sh
+.sandbox/scripts/sync-secrets.py
 
 # 3. Exit and rebuild DevContainer
 exit

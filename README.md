@@ -455,7 +455,7 @@ workspace/
 │   ├── scripts/            # Shared scripts
 │   │   ├── validate-secrets.py    # Verify secret files are hidden
 │   │   ├── check-secret-sync.py   # Sync check with AI deny settings
-│   │   └── sync-secrets.sh        # Interactively sync settings
+│   │   └── sync-secrets.py        # Interactively sync settings
 │   ├── commands/            # Bundled slash commands (code review, etc.)
 │   ├── config/              # Config files such as hostmcp.yaml
 │   ├── host-setup/          # Host-OS-only setup (install-hostmcp.sh, etc.)

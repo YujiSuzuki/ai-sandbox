@@ -417,7 +417,7 @@ Scripts are classified into two execution environments.
 
 | Environment | Scripts |
 |---|---|
-| `container` (container only) | `sync-secrets.sh`, `validate-secrets.py`, `sync-compose-secrets.py`, `check-secret-sync.py`, `compare-secret-config.py`, `check-undeclared-secrets.py`, `triage-undeclared-secrets.py` |
+| `container` (container only) | `sync-secrets.py`, `validate-secrets.py`, `sync-compose-secrets.py`, `check-secret-sync.py`, `compare-secret-config.py`, `check-undeclared-secrets.py`, `triage-undeclared-secrets.py` |
 | `any` (either) | All others |
 
 ```

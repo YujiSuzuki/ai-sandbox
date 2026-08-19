@@ -42,7 +42,7 @@ show_script_list() {
     fi
 
     # Scripts that must run in container
-    local container_only="sync-secrets.sh validate-secrets.py sync-compose-secrets.py check-undeclared-secrets.py check-secret-sync.py compare-secret-config.py triage-undeclared-secrets.py"
+    local container_only="sync-secrets.py validate-secrets.py sync-compose-secrets.py check-undeclared-secrets.py check-secret-sync.py compare-secret-config.py triage-undeclared-secrets.py"
 
     get_env_icon() {
         local s="$1"
@@ -152,7 +152,7 @@ show_workflow_guide() {
 ■ 必要に応じて手動実行（上記の結果に応じて実行を提案されます）
 
   同期のズレを対話的に修正:
-    .sandbox/scripts/sync-secrets.sh
+    .sandbox/scripts/sync-secrets.py
 
   そもそも隠蔽設定に入っていない秘密ファイルがないか確認（名前パターンによる検出 -- 対処前に確認が必要）:
     .sandbox/scripts/check-undeclared-secrets.py
@@ -197,7 +197,7 @@ GUIDE_JA
 ■ Run manually when needed (suggested based on results above)
 
   Interactively fix sync issues:
-    .sandbox/scripts/sync-secrets.sh
+    .sandbox/scripts/sync-secrets.py
 
   Check for secret files never declared anywhere (name-pattern detection -- review before acting):
     .sandbox/scripts/check-undeclared-secrets.py

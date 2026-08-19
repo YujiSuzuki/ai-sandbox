@@ -126,7 +126,7 @@ services:
    - 対応: `.claude/settings.json`, `.aiexclude`, `.geminiignore`
    - 注意: `.gitignore` は意図的に**非対応**です — 秘匿情報以外のパターン（`node_modules/`, `dist/`, `*.log`）が多く含まれノイズになります。AI専用ファイルに秘匿情報のみを明示的に記載してください。
 
-**手動同期ツール:** `check-secret-sync.py` で未設定ファイルが報告された場合、`.sandbox/scripts/sync-secrets.sh` を実行して対話的に追加できます。オプション `4`（プレビュー）でファイルを変更せずに設定内容を確認できます。
+**手動同期ツール:** `check-secret-sync.py` で未設定ファイルが報告された場合、`.sandbox/scripts/sync-secrets.py` を実行して対話的に追加できます。オプション `4`（プレビュー）でファイルを変更せずに設定内容を確認できます。
 
 **初回セットアップの推奨フロー:**
 ```bash
@@ -134,7 +134,7 @@ services:
 ./cli_sandbox/ai_sandbox.sh
 
 # 2. コンテナ内で: 対話的に秘匿設定を同期
-.sandbox/scripts/sync-secrets.sh
+.sandbox/scripts/sync-secrets.py
 
 # 3. 終了して DevContainer をリビルド
 exit

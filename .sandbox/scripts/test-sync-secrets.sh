@@ -1,19 +1,19 @@
 #!/bin/bash
 # test-sync-secrets.sh
-# Test script for sync-secrets.sh
+# Test script for sync-secrets.py
 #
-# sync-secrets.sh のテストスクリプト
+# sync-secrets.py のテストスクリプト
 #
 # Usage: ./test-sync-secrets.sh
 # 使用方法: ./test-sync-secrets.sh
 #
-# Note: sync-secrets.sh is interactive, so tests focus on detection logic
-# 注意: sync-secrets.sh は対話式なので、テストは検出ロジックに焦点を当てます
+# Note: sync-secrets.py is interactive, so tests focus on detection logic
+# 注意: sync-secrets.py は対話式なので、テストは検出ロジックに焦点を当てます
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/sync-secrets.sh"
+SCRIPT="$SCRIPT_DIR/sync-secrets.py"
 TEST_WORKSPACE=""
 
 # Colors for output
@@ -60,10 +60,11 @@ setup() {
     mkdir -p "$TEST_WORKSPACE/.sandbox/scripts"
     mkdir -p "$TEST_WORKSPACE/.sandbox/config"
 
-    # Copy required scripts and config to test workspace
-    # 必要なスクリプトと設定をテストワークスペースにコピー
-    cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
-    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    # Copy required config to test workspace (the script imports its own
+    # Python libraries from its real script directory, not $WORKSPACE)
+    # 必要な設定をテストワークスペースにコピー（スクリプトは自身の実際の
+    # ディレクトリからPythonライブラリをimportするため、$WORKSPACE相対では
+    # コピー不要）
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -154,7 +155,7 @@ test_script_executable_and_valid() {
 
     # Check for syntax errors
     # 構文エラーをチェック
-    if bash -n "$SCRIPT" 2>/dev/null; then
+    if python3 -m py_compile "$SCRIPT" 2>/dev/null; then
         pass "Script is executable and has valid syntax"
     else
         fail "Script has syntax errors"
@@ -433,11 +434,11 @@ test_preview_shows_sections() {
 
 # Test 10b: A directory already hidden via a "# @secret"-tagged tmpfs
 # entry must be recognized by is_file_in_compose() for files inside it,
-# so sync-secrets.sh doesn't add redundant per-file /dev/null mounts for
+# so sync-secrets.py doesn't add redundant per-file /dev/null mounts for
 # files already covered by the tmpfs entry.
 # テスト10b: "# @secret" タグ付きの tmpfs エントリで既に隠蔽されている
 # ディレクトリ内のファイルを is_file_in_compose() が正しく認識し、
-# sync-secrets.sh が冗長な /dev/null マウントを追加しないことを確認する
+# sync-secrets.py が冗長な /dev/null マウントを追加しないことを確認する
 test_tagged_tmpfs_directory_recognized_as_already_synced() {
     echo ""
     echo "=== Test: Directory hidden via a tagged tmpfs entry is recognized as already synced ==="
@@ -455,7 +456,7 @@ test_tagged_tmpfs_directory_recognized_as_already_synced() {
     if echo "$output" | grep -qE "synced|同期"; then
         pass "Directory hidden via a tagged tmpfs entry is recognized as already synced"
     else
-        fail "sync-secrets.sh should recognize the tagged tmpfs entry and report no missing files (got: $output)"
+        fail "sync-secrets.py should recognize the tagged tmpfs entry and report no missing files (got: $output)"
     fi
 
     cleanup
@@ -654,7 +655,7 @@ test_shows_detected_compose_files() {
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  sync-secrets.sh Test Suite"
+    echo "  sync-secrets.py Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_executable_and_valid

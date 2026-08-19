@@ -122,7 +122,7 @@ Backups created by sync scripts are stored in `.sandbox/backups/`. To limit rete
 BACKUP_KEEP_COUNT=10
 
 # Temporarily override via environment variable
-BACKUP_KEEP_COUNT=10 .sandbox/scripts/sync-secrets.sh
+BACKUP_KEEP_COUNT=10 .sandbox/scripts/sync-secrets.py
 ```
 
 ---

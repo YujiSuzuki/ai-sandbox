@@ -122,7 +122,7 @@ sync スクリプトが作成するバックアップは `.sandbox/backups/` に
 BACKUP_KEEP_COUNT=10
 
 # 環境変数で一時的に上書きも可能
-BACKUP_KEEP_COUNT=10 .sandbox/scripts/sync-secrets.sh
+BACKUP_KEEP_COUNT=10 .sandbox/scripts/sync-secrets.py
 ```
 
 ---
