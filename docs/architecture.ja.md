@@ -132,7 +132,7 @@ volumes:
 
 tmpfs:
   # 秘匿ディレクトリを隠す。末尾の "# @secret" タグは必須 — 付け忘れると
-  # validate-secrets.py はサイレントに除外するが、check-secret-sync.sh は
+  # validate-secrets.py はサイレントに除外するが、check-secret-sync.py は
   # 逆に「欠落」として可視化されたエラーを報告する。
   - /workspace/your-api/secrets  # @secret
 ```
@@ -419,7 +419,7 @@ AI アシスタントは `list_tools` でツールを発見し、`get_tool_info`
 
 | 環境 | 対象スクリプト |
 |---|---|
-| `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.py`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.py`, `check-undeclared-secrets.py`, `triage-undeclared-secrets.sh` |
+| `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.py`, `sync-compose-secrets.sh`, `check-secret-sync.py`, `compare-secret-config.py`, `check-undeclared-secrets.py`, `triage-undeclared-secrets.sh` |
 | `any`（どちらでも可） | 上記以外のすべて |
 
 ```

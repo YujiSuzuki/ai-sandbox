@@ -133,7 +133,7 @@ volumes:
 tmpfs:
   # Hide secret directories. The trailing "# @secret" tag is required —
   # without it, validate-secrets.py silently skips this entry, while
-  # check-secret-sync.sh instead reports it as a visible "missing" error.
+  # check-secret-sync.py instead reports it as a visible "missing" error.
   - /workspace/your-api/secrets  # @secret
 ```
 
@@ -417,7 +417,7 @@ Scripts are classified into two execution environments.
 
 | Environment | Scripts |
 |---|---|
-| `container` (container only) | `sync-secrets.sh`, `validate-secrets.py`, `sync-compose-secrets.sh`, `check-secret-sync.sh`, `compare-secret-config.py`, `check-undeclared-secrets.py`, `triage-undeclared-secrets.sh` |
+| `container` (container only) | `sync-secrets.sh`, `validate-secrets.py`, `sync-compose-secrets.sh`, `check-secret-sync.py`, `compare-secret-config.py`, `check-undeclared-secrets.py`, `triage-undeclared-secrets.sh` |
 | `any` (either) | All others |
 
 ```

@@ -5,7 +5,7 @@
 # suffix, since tmpfs has no read-only concept in Compose's short syntax
 # and a bare path could plausibly serve some other purpose).
 #
-# Four remaining bash scripts (check-secret-sync.sh, sync-compose-secrets.sh,
+# Four remaining bash scripts (check-secret-sync.py, sync-compose-secrets.sh,
 # sync-secrets.sh, triage-undeclared-secrets.sh) all need to agree on exactly
 # what counts as a tagged entry, so the matching/extraction logic lives here
 # once instead of being re-implemented per script. Python-migrated scripts
@@ -21,7 +21,7 @@
 # Compose の短縮構文上、読み取り専用の概念が無く、裸のパスは秘匿目的以外にも
 # 使われ得るため）。
 #
-# 残り4本のbashスクリプト（check-secret-sync.sh, sync-compose-secrets.sh,
+# 残り4本のbashスクリプト（check-secret-sync.py, sync-compose-secrets.sh,
 # sync-secrets.sh, triage-undeclared-secrets.sh）はすべて「タグ付きエントリ」の
 # 定義について一致している必要があるため、判定・抽出ロジックをスクリプトごとに
 # 個別実装せず、ここに集約している。Python移行済みのスクリプト

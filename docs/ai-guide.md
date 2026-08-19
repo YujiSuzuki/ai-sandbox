@@ -249,7 +249,7 @@ Update `allowed_containers` and `exec_whitelist` in the generated `.sandbox/conf
 ```bash
 .sandbox/scripts/validate-secrets.py
 .sandbox/scripts/compare-secret-config.py
-.sandbox/scripts/check-secret-sync.sh
+.sandbox/scripts/check-secret-sync.py
 ```
 
 ### Step 6: Hand off to user
@@ -426,7 +426,7 @@ A specific bash 3.2 pitfall: a bare `$var` immediately followed by a non-ASCII c
 │   │   ├── _startup_common.sh        # Common functions for startup scripts
 │   │   ├── validate-secrets.py       # 🐳 Secret hiding verification
 │   │   ├── compare-secret-config.py  # 🐳 DevContainer/CLI config diff check
-│   │   ├── check-secret-sync.sh      # 🐳 Check if Claude deny files are hidden
+│   │   ├── check-secret-sync.py      # 🐳 Check if Claude deny files are hidden
 │   │   ├── sync-secrets.sh           # 🐳 Interactive secret sync tool
 │   │   ├── sync-compose-secrets.sh   # 🐳 Sync between DevContainer/CLI compose
 │   │   ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
@@ -510,7 +510,7 @@ See [docs/reference.md](reference.md) → "Running Multiple DevContainers" for d
 
 `check-undeclared-secrets.py` (heuristic scan) only reports files that look like secrets but aren't hidden in `docker-compose.yml`; it never determines whether a finding is a real secret. To act on those findings, run `triage-undeclared-secrets.sh`, which walks through them one at a time and lets the user judge each — hide it via `docker-compose.yml` if it's a real secret, or add it to `sync-ignore` if it's not — and never writes without that per-item confirmation.
 
-`check-secret-sync.sh` reads patterns from:
+`check-secret-sync.py` reads patterns from:
 - `.claude/settings.json` — Claude Code
 - `.aiexclude` — Gemini Code Assist
 - `.geminiignore` — Gemini CLI
@@ -543,7 +543,7 @@ tmpfs:
 
 AI sees empty files/directories. Real containers access actual secrets.
 
-The trailing `# @secret` tag on a `tmpfs:` entry is required — it's how `validate-secrets.py` / `check-secret-sync.sh` recognize the entry as secret-hiding, since (unlike a `/dev/null` bind mount, which is unambiguous) a bare tmpfs path under `$WORKSPACE` could plausibly serve some other, non-secret purpose too.
+The trailing `# @secret` tag on a `tmpfs:` entry is required — it's how `validate-secrets.py` / `check-secret-sync.py` recognize the entry as secret-hiding, since (unlike a `/dev/null` bind mount, which is unambiguous) a bare tmpfs path under `$WORKSPACE` could plausibly serve some other, non-secret purpose too.
 
 ### HostMCP Security Policy
 

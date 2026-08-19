@@ -40,7 +40,7 @@
   │    ├─ security-reminder.sh        … AI設定変更の検知
   │    ├─ compare-secret-config.py    … DevContainer と CLI の設定差異チェック
   │    ├─ validate-secrets.py         … 秘匿設定が機能しているか検証
-  │    └─ check-secret-sync.sh        … .claude/settings.json との同期チェック
+  │    └─ check-secret-sync.py        … .claude/settings.json との同期チェック
   │
   ├─ [検証成功] → AI ツール起動（claude / gemini / bash）
   └─ [検証失敗] → confirm_continue_after_failure()
@@ -85,7 +85,7 @@ volumes:
 
 tmpfs:
   # ディレクトリ単位の隠蔽: tmpfs で空ディレクトリに見える
-  # 末尾の "# @secret" タグは validate-secrets.py / check-secret-sync.sh が
+  # 末尾の "# @secret" タグは validate-secrets.py / check-secret-sync.py が
   # このエントリを秘匿設定として認識するための目印です。tmpfsにはbind mount
   # のような読み取り専用の概念が無く、エントリ自体からは判別できないため必須です。
   - /workspace/your-api/secrets  # @secret

@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-check-secret-sync.sh
-# Test script for check-secret-sync.sh
+# Test script for check-secret-sync.py
 #
-# check-secret-sync.sh のテストスクリプト
+# check-secret-sync.py のテストスクリプト
 #
 # Usage: ./test-check-secret-sync.sh
 # 使用方法: ./test-check-secret-sync.sh
@@ -10,14 +10,14 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/check-secret-sync.sh"
+SCRIPT="$SCRIPT_DIR/check-secret-sync.py"
 TEST_WORKSPACE=""
 
-# check-secret-sync.sh now refuses to run unless $SANDBOX_ENV is set or
+# check-secret-sync.py now refuses to run unless $SANDBOX_ENV is set or
 # /.dockerenv exists. Default it here so this test suite still runs outside
 # the container (plain checkout, CI without a devcontainer) -- tests below
 # that need a different value (or none) override it inline per-invocation.
-# check-secret-sync.sh は $SANDBOX_ENV か /.dockerenv が無いと実行を拒否する
+# check-secret-sync.py は $SANDBOX_ENV か /.dockerenv が無いと実行を拒否する
 # ようになった。コンテナ外（素のチェックアウトやdevcontainer無しのCI）でも
 # このテストスイートが動くよう既定値を設定する。異なる値（または未設定）が
 # 必要なテストは、呼び出しごとにインラインで上書きする。
@@ -67,10 +67,11 @@ setup() {
     mkdir -p "$TEST_WORKSPACE/.sandbox/scripts"
     mkdir -p "$TEST_WORKSPACE/.sandbox/config"
 
-    # Copy required scripts and config to test workspace
-    # 必要なスクリプトと設定をテストワークスペースにコピー
-    cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
-    cp "$SCRIPT_DIR/_secret-tag.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    # Copy required config to test workspace (the script imports its own
+    # Python libraries from its real script directory, not $WORKSPACE)
+    # 必要な設定をテストワークスペースにコピー（スクリプトは自身の実際の
+    # ディレクトリからPythonライブラリをimportするため、$WORKSPACE相対では
+    # コピー不要）
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 }
@@ -155,7 +156,7 @@ test_script_executable_and_valid() {
 
     # Check for syntax errors
     # 構文エラーをチェック
-    if bash -n "$SCRIPT" 2>/dev/null; then
+    if python3 -m py_compile "$SCRIPT" 2>/dev/null; then
         pass "Script is executable and has valid syntax"
     else
         fail "Script has syntax errors"
@@ -775,10 +776,17 @@ test_host_os_guard() {
     create_compose_file "" ""
     echo '{}' > "$TEST_WORKSPACE/.claude/settings.json"
 
-    local patched_script="$TEST_WORKSPACE/check-secret-sync-patched.sh"
+    local patched_script="$TEST_WORKSPACE/check-secret-sync-patched.py"
     local fake_marker="$TEST_WORKSPACE/no-such-dockerenv"
     sed "s#/\.dockerenv#$fake_marker#" "$SCRIPT" > "$patched_script"
     chmod +x "$patched_script"
+    # The patched copy runs from $TEST_WORKSPACE, so it needs its imported
+    # libraries alongside it there too (Python resolves "from X import Y"
+    # relative to the running script's own directory, not $WORKSPACE).
+    # パッチ済みコピーは$TEST_WORKSPACEから実行されるため、import先の
+    # ライブラリもそこに置く必要がある（Pythonの"from X import Y"は
+    # $WORKSPACEではなく実行スクリプト自身のディレクトリを基準に解決される）。
+    cp "$SCRIPT_DIR/_python_common.py" "$SCRIPT_DIR/_secret_tag.py" "$TEST_WORKSPACE/"
 
     local output exit_code
 
@@ -849,7 +857,7 @@ test_regex_metacharacter_in_path_synced_correctly() {
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  check-secret-sync.sh Test Suite"
+    echo "  check-secret-sync.py Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_executable_and_valid

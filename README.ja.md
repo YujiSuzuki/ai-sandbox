@@ -284,7 +284,7 @@ git clone https://github.com/YujiSuzuki/ai-sandbox-demo
 
 - **セキュリティ機能を体験したい** → [ai-sandbox-demo ハンズオン](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.ja.md)
 - **自分のプロジェクトで使いたい** → [自分のプロジェクトへの適用](docs/customization.ja.md)
-- **設定漏れを検出したい** → `.sandbox/scripts/check-secret-sync.sh`（AI拒否設定とdocker-compose.ymlの同期チェック）
+- **設定漏れを検出したい** → `.sandbox/scripts/check-secret-sync.py`（AI拒否設定とdocker-compose.ymlの同期チェック）
 - **SandboxMCPを体験したい** → AIに「カスタムコマンドをインストールして」と頼むだけで、`.sandbox/scripts/install-commands.py`をAIが自動で見つけて実行します
 
 ---
@@ -456,7 +456,7 @@ workspace/
 │   ├── Dockerfile          # コンテナイメージ定義
 │   ├── scripts/            # 共有スクリプト
 │   │   ├── validate-secrets.py    # 秘匿ファイルが隠蔽されているか確認
-│   │   ├── check-secret-sync.sh   # AI拒否設定との同期チェック
+│   │   ├── check-secret-sync.py   # AI拒否設定との同期チェック
 │   │   └── sync-secrets.sh        # 対話的に設定を同期
 │   ├── commands/            # 付属スラッシュコマンド（コードレビュー等）
 │   ├── config/              # hostmcp.yaml等の設定ファイル

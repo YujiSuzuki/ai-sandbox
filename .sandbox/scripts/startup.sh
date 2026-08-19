@@ -139,7 +139,7 @@ BANNER
 
 # 4. Check secret sync (warning only)
 # 秘匿同期チェック（警告のみ）
-"$WORKSPACE/.sandbox/scripts/check-secret-sync.sh" || {
+"$WORKSPACE/.sandbox/scripts/check-secret-sync.py" || {
     echo "$MSG_SYNC_CHECK_FAILED"
     echo ""
 }

@@ -93,14 +93,14 @@ services:
 
     tmpfs:
       # Make secret directories empty. The trailing "# @secret" tag marks
-      # each entry for validate-secrets.py / check-secret-sync.sh.
+      # each entry for validate-secrets.py / check-secret-sync.py.
       - /workspace/your-api/secrets  # @secret
       - /workspace/your-api/keys  # @secret
 ```
 
 **Key points:**
 - `.env` files → mount to `/dev/null`
-- `secrets/` directories → `tmpfs` for empty directories, tagged with a trailing `# @secret` comment — **required**: without the tag, `validate-secrets.py` silently skips the entry, while `check-secret-sync.sh` instead reports it as a visible "missing" error
+- `secrets/` directories → `tmpfs` for empty directories, tagged with a trailing `# @secret` comment — **required**: without the tag, `validate-secrets.py` silently skips the entry, while `check-secret-sync.py` instead reports it as a visible "missing" error
 - Keep both docker-compose.yml files in sync
 
 ### Custom domains (optional)
@@ -121,11 +121,11 @@ You'll also need the same entry in your host OS's `/etc/hosts` (or Windows equiv
 These checks run automatically at startup:
 1. `validate-secrets.py` - Verifies secrets are actually hidden (auto-reads paths from docker-compose.yml)
 2. `compare-secret-config.py` - Warns if DevContainer and CLI configurations differ
-3. `check-secret-sync.sh` - Warns if files blocked in AI settings are not hidden in docker-compose.yml
+3. `check-secret-sync.py` - Warns if files blocked in AI settings are not hidden in docker-compose.yml
    - Supports: `.claude/settings.json`, `.aiexclude`, `.geminiignore`
    - Note: `.gitignore` is intentionally **not supported** — it contains many non-secret patterns (`node_modules/`, `dist/`, `*.log`) that would create noise. List only secrets explicitly in AI-specific files.
 
-**Manual sync tool:** If `check-secret-sync.sh` reports unconfigured files, run `.sandbox/scripts/sync-secrets.sh` to interactively add them. Use option `4` (preview) to check settings without modifying files.
+**Manual sync tool:** If `check-secret-sync.py` reports unconfigured files, run `.sandbox/scripts/sync-secrets.sh` to interactively add them. Use option `4` (preview) to check settings without modifying files.
 
 **Recommended first-time setup flow:**
 ```bash

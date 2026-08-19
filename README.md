@@ -285,7 +285,7 @@ See [ai-sandbox-demo](https://github.com/YujiSuzuki/ai-sandbox-demo) for setup i
 
 - **Want to experience the security features?** → [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md)
 - **Ready to use with your own project?** → [Customization Guide](docs/customization.md)
-- **Want to detect configuration gaps?** → `.sandbox/scripts/check-secret-sync.sh` (sync check between AI deny settings and docker-compose.yml)
+- **Want to detect configuration gaps?** → `.sandbox/scripts/check-secret-sync.py` (sync check between AI deny settings and docker-compose.yml)
 - **Want to experience SandboxMCP?** → Just ask AI to "install the custom commands," and it will automatically find and run `.sandbox/scripts/install-commands.py` for you
 
 ---
@@ -454,7 +454,7 @@ workspace/
 │   ├── Dockerfile          # Container image definition
 │   ├── scripts/            # Shared scripts
 │   │   ├── validate-secrets.py    # Verify secret files are hidden
-│   │   ├── check-secret-sync.sh   # Sync check with AI deny settings
+│   │   ├── check-secret-sync.py   # Sync check with AI deny settings
 │   │   └── sync-secrets.sh        # Interactively sync settings
 │   ├── commands/            # Bundled slash commands (code review, etc.)
 │   ├── config/              # Config files such as hostmcp.yaml

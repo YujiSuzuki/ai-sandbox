@@ -34,9 +34,9 @@ services:
       - /tmp:rw,noexec,nosuid,size=1g
       # Example: make a project's secret directory empty via tmpfs. The
       # trailing "# @secret" tag marks the entry for validate-secrets.py /
-      # check-secret-sync.sh.
+      # check-secret-sync.py.
       # 例: プロジェクトの秘匿情報ディレクトリを tmpfs で空にする場合はこう書く。
-      # 末尾の "# @secret" タグは validate-secrets.py / check-secret-sync.sh
+      # 末尾の "# @secret" タグは validate-secrets.py / check-secret-sync.py
       # がこのエントリを秘匿設定として認識するための目印。
       # - /workspace/<your-project>/secrets  # @secret
 

@@ -42,7 +42,7 @@ show_script_list() {
     fi
 
     # Scripts that must run in container
-    local container_only="sync-secrets.sh validate-secrets.py sync-compose-secrets.sh check-undeclared-secrets.py check-secret-sync.sh compare-secret-config.py triage-undeclared-secrets.sh"
+    local container_only="sync-secrets.sh validate-secrets.py sync-compose-secrets.sh check-undeclared-secrets.py check-secret-sync.py compare-secret-config.py triage-undeclared-secrets.sh"
 
     get_env_icon() {
         local s="$1"
@@ -147,7 +147,7 @@ show_workflow_guide() {
     .sandbox/scripts/validate-secrets.py
 
   AI 設定ファイルと docker-compose の同期チェック:
-    .sandbox/scripts/check-secret-sync.sh
+    .sandbox/scripts/check-secret-sync.py
 
 ■ 必要に応じて手動実行（上記の結果に応じて実行を提案されます）
 
@@ -192,7 +192,7 @@ GUIDE_JA
     .sandbox/scripts/validate-secrets.py
 
   Check if AI config and docker-compose are in sync:
-    .sandbox/scripts/check-secret-sync.sh
+    .sandbox/scripts/check-secret-sync.py
 
 ■ Run manually when needed (suggested based on results above)
 
