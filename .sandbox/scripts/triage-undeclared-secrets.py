@@ -8,10 +8,8 @@
 #
 # IMPORTANT: Must run inside AI Sandbox container (not on host OS).
 #
-# Unlike the bash original, this port parses check-undeclared-secrets.py's
-# --format json output with Python's own json module instead of shelling out
-# to jq, so it has no jq dependency (the bash version only ever used jq for
-# that one purpose).
+# Parses check-undeclared-secrets.py's --format json output with Python's
+# own json module; has no jq dependency.
 # @env: container
 # ---
 # check-undeclared-secrets.py の検出結果を1件ずつ対話式に処理する:
@@ -21,9 +19,8 @@
 # 使用法: .sandbox/scripts/triage-undeclared-secrets.py [--dry-run]
 #   --dry-run: プロンプトも書き込みも行わず、各検出結果がどう処理されるかのみ表示
 #
-# bash版と異なり、check-undeclared-secrets.py の --format json 出力の解析に
-# jqをシェルアウトせず、Pythonの json モジュールを使う。そのためjqへの依存が
-# ない（bash版はこの用途のみでjqを使っていた）。
+# check-undeclared-secrets.py の --format json 出力の解析にPythonの
+# json モジュールを使う。jqへの依存はない。
 
 import json
 import os
@@ -315,7 +312,15 @@ def main() -> None:
         sys.exit(1)
 
     scan_result = subprocess.run([str(CHECK_SCRIPT), "--format", "json"], capture_output=True, text=True)
-    scan_json = json.loads(scan_result.stdout)
+    if scan_result.returncode != 0:
+        print(f"❌ {CHECK_SCRIPT} exited with an error:")
+        print(scan_result.stderr.strip())
+        sys.exit(1)
+    try:
+        scan_json = json.loads(scan_result.stdout)
+    except json.JSONDecodeError:
+        print(f"❌ {CHECK_SCRIPT} did not produce valid JSON output")
+        sys.exit(1)
     undeclared_rel = scan_json["undeclared"]
     claude_only_rel = set(scan_json["claude_only"])
 

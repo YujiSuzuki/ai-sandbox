@@ -494,6 +494,46 @@ EOF
     cleanup
 }
 
+# Test 12: A failing CHECK_SCRIPT doesn't crash triage with a raw traceback
+# -- it should print a clean error and exit non-zero (regression test:
+# json.loads(scan_result.stdout) used to run with no returncode check and
+# no JSONDecodeError guard).
+# テスト12: CHECK_SCRIPT が失敗してもtriageが生のトレースバックでクラッシュ
+# せず、明確なエラーを表示して非0終了する（回帰テスト: json.loads
+# (scan_result.stdout) がreturncodeチェックもJSONDecodeErrorガードも
+# なしで実行されていた）。
+test_check_script_failure_handled_cleanly() {
+    echo ""
+    echo "=== Test: Failing CHECK_SCRIPT is handled cleanly, not a raw crash ==="
+
+    setup
+    create_compose_file "" ""
+
+    local fake_check_script="$TEST_WORKSPACE/.sandbox/scripts/fake-check.py"
+    cat > "$fake_check_script" << 'PYEOF'
+#!/usr/bin/env python3
+import sys
+print("boom", file=sys.stderr)
+sys.exit(1)
+PYEOF
+    chmod +x "$fake_check_script"
+
+    local output exit_code
+    output=$(echo "" | WORKSPACE="$TEST_WORKSPACE" CHECK_SCRIPT="$fake_check_script" "$SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+
+    if echo "$output" | grep -qi "traceback"; then
+        fail "Should not crash with a raw traceback when CHECK_SCRIPT fails"
+        echo "Output: $output"
+    elif [ "$exit_code" -eq 0 ]; then
+        fail "Should exit non-zero when CHECK_SCRIPT fails"
+        echo "Output: $output"
+    else
+        pass "Failing CHECK_SCRIPT is handled with a clean error, not a crash"
+    fi
+
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -513,6 +553,7 @@ main() {
     test_dry_run_no_changes
     test_idempotent_sync_ignore_across_runs
     test_no_duplicate_tag_when_already_hidden_in_other_compose
+    test_check_script_failure_handled_cleanly
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

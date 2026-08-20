@@ -929,6 +929,43 @@ test_regex_metacharacter_in_path_synced_correctly() {
     cleanup
 }
 
+# Test: .claude/settings.json with "deny": null doesn't crash the script
+# (regression test -- deny=null is valid JSON, but the old code let None
+# reach the "for item in deny" loop, which sits outside the try/except
+# that was supposed to guard against exactly this).
+# テスト: .claude/settings.json の "deny" が null でもスクリプトがクラッシュ
+# しない（回帰テスト -- deny=null は正当なJSONだが、旧コードはNoneを
+# "for item in deny" ループまで到達させていた。このループはtry/exceptの
+# 外にあり、本来これを防ぐはずだった例外処理が効かなかった）。
+test_claude_settings_deny_null() {
+    echo ""
+    echo "=== Test: .claude/settings.json with deny:null doesn't crash ==="
+
+    setup
+
+    cat > "$TEST_WORKSPACE/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "deny": null,
+    "allow": []
+  }
+}
+EOF
+    create_compose_file "" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -qi "traceback\|typeerror"; then
+        fail "Script should not crash when deny is null"
+        echo "Output: $output"
+    else
+        pass "Script handles deny:null without crashing"
+    fi
+
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -958,6 +995,7 @@ main() {
     test_recursive_glob_matches_subdirs
     test_aiexclude_directory_trailing_slash
     test_aiexclude_recursive_directory_pattern
+    test_claude_settings_deny_null
     test_host_os_guard
 
     echo ""

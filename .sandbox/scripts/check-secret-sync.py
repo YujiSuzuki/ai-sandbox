@@ -155,6 +155,8 @@ def extract_claude_patterns(settings_file: Path) -> list:
         deny = data["permissions"]["deny"]
     except (OSError, json.JSONDecodeError, KeyError, TypeError):
         return []
+    if not isinstance(deny, list):
+        return []
     patterns = []
     for item in deny:
         if not isinstance(item, str):
