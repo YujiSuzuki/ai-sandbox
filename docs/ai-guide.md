@@ -431,7 +431,7 @@ A specific bash 3.2 pitfall: a bare `$var` immediately followed by a non-ASCII c
 │   │   ├── check-secret-sync.py      # 🐳 Check if Claude deny files are hidden
 │   │   ├── sync-secrets.py           # 🐳 Interactive secret sync tool
 │   │   ├── sync-compose-secrets.py   # 🐳 Sync between DevContainer/CLI compose
-│   │   ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
+│   │   ├── merge-claude-settings.py  # Merge subproject .claude/settings.json
 │   │   ├── check-undeclared-secrets.py # 🐳 Manual scan for secrets declared nowhere
 │   │   ├── triage-undeclared-secrets.py # 🐳 Interactively act on that scan's findings
 │   │   ├── run-all-tests.sh          # Run all test scripts

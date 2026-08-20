@@ -209,7 +209,7 @@ AI アシスタントがプロジェクトの構成や秘匿ポリシーを正�
 
 **自動で反映されるもの（手順不要）:**
 
-サブプロジェクトに `.claude/settings.json` が既にある場合、AI Sandbox 起動時に自動マージされます（`merge-claude-settings.sh`）。新規に作成する必要はありません。
+サブプロジェクトに `.claude/settings.json` が既にある場合、AI Sandbox 起動時に自動マージされます（`merge-claude-settings.py`）。新規に作成する必要はありません。
 
 **編集が必要なもの:**
 

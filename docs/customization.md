@@ -208,7 +208,7 @@ Edit these files so AI assistants correctly understand your project structure an
 
 **Automatically applied (no action needed):**
 
-If subprojects already have `.claude/settings.json`, they are auto-merged at AI Sandbox startup (`merge-claude-settings.sh`). No need to create new ones.
+If subprojects already have `.claude/settings.json`, they are auto-merged at AI Sandbox startup (`merge-claude-settings.py`). No need to create new ones.
 
 **Files that need editing:**
 

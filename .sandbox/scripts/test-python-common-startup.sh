@@ -2,13 +2,13 @@
 # test-python-common-startup.sh
 # Test script for the _startup_common.sh-derived functions in
 # _python_common.py: load_startup_config, is_quiet/is_verbose/is_summary,
-# print_title/print_footer/print_default/print_error,
+# print_title/print_footer/print_default/print_detail/print_warning/print_error,
 # load_sync_ignore_patterns/matches_sync_ignore/add_sync_ignore_pattern,
 # backup_file/cleanup_backups.
 #
 # _python_common.py に移植した _startup_common.sh 由来の関数
 # （load_startup_config、is_quiet/is_verbose/is_summary、
-# print_title/print_footer/print_default/print_error、
+# print_title/print_footer/print_default/print_detail/print_warning/print_error、
 # load_sync_ignore_patterns/matches_sync_ignore/add_sync_ignore_pattern、
 # backup_file/cleanup_backups）のテストスクリプト。
 #
@@ -52,9 +52,11 @@ from _python_common import (
     load_sync_ignore_patterns,
     matches_sync_ignore,
     print_default,
+    print_detail,
     print_error,
     print_footer,
     print_title,
+    print_warning,
 )
 
 RED = "\033[0;31m"
@@ -214,6 +216,32 @@ if quiet_out == "" and verbose_out == "body text\n":
     ok("print_default suppressed only in quiet mode")
 else:
     bad(f"print_default mismatch: quiet={quiet_out!r} verbose={verbose_out!r}")
+
+# Test 7b: print_detail printed only in verbose, not quiet/summary/default
+print()
+print("=== Test: print_detail printed only in verbose ===")
+outs = {}
+for v in ("quiet", "summary", "default", "verbose"):
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        print_detail("extra detail", v)
+    outs[v] = buf.getvalue()
+if outs["quiet"] == "" and outs["summary"] == "" and outs["default"] == "" and outs["verbose"] == "extra detail\n":
+    ok("print_detail printed only in verbose mode")
+else:
+    bad(f"print_detail mismatch: {outs!r}")
+
+# Test 7c: print_warning always prints, with the emoji prefix, regardless of verbosity
+print()
+print("=== Test: print_warning always prints with emoji prefix ===")
+buf = io.StringIO()
+with redirect_stdout(buf):
+    print_warning("careful")
+warn_out = buf.getvalue()
+if warn_out == "⚠️  careful\n":
+    ok("print_warning writes the expected message")
+else:
+    bad(f"print_warning mismatch: {warn_out!r}")
 
 # Test 8: print_error always prints, to stderr, regardless of verbosity
 print()

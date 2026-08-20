@@ -36,7 +36,7 @@
   │    └─ .env.sandbox, cli_sandbox/.env の読み込み
   │
   ├─ run_startup_scripts()
-  │    ├─ merge-claude-settings.sh    … Claude 設定のマージ
+  │    ├─ merge-claude-settings.py    … Claude 設定のマージ
   │    ├─ security-reminder.sh        … AI設定変更の検知
   │    ├─ compare-secret-config.py    … DevContainer と CLI の設定差異チェック
   │    ├─ validate-secrets.py         … 秘匿設定が機能しているか検証

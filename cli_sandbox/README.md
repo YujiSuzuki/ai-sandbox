@@ -36,7 +36,7 @@ Script starts
   │    └─ Load .env.sandbox, cli_sandbox/.env
   │
   ├─ run_startup_scripts()
-  │    ├─ merge-claude-settings.sh    … Merge Claude settings
+  │    ├─ merge-claude-settings.py    … Merge Claude settings
   │    ├─ security-reminder.sh        … Detect AI config changes
   │    ├─ compare-secret-config.py    … Check for differences between DevContainer and CLI configs
   │    ├─ validate-secrets.py         … Verify secret hiding is working

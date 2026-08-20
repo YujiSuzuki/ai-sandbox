@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-merge-claude-settings.sh
-# Test script for merge-claude-settings.sh
+# Test script for merge-claude-settings.py
 #
-# merge-claude-settings.sh のテストスクリプト
+# merge-claude-settings.py のテストスクリプト
 #
 # Usage: ./test-merge-claude-settings.sh
 # 使用方法: ./test-merge-claude-settings.sh
@@ -17,7 +17,7 @@ if ! command -v jq &> /dev/null; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/merge-claude-settings.sh"
+SCRIPT="$SCRIPT_DIR/merge-claude-settings.py"
 TEST_WORKSPACE=""
 ORIGINAL_HOME="$HOME"
 
@@ -62,9 +62,12 @@ setup() {
     mkdir -p "$TEST_WORKSPACE/.sandbox/scripts"
     mkdir -p "$TEST_WORKSPACE/.sandbox/config"
 
-    # Copy required scripts and config to test workspace
-    # 必要なスクリプトと設定をテストワークスペースにコピー
-    cp "$SCRIPT_DIR/_startup_common.sh" "$TEST_WORKSPACE/.sandbox/scripts/"
+    # Copy required config to test workspace (the SUT is a Python script and
+    # imports its _python_common.py dependency from its own directory, not
+    # from $WORKSPACE_ROOT, so no library file needs copying here)
+    # テストワークスペースに設定をコピー（SUTはPythonスクリプトで、
+    # 依存する _python_common.py は $WORKSPACE_ROOT からではなく自身の
+    # ディレクトリからimportするため、ライブラリファイルのコピーは不要）
     cp "$SCRIPT_DIR/../config/startup.conf" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
     cp "$SCRIPT_DIR/../config/sync-ignore" "$TEST_WORKSPACE/.sandbox/config/" 2>/dev/null || true
 
@@ -387,7 +390,7 @@ EOF
     if jq -e '.hooks.UserPromptSubmit' "$TEST_WORKSPACE/.claude/settings.json" > /dev/null 2>&1; then
         pass "hooks key preserved across re-merge"
     else
-        fail "hooks key was dropped by merge-claude-settings.sh"
+        fail "hooks key was dropped by merge-claude-settings.py"
         cat "$TEST_WORKSPACE/.claude/settings.json"
     fi
 
@@ -440,8 +443,8 @@ EOF
 
 echo ""
 echo "=========================================="
-echo "Testing merge-claude-settings.sh"
-echo "merge-claude-settings.sh のテスト"
+echo "Testing merge-claude-settings.py"
+echo "merge-claude-settings.py のテスト"
 echo "=========================================="
 echo ""
 

@@ -48,7 +48,7 @@ Add the script to the beginning of `postStartCommand` in `.devcontainer/devconta
 
 ```jsonc
 // Add at the beginning of the existing postStartCommand
-"postStartCommand": "/workspace/.devcontainer/init-firewall.sh && /workspace/.sandbox/scripts/merge-claude-settings.sh && ..."
+"postStartCommand": "/workspace/.devcontainer/init-firewall.sh && /workspace/.sandbox/scripts/merge-claude-settings.py && ..."
 ```
 
 > **Tip:** The firewall should run before other startup scripts.

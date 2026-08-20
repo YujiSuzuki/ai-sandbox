@@ -48,7 +48,7 @@ chmod +x .devcontainer/init-firewall.sh
 
 ```jsonc
 // 既存の postStartCommand の先頭に追加
-"postStartCommand": "/workspace/.devcontainer/init-firewall.sh && /workspace/.sandbox/scripts/merge-claude-settings.sh && ..."
+"postStartCommand": "/workspace/.devcontainer/init-firewall.sh && /workspace/.sandbox/scripts/merge-claude-settings.py && ..."
 ```
 
 > **ヒント:** ファイアウォールは他のスクリプトより先に実行するのがよいでしょう。

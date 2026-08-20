@@ -12,12 +12,13 @@
 # the _secret-tag.sh-dependent group (load_startup_config, is_quiet/
 # is_verbose/is_summary, print_title/print_footer/print_default/print_error,
 # load_sync_ignore_patterns/matches_sync_ignore/add_sync_ignore_pattern,
-# backup_file/cleanup_backups). _startup_common.sh's remaining functions
-# (README URL helpers, print_summary/print_detail/print_warning, and the
-# update-check/binary-install helpers used by check-upstream-updates.sh /
-# check-sandbox-mcp-updates.sh / startup.sh) belong to scripts that haven't
-# been migrated yet -- add them here if/when those scripts are ported,
-# rather than porting the whole file speculatively.
+# backup_file/cleanup_backups) plus print_detail/print_warning (added for
+# merge-claude-settings.py). _startup_common.sh's remaining functions
+# (README URL helpers, print_summary, and the update-check/binary-install
+# helpers used by check-upstream-updates.sh / check-sandbox-mcp-updates.sh /
+# startup.sh) belong to scripts that haven't been migrated yet -- add them
+# here if/when those scripts are ported, rather than porting the whole file
+# speculatively.
 #
 # Unlike the earlier is_lang_ja/pick/msg helpers (which take their state as
 # an explicit parameter, e.g. pick(lang_ja, ...)), these functions don't
@@ -40,8 +41,9 @@
 # 必要とする範囲（load_startup_config、is_quiet/is_verbose/is_summary、
 # print_title/print_footer/print_default/print_error、
 # load_sync_ignore_patterns/matches_sync_ignore/add_sync_ignore_pattern、
-# backup_file/cleanup_backups）。_startup_common.sh の残りの関数（README URL
-# ヘルパー、print_summary/print_detail/print_warning、
+# backup_file/cleanup_backups）に加え、print_detail/print_warning
+# （merge-claude-settings.py用に追加）。_startup_common.sh の残りの関数
+# （README URL ヘルパー、print_summary、
 # check-upstream-updates.sh / check-sandbox-mcp-updates.sh / startup.sh が
 # 使う更新チェック・バイナリインストール系ヘルパー）は、まだ移行していない
 # スクリプトのためのものなので、それらを移行するタイミングで追加する
@@ -188,6 +190,15 @@ def print_footer(verbosity: str) -> None:
 def print_default(text: str, verbosity: str) -> None:
     if not is_quiet(verbosity):
         print(text)
+
+
+def print_detail(text: str, verbosity: str) -> None:
+    if is_verbose(verbosity):
+        print(text)
+
+
+def print_warning(text: str) -> None:
+    print(f"⚠️  {text}")
 
 
 def print_error(text: str) -> None:

@@ -118,7 +118,7 @@ BANNER
 
 # 1. Merge Claude settings (low-failure, essential)
 # Claude 設定のマージ（失敗しにくい、必須）
-"$WORKSPACE/.sandbox/scripts/merge-claude-settings.sh" || {
+"$WORKSPACE/.sandbox/scripts/merge-claude-settings.py" || {
     echo "$MSG_MERGE_FAILED"
     echo ""
 }
