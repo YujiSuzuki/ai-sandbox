@@ -148,6 +148,7 @@ def get_messages(lang_ja: bool) -> dict:
             "STEP1": "1. プロジェクトのコミットスタイルを確認:",
             "STEP2": "2. ドラフトをスタイルに合わせて推敲",
             "STEP2_NOTE": "→ git diff --cached の実差分を根拠にすること。編集セッションや会話の記憶を根拠にしないこと。新規ファイル(A)にbefore/after表現（修正、〜だけでなく等）は使わない",
+            "STEP2_NOTE2": "→ 発見・検証の過程を語らず、事実だけを書くこと（「学んだ」「〜中に見つけた」は不要）。自分の作業上の癖を「プロジェクトの方針」と呼ばないこと（実際に文書化されている場合を除く）",
             "STEP3": "3. 推敲が完了したらコミット実行:",
             "RECENT_TITLE": "📜 直近 %s 件のコミット",
             "NO_COMMITS": "コミットが見つかりません。",
@@ -177,6 +178,7 @@ def get_messages(lang_ja: bool) -> dict:
         "STEP1": "1. Check the project's commit style:",
         "STEP2": "2. Refine the draft to match the style",
         "STEP2_NOTE": "→ Ground it in git diff --cached, not session or conversation memory. Don't use before/after language (\"fix\", \"not just X\") for new (A) files",
+        "STEP2_NOTE2": "→ State facts, don't narrate discovery/testing (\"learned\", \"found while...\"). Don't call a personal working habit \"project policy\" unless it's actually documented",
         "STEP3": "3. When refined, commit:",
         "RECENT_TITLE": "📜 Recent %s commits",
         "NO_COMMITS": "No commits found.",
@@ -510,6 +512,7 @@ def generate_draft(msgs: dict, style: str, draft_file: str, repo: str) -> str:
 {style_comment}
 <!-- Scope hint: {scope_hint} -->
 <!-- {msgs['STEP2_NOTE']} -->
+<!-- {msgs['STEP2_NOTE2']} -->
 <!-- To commit: .sandbox/scripts/commit-msg.py --msg-file {draft_file} -->
 
 {subject_hint}
@@ -638,6 +641,7 @@ def main() -> None:
         print(f"      {CYAN}.sandbox/scripts/commit-msg.py --log{repo_flag}{NC}")
         print(f"    {msgs['STEP2']}")
         print(f"      {DIM}{msgs['STEP2_NOTE']}{NC}")
+        print(f"      {DIM}{msgs['STEP2_NOTE2']}{NC}")
         print(f"    {msgs['STEP3']}")
         print(f"      {CYAN}.sandbox/scripts/commit-msg.py --msg-file {draft_file}{repo_flag}{NC}")
         print()
