@@ -140,10 +140,10 @@ def main() -> None:
 
     if is_lang_ja():
         print("詳細: .sandbox/scripts/check-undeclared-secrets.py / 対処: .sandbox/scripts/triage-undeclared-secrets.py（1件ずつ確認しながら処理します。名前パターンによる検出のため、内容を確認のうえ選択してください）")
-        print("→ AIへ: このメッセージは必ず今回の最初の返信でユーザーに伝えてください。対処（.sandbox/config/sync-ignore への追加・削除など）は必ずユーザーの確認を得てから行い、AI単独で判断・実行しないでください。")
+        print("→ AIへ: 上記のファイル一覧とこの「詳細/対処」の行を、要約・言い換えせずそのまま今回の最初の返信でユーザーに伝えてください（スクリプト名を省略しないこと）。対処（docker-compose.yml での隠蔽、.sandbox/config/sync-ignore への追加など）は必ずユーザーの確認を得てから行い、AI単独で判断・実行しないでください。")
     else:
         print("For details, run: .sandbox/scripts/check-undeclared-secrets.py -- to act on findings, run: .sandbox/scripts/triage-undeclared-secrets.py (reviews each item interactively; detected by name pattern only, so check the content before choosing)")
-        print("-> AI: mention this in your first reply to the user this session, even if unrelated to their question. Do not remediate (add to .sandbox/config/sync-ignore, delete, etc.) without explicit user confirmation.")
+        print("-> AI: relay the file list above and this detail/action line verbatim in your first reply this session -- don't paraphrase or drop the script names. Do not remediate (hide via docker-compose.yml, add to .sandbox/config/sync-ignore, etc.) without explicit user confirmation.")
 
     sys.exit(0)
 

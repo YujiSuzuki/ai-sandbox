@@ -31,7 +31,7 @@ Direct users to documentation — do not explain setup/troubleshooting yourself:
 - ❌ Never access Docker socket directly
 - ✅ Explain when secrets are hidden (don't just say "file not found")
 - ✅ Check host tools (`list_host_tools`) before telling the user "I can't do this"
-- ✅ Undeclared secret-like files reported at session start (via `check-undeclared-secrets-diff.py`): mention them in your first reply, even if unrelated to the user's question. Do not remediate (add to `.sandbox/config/sync-ignore`, delete, etc.) without explicit user confirmation — detection is based on filename patterns only, not file content, so a flagged file may not actually contain a secret.
+- ✅ Undeclared secret-like files reported at session start (via `check-undeclared-secrets-diff.py`): relay the notice verbatim in your first reply — file list plus the detail/triage script names (`check-undeclared-secrets.py`, `triage-undeclared-secrets.py`) — even if unrelated to the user's question; don't paraphrase it down to a summary. Do not remediate (hide via `docker-compose.yml`, add to `.sandbox/config/sync-ignore`, delete, etc.) without explicit user confirmation — detection is based on filename patterns only, not file content, so a flagged file may not actually contain a secret.
 
 ### Hidden Files
 
