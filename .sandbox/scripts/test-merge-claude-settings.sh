@@ -437,6 +437,64 @@ EOF
     cleanup
 }
 
+# Test 9: A permissions key that becomes empty across a re-merge is cleared,
+# not left stuck at its last non-empty value
+# テスト9: 再マージで空になったpermissionsキーは、最後の値のまま残らず削除される
+test_stale_key_cleared_on_remerge() {
+    info "Test 9: Stale permission key cleared on re-merge (not left stuck)"
+    info "テスト9: 再マージで空になったキーは削除される（値が残り続けない）"
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/project-a/.claude"
+    cat > "$TEST_WORKSPACE/project-a/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "deny": ["Read(.env)"]
+  }
+}
+EOF
+
+    # First run creates workspace settings with deny populated
+    "$SCRIPT" > /dev/null 2>&1
+
+    if jq -e '.permissions.deny | index("Read(.env)")' "$TEST_WORKSPACE/.claude/settings.json" > /dev/null 2>&1; then
+        pass "deny populated after first run"
+    else
+        fail "deny should be populated after first run"
+        cat "$TEST_WORKSPACE/.claude/settings.json"
+    fi
+
+    # project-a drops its deny pattern and adds an allow pattern instead
+    cat > "$TEST_WORKSPACE/project-a/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "allow": ["Read(*.md)"]
+  }
+}
+EOF
+
+    # Second run: re-merge (workspace permissions still match the backup,
+    # since only the subproject file changed)
+    "$SCRIPT" > /dev/null 2>&1
+
+    if jq -e '.permissions.deny' "$TEST_WORKSPACE/.claude/settings.json" > /dev/null 2>&1; then
+        fail "deny key should have been cleared once project-a dropped it (stuck at stale value)"
+        cat "$TEST_WORKSPACE/.claude/settings.json"
+    else
+        pass "stale deny key was cleared after re-merge"
+    fi
+
+    if jq -e '.permissions.allow | index("Read(*.md)")' "$TEST_WORKSPACE/.claude/settings.json" > /dev/null 2>&1; then
+        pass "allow key correctly picked up the new pattern"
+    else
+        fail "allow key should have the new pattern"
+        cat "$TEST_WORKSPACE/.claude/settings.json"
+    fi
+
+    cleanup
+}
+
 # ========================================
 # Run all tests / 全テストの実行
 # ========================================
@@ -456,6 +514,7 @@ test_skip_without_backup
 test_merge_multiple_projects
 test_preserve_other_keys_on_remerge
 test_merge_deeply_nested_project
+test_stale_key_cleared_on_remerge
 
 echo ""
 echo "=========================================="

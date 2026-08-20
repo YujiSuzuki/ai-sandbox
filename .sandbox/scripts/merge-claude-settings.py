@@ -14,13 +14,14 @@
 #   stdlib json module for the same operations, so the "jq missing -> warn
 #   and skip" branch is gone entirely (matches the precedent set by
 #   triage-undeclared-secrets.py's own jq removal).
-# - Case 2's re-merge preserves a bash quirk rather than fixing it: jq's `*`
-#   operator only overwrites permissions keys that the freshly recomputed
-#   merge actually produced (non-empty "deny"/"allow"); a key that goes from
-#   populated to empty across a re-merge is NOT deleted, it stays stuck at
-#   its last non-empty value. _merge_onto() below reproduces this exactly
-#   (dict.update over the existing permissions, not a replacement) rather
-#   than "fixing" it, per this migration's parity policy.
+# - Case 2's re-merge FIXES a bash bug rather than preserving it: jq's `*`
+#   operator only overwrote permissions keys that the freshly recomputed
+#   merge actually produced (non-empty "deny"/"allow"), so a key that went
+#   from populated to empty across a re-merge was never deleted -- it stuck
+#   at its last non-empty value until some future merge happened to
+#   overwrite it with something non-empty again. _merge_onto() below
+#   explicitly clears a key that the fresh recompute no longer produces,
+#   instead of leaving it untouched.
 #
 # Also note: this script resolves ITS OWN workspace root via $WORKSPACE_ROOT
 # (matching the bash original), which is a different env var from the
@@ -43,13 +44,12 @@
 #   json モジュールで同じ処理を行うため、「jq が無ければ警告してスキップ」の
 #   分岐は丸ごと無くなっている（triage-undeclared-secrets.py で既に行った
 #   jq依存の除去と同じ方針）。
-# - ケース2の再マージは、bashの癖を修正せずそのまま再現している: jqの `*`
+# - ケース2の再マージは、bashのバグをそのまま再現せず修正している: jqの `*`
 #   演算子は、新たに計算し直したマージ結果に実際に含まれるキー（空でない
-#   "deny"/"allow"）だけを上書きする。あるキーが「値あり」から「空」に
-#   変わっても削除されず、最後に値があった状態のまま残り続ける。下記の
-#   _merge_onto() はこれをそのまま再現しており（既存permissionsに対する
-#   dict.update であり、丸ごと置き換えではない）、「修正」はしていない
-#   （このマイグレーションのパリティ方針に従う）。
+#   "deny"/"allow"）だけを上書きしていたため、あるキーが「値あり」から「空」に
+#   変わっても削除されず、次に空でない値で上書きされるまで最後の値のまま
+#   残り続けていた。下記の _merge_onto() は、新たな計算結果に含まれなくなった
+#   キーを明示的に削除するようにしている。
 #
 # なお、このスクリプト自身のworkspace rootは $WORKSPACE_ROOT で解決する
 # （bash版と同じ）。これは _python_common.py の load_startup_config() が
@@ -196,18 +196,28 @@ def _write_json(path: Path, data: dict) -> None:
 
 
 def _merge_onto(existing_permissions: dict, new_permissions: dict) -> dict:
-    """jq's `.[0] * .[1]` deep-merge, restricted to the "deny"/"allow"
-    leaves: only keys present in new_permissions are overwritten, any other
-    key already in existing_permissions passes through untouched (see the
-    module docstring for why this "sticky key" behavior is intentional).
+    """Replaces the "deny"/"allow" leaves with the freshly recomputed
+    values. new_permissions only contains a "deny"/"allow" key when
+    merge_permissions() found at least one non-empty pattern for it this
+    round (it always performs a full scan, so a missing key here is a
+    reliable signal that the recomputed value is empty) -- so a key present
+    in existing_permissions but absent from new_permissions is explicitly
+    cleared, not left stuck at its previous value. Any other key already in
+    existing_permissions passes through untouched.
 
-    jqの `.[0] * .[1]` ディープマージを "deny"/"allow" の葉に限定したもの:
-    new_permissions に存在するキーだけを上書きし、existing_permissions に
-    既にある他のキーはそのまま通す（この「値が残り続ける」挙動を意図的に
-    残している理由はモジュール先頭のdocstringを参照）。
+    "deny"/"allow" の葉を、新たに計算し直した値で置き換える。new_permissions
+    に "deny"/"allow" キーが存在するのは、merge_permissions() が今回のスキャンで
+    非空のパターンを1つ以上見つけた場合のみ（毎回必ずフルスキャンするため、
+    キーが無いことは「今回の再計算結果が空である」ことの確実なシグナルになる）。
+    そのため existing_permissions にあって new_permissions に無いキーは、
+    以前の値のまま残さず明示的に削除する。それ以外のキーはそのまま通す。
     """
     merged = dict(existing_permissions)
-    merged.update(new_permissions)
+    for key in ("deny", "allow"):
+        if key in new_permissions:
+            merged[key] = new_permissions[key]
+        else:
+            merged.pop(key, None)
     return merged
 
 
@@ -276,11 +286,11 @@ def main() -> None:
 
         # Merge onto the existing file, preserving any other top-level keys
         # already present while overwriting .permissions with the freshly
-        # recomputed set (see _merge_onto()'s docstring for the "sticky
-        # key" nuance this reproduces from the bash original).
+        # recomputed set (a key the recompute no longer produces is cleared,
+        # not left stuck -- see _merge_onto()'s docstring).
         # 既存ファイルにマージする。他のトップレベルキーは保持しつつ、
-        # .permissionsだけを最新の値で上書きする（「値が残り続ける」挙動に
-        # ついては _merge_onto() のdocstringを参照）。
+        # .permissionsだけを最新の値で上書きする（再計算結果に含まれなくなった
+        # キーは、残さず削除される -- 詳細は _merge_onto() のdocstringを参照）。
         existing_permissions = workspace_data.get("permissions") if isinstance(workspace_data.get("permissions"), dict) else {}
         workspace_data["permissions"] = _merge_onto(existing_permissions, merged_permissions)
         _write_json(workspace_settings, workspace_data)
