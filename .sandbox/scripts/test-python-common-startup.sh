@@ -4,13 +4,19 @@
 # _python_common.py: load_startup_config, is_quiet/is_verbose/is_summary,
 # print_title/print_footer/print_default/print_detail/print_warning/print_error,
 # load_sync_ignore_patterns/matches_sync_ignore/add_sync_ignore_pattern,
-# backup_file/cleanup_backups.
+# backup_file/cleanup_backups, and the update-check helpers (debug_log,
+# read_state_timestamp, get_last_notified_version, is_first_run,
+# should_check, update_state, build_api_url, extract_tag_from_json,
+# fetch_latest_release).
 #
 # _python_common.py に移植した _startup_common.sh 由来の関数
 # （load_startup_config、is_quiet/is_verbose/is_summary、
 # print_title/print_footer/print_default/print_detail/print_warning/print_error、
 # load_sync_ignore_patterns/matches_sync_ignore/add_sync_ignore_pattern、
-# backup_file/cleanup_backups）のテストスクリプト。
+# backup_file/cleanup_backups、および更新チェックヘルパー一式
+# debug_log/read_state_timestamp/get_last_notified_version/is_first_run/
+# should_check/update_state/build_api_url/extract_tag_from_json/
+# fetch_latest_release）のテストスクリプト。
 #
 # Usage: ./test-python-common-startup.sh
 # 使用方法: ./test-python-common-startup.sh
@@ -35,28 +41,41 @@ fi
 # 発見・実行できるようにしている。
 PYTHONPATH="$SCRIPT_DIR" python3 - <<'PYEOF'
 import io
+import json
 import os
 import shutil
 import sys
 import tempfile
+import time
 from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 
 from _python_common import (
     add_sync_ignore_pattern,
     backup_file,
+    build_api_url,
     cleanup_backups,
+    debug_log,
+    extract_tag_from_json,
+    fetch_latest_release,
+    get_last_notified_version,
+    is_first_run,
     is_quiet,
     is_summary,
     is_verbose,
     load_startup_config,
     load_sync_ignore_patterns,
     matches_sync_ignore,
+    parse_simple_conf,
     print_default,
     print_detail,
     print_error,
     print_footer,
     print_title,
     print_warning,
+    read_state_timestamp,
+    should_check,
+    update_state,
 )
 
 RED = "\033[0;31m"
@@ -374,6 +393,199 @@ with TempWorkspace() as ws:
         ok("keep=0 left the backup untouched (unlimited)")
     else:
         bad("keep=0 should not delete anything")
+
+# Test 13c: parse_simple_conf parses KEY="value" lines, ignores comments/blanks
+print()
+print("=== Test: parse_simple_conf parses quoted/unquoted values, skips comments/blanks ===")
+with TempWorkspace() as ws:
+    conf_path = Path(ws) / "some.conf"
+    conf_path.write_text('# a comment\nFOO="bar"\nBAZ=qux\n\nEMPTY=""\n')
+    values = parse_simple_conf(conf_path)
+    if values == {"FOO": "bar", "BAZ": "qux", "EMPTY": ""}:
+        ok(f"parse_simple_conf parsed: {values}")
+    else:
+        bad(f"parse_simple_conf mismatch: {values}")
+
+    if parse_simple_conf(Path(ws) / "missing.conf") == {}:
+        ok("parse_simple_conf returns {} for a missing file")
+    else:
+        bad("parse_simple_conf should return {} for a missing file")
+
+# ─── Update-check helpers ───────────────────────────────────
+
+# Test 14: read_state_timestamp / get_last_notified_version / is_first_run
+print()
+print("=== Test: read_state_timestamp/get_last_notified_version/is_first_run ===")
+with TempWorkspace() as ws:
+    state_file = Path(ws) / "state"
+    if is_first_run(state_file) and read_state_timestamp(state_file) == 0 and get_last_notified_version(state_file) == "":
+        ok("Missing state file: is_first_run=True, timestamp=0, version=''")
+    else:
+        bad("Missing state file should yield first_run=True, timestamp=0, version=''")
+
+    state_file.write_text("1738300000:v0.2.0\n")
+    if (not is_first_run(state_file)) and read_state_timestamp(state_file) == 1738300000 and get_last_notified_version(state_file) == "v0.2.0":
+        ok("Populated state file parsed correctly")
+    else:
+        bad(f"Unexpected parse: first_run={is_first_run(state_file)}, ts={read_state_timestamp(state_file)}, ver={get_last_notified_version(state_file)!r}")
+
+    state_file.write_text("1738300000:v0.3.0-beta.1\n")
+    if get_last_notified_version(state_file) == "v0.3.0-beta.1":
+        ok("Pre-release suffix (extra dots/hyphens) preserved in version")
+    else:
+        bad(f"Pre-release suffix mishandled: {get_last_notified_version(state_file)!r}")
+
+    state_file.write_text("not-a-number:v9.9.9\n")
+    if read_state_timestamp(state_file) == 0:
+        ok("Malformed timestamp falls back to 0 rather than raising")
+    else:
+        bad(f"Malformed timestamp should yield 0, got {read_state_timestamp(state_file)}")
+
+# Test 15: update_state writes the "<timestamp>:<version>" format, readable back
+print()
+print("=== Test: update_state writes a format read_state_timestamp/get_last_notified_version can parse ===")
+with TempWorkspace() as ws:
+    state_file = Path(ws) / "nested" / "state"
+    update_state(state_file, "v1.0.0")
+    if get_last_notified_version(state_file) == "v1.0.0" and read_state_timestamp(state_file) > 0:
+        ok("update_state wrote a version/timestamp pair round-tripping through the readers")
+    else:
+        bad(f"update_state round-trip failed: ts={read_state_timestamp(state_file)}, ver={get_last_notified_version(state_file)!r}")
+
+# Test 16: should_check interval logic
+print()
+print("=== Test: should_check interval logic ===")
+with TempWorkspace() as ws:
+    state_file = Path(ws) / "state"
+    if should_check(state_file, 24):
+        ok("No state file -> should_check True regardless of interval")
+    else:
+        bad("No state file should always check")
+
+    state_file.write_text(f"{int(time.time())}:v0.1.0\n")
+    if should_check(state_file, 0):
+        ok("interval=0 -> always check even with a fresh timestamp")
+    else:
+        bad("interval=0 should always check")
+
+    if not should_check(state_file, 24):
+        ok("Fresh timestamp + interval=24 -> should_check False")
+    else:
+        bad("Fresh timestamp should not need a check yet")
+
+    state_file.write_text(f"{int(time.time()) - 100000}:v0.1.0\n")
+    if should_check(state_file, 24):
+        ok("Old timestamp (>24h elapsed) -> should_check True")
+    else:
+        bad("Old timestamp should trigger a check")
+
+    state_file.write_text(f"{int(time.time())}:v0.1.0\n")
+    if not should_check(state_file, "abc") and not should_check(state_file, ""):
+        ok("Non-numeric/empty interval falls back to 24 (fresh timestamp -> no check)")
+    else:
+        bad("Invalid interval should fall back to 24, not always-check")
+
+# Test 17: build_api_url per channel
+print()
+print("=== Test: build_api_url per channel ===")
+cases = [
+    ("all", "https://api.github.com/repos/owner/repo/releases?per_page=1"),
+    ("stable", "https://api.github.com/repos/owner/repo/releases/latest"),
+    ("unknown", "https://api.github.com/repos/owner/repo/releases?per_page=1"),
+]
+if all(build_api_url("owner/repo", channel) == expected for channel, expected in cases):
+    ok("build_api_url returns the right endpoint for all/stable/unknown channels")
+else:
+    bad(f"build_api_url mismatch: {[build_api_url('owner/repo', c) for c, _ in cases]}")
+
+# Test 18: extract_tag_from_json for both response shapes
+print()
+print("=== Test: extract_tag_from_json for array (all) and object (stable) responses ===")
+array_resp = [{"tag_name": "v0.2.0-beta.1", "prerelease": True}]
+object_resp = {"tag_name": "v1.0.0", "prerelease": False}
+if (
+    extract_tag_from_json(array_resp, "all") == "v0.2.0-beta.1"
+    and extract_tag_from_json(object_resp, "stable") == "v1.0.0"
+    and extract_tag_from_json([], "all") == ""
+    and extract_tag_from_json({"name": "No Tag"}, "stable") == ""
+):
+    ok("extract_tag_from_json handles array/object/empty/missing-tag cases")
+else:
+    bad("extract_tag_from_json mismatch on one of the array/object/empty/missing cases")
+
+# Test 19: debug_log only prints when enabled, always to stderr
+print()
+print("=== Test: debug_log only prints when enabled ===")
+buf = io.StringIO()
+with redirect_stderr(buf):
+    debug_log("hello", False)
+disabled_out = buf.getvalue()
+buf = io.StringIO()
+with redirect_stderr(buf):
+    debug_log("hello", True)
+enabled_out = buf.getvalue()
+if disabled_out == "" and enabled_out == "[debug] hello\n":
+    ok("debug_log silent when disabled, '[debug] ...' on stderr when enabled")
+else:
+    bad(f"debug_log mismatch: disabled={disabled_out!r} enabled={enabled_out!r}")
+
+# Test 20: fetch_latest_release against a local HTTP server (success, non-200, unreachable)
+print()
+print("=== Test: fetch_latest_release (local HTTP server) ===")
+import http.server
+import socketserver
+import threading
+
+
+class _Handler(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def do_GET(self):
+        if self.path.endswith("/releases/latest"):
+            body = json.dumps({"tag_name": "v9.9.9"}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(body)
+        elif "no-releases" in self.path:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b"[]")
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+
+with socketserver.TCPServer(("127.0.0.1", 0), _Handler) as httpd:
+    port = httpd.server_address[1]
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        import unittest.mock
+
+        base = f"127.0.0.1:{port}/repos"
+        with unittest.mock.patch("_python_common.build_api_url", side_effect=lambda repo, channel: f"http://{base}/{repo}/releases/latest" if channel == "stable" else f"http://{base}/{repo}/no-releases"):
+            ok_result = fetch_latest_release("owner/repo", "stable")
+            empty_result = fetch_latest_release("owner/repo", "all")
+        if ok_result == "v9.9.9":
+            ok("fetch_latest_release parses a successful 200 response")
+        else:
+            bad(f"fetch_latest_release should return 'v9.9.9', got {ok_result!r}")
+        if empty_result == "":
+            ok("fetch_latest_release returns '' (not None) for a success with no releases")
+        else:
+            bad(f"fetch_latest_release should return '', got {empty_result!r}")
+    finally:
+        httpd.shutdown()
+    thread.join(timeout=2)
+
+unreachable_result = fetch_latest_release("owner/repo", "all", timeout=0.5)
+if unreachable_result is None:
+    ok("fetch_latest_release returns None on connection failure")
+else:
+    bad(f"fetch_latest_release should return None on failure, got {unreachable_result!r}")
 
 print()
 print("=" * 62)

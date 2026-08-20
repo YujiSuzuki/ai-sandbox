@@ -7,6 +7,20 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE="${WORKSPACE:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+SCRIPT="$SCRIPT_DIR/check-sandbox-mcp-updates.py"
+
+# Resolved once, up front, and always used to invoke Python scripts below
+# instead of relying on the `#!/usr/bin/env python3` shebang: several tests
+# deliberately replace PATH to simulate "not installed" / "go not found"
+# states, and a replaced PATH can hide python3 itself (unlike bash, whose
+# `#!/bin/bash` shebang is a fixed absolute path, not a PATH lookup).
+# 事前に一度だけ解決し、以下ではPythonスクリプトの実行に常にこれを使う
+# （`#!/usr/bin/env python3` シェバングには頼らない）: 以下のテストの一部は
+# 意図的にPATHを丸ごと置き換えて「未インストール」「goが無い」状態を
+# 再現するが、置き換えたPATHはpython3自体を隠してしまう場合がある
+# （bashの`#!/bin/bash`は固定の絶対パスであり、PATH参照ではないため、
+# この問題が起きない）。
+PYTHON3="$(command -v python3)"
 
 # Colors
 RED='\033[0;31m'
@@ -29,11 +43,12 @@ FAKE_BIN_DIR=""
 
 setup() {
     TEST_TMP_DIR=$(mktemp -d)
-    mkdir -p "$TEST_TMP_DIR/.sandbox/config"
-    mkdir -p "$TEST_TMP_DIR/.sandbox/scripts"
-    # Symlink shared files so mock WORKSPACE can source them
-    ln -sf "$WORKSPACE/.sandbox/scripts/_startup_common.sh" "$TEST_TMP_DIR/.sandbox/scripts/_startup_common.sh"
-    ln -sf "$WORKSPACE/.sandbox/config/startup.conf" "$TEST_TMP_DIR/.sandbox/config/startup.conf" 2>/dev/null || true
+    # No .sandbox/scripts/_startup_common.sh symlink needed here (unlike the
+    # bash original): the Python script resolves _python_common.py via its
+    # own directory (sys.path[0]), not via $WORKSPACE.
+    # ここではbash版と異なり .sandbox/scripts/_startup_common.sh の
+    # シンボリックリンクは不要: Pythonスクリプトは _python_common.py を
+    # $WORKSPACE経由ではなく自身のディレクトリ（sys.path[0]）経由でimportする。
 
     # Fake `sandbox-mcp` binary directory, prepended to PATH in tests that need
     # an "installed" binary without depending on the real one.
@@ -100,25 +115,23 @@ test_script_executable() {
     echo ""
     echo "=== Testing script is executable ==="
 
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
-
-    if [ -f "$script" ]; then
-        pass "check-sandbox-mcp-updates.sh exists"
+    if [ -f "$SCRIPT" ]; then
+        pass "check-sandbox-mcp-updates.py exists"
     else
-        fail "check-sandbox-mcp-updates.sh does not exist"
+        fail "check-sandbox-mcp-updates.py does not exist"
         return
     fi
 
-    if [ -x "$script" ]; then
-        pass "check-sandbox-mcp-updates.sh is executable"
+    if [ -x "$SCRIPT" ]; then
+        pass "check-sandbox-mcp-updates.py is executable"
     else
-        fail "check-sandbox-mcp-updates.sh should be executable"
+        fail "check-sandbox-mcp-updates.py should be executable"
     fi
 
-    if head -1 "$script" | grep -q "^#!/bin/bash"; then
-        pass "check-sandbox-mcp-updates.sh has correct shebang"
+    if head -1 "$SCRIPT" | grep -q "^#!/usr/bin/env python3"; then
+        pass "check-sandbox-mcp-updates.py has correct shebang"
     else
-        fail "check-sandbox-mcp-updates.sh should have #!/bin/bash shebang"
+        fail "check-sandbox-mcp-updates.py should have #!/usr/bin/env python3 shebang"
     fi
 }
 
@@ -129,12 +142,11 @@ test_not_installed_skips() {
     echo ""
     echo "=== Testing not-installed skip behavior ==="
 
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-not-installed"
     rm -f "$mock_state"
 
     local stdout_output exit_code
-    stdout_output=$( (PATH="/nonexistent" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" "$script") 2>/dev/null )
+    stdout_output=$( (PATH="/nonexistent" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" "$PYTHON3" "$SCRIPT") 2>/dev/null )
     exit_code=$?
 
     if [ -z "$stdout_output" ]; then
@@ -164,13 +176,12 @@ test_same_version_no_notification() {
     echo "=== Testing same version (installed == latest) ==="
 
     make_fake_sandbox_mcp "v0.2.0"
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-same"
     rm -f "$mock_state"
 
     local stdout_output
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script") 2>/dev/null )
+        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT") 2>/dev/null )
 
     if [ -z "$stdout_output" ]; then
         pass "No notification when installed version matches latest"
@@ -187,13 +198,12 @@ test_different_version_notifies() {
     echo "=== Testing different version (installed != latest) ==="
 
     make_fake_sandbox_mcp "v0.1.0"
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-diff"
     rm -f "$mock_state"
 
     local stdout_output
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script") 2>/dev/null )
+        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT") 2>/dev/null )
 
     if echo "$stdout_output" | grep -q "v0.1.0" && echo "$stdout_output" | grep -q "v0.2.0"; then
         pass "Notification shows both current (v0.1.0) and latest (v0.2.0) version"
@@ -201,18 +211,18 @@ test_different_version_notifies() {
         fail "Should notify with both versions, got: '$stdout_output'"
     fi
 
-    if echo "$stdout_output" | grep -q "check-sandbox-mcp-updates.sh --auto-update"; then
+    if echo "$stdout_output" | grep -q "check-sandbox-mcp-updates.py --auto-update"; then
         pass "Notification includes --auto-update update command"
     else
         fail "Should include --auto-update command, got: '$stdout_output'"
     fi
 
     # Re-checking immediately after (interval elapsed via CHECK_INTERVAL_HOURS=0) should notify again,
-    # since ground truth (installed version) still differs -- unlike check-upstream-updates.sh's dedup.
+    # since ground truth (installed version) still differs -- unlike check-upstream-updates.py's dedup.
     # インターバル経過後（CHECK_INTERVAL_HOURS=0）は再度通知される。インストール済みバージョンが
-    # 実際にまだ古いままなので、check-upstream-updates.sh のような重複排除は行わない。
+    # 実際にまだ古いままなので、check-upstream-updates.py のような重複排除は行わない。
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script") 2>/dev/null )
+        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT") 2>/dev/null )
     if echo "$stdout_output" | grep -q "v0.1.0"; then
         pass "Re-notifies on next check while still on an outdated version"
     else
@@ -228,7 +238,6 @@ test_auto_update_disabled_by_default() {
     echo "=== Testing auto-update is off by default ==="
 
     make_fake_sandbox_mcp "v0.1.0"
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-no-autoupdate"
     rm -f "$mock_state"
 
@@ -241,7 +250,7 @@ EOF
 
     local stdout_output
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script") 2>/dev/null )
+        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT") 2>/dev/null )
 
     if echo "$stdout_output" | grep -q "UNEXPECTED: go was called"; then
         fail "Should not invoke go when --auto-update is not passed, got: '$stdout_output'"
@@ -272,13 +281,12 @@ exit 0
 EOF
     chmod +x "$FAKE_BIN_DIR/go"
 
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-autoupdate-go-ok"
     rm -f "$mock_state"
 
     local stdout_output exit_code
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script" --auto-update) 2>/dev/null )
+        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT" --auto-update) 2>/dev/null )
     exit_code=$?
 
     if echo "$stdout_output" | grep -q "updated to: v0.2.0\|を更新しました: v0.2.0"; then
@@ -317,13 +325,12 @@ exit 1
 EOF
     chmod +x "$FAKE_BIN_DIR/go"
 
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-autoupdate-go-fail"
     rm -f "$mock_state"
 
     local stdout_output exit_code
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script" --auto-update) 2>/dev/null )
+        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT" --auto-update) 2>/dev/null )
     exit_code=$?
 
     if echo "$stdout_output" | grep -q "Auto-update failed\|自動更新に失敗しました"; then
@@ -383,7 +390,6 @@ exit 0
 EOF
     chmod +x "$FAKE_BIN_DIR/curl"
 
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-autoupdate-binary"
     local fake_home="$TEST_TMP_DIR/fake-home"
     mkdir -p "$fake_home"
@@ -391,7 +397,7 @@ EOF
 
     local stdout_output
     stdout_output=$( (HOME="$fake_home" PATH="$FAKE_BIN_DIR:$(path_without_real_go)" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$script" --auto-update) 2>/dev/null )
+        CHECK_INTERVAL_HOURS=0 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT" --auto-update) 2>/dev/null )
 
     if echo "$stdout_output" | grep -q "Go not found\|Go が見つかりません"; then
         pass "Falls back to binary download when go is not on PATH"
@@ -407,14 +413,13 @@ EOF
 }
 
 # ============================================================
-# Test: interval throttling (reuses should_check from _startup_common.sh)
+# Test: interval throttling (reuses should_check from _python_common.py)
 # ============================================================
 test_interval_throttling() {
     echo ""
     echo "=== Testing interval throttling ==="
 
     make_fake_sandbox_mcp "v0.1.0"
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-throttle"
 
     # Recent timestamp -> should not check again within interval
@@ -422,7 +427,7 @@ test_interval_throttling() {
 
     local stdout_output
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=24 MOCK_LATEST_VERSION="v0.2.0" "$script") 2>/dev/null )
+        CHECK_INTERVAL_HOURS=24 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT") 2>/dev/null )
 
     if [ -z "$stdout_output" ]; then
         pass "No notification when within interval, even if versions differ"
@@ -439,7 +444,6 @@ test_auto_update_bypasses_throttle() {
     echo "=== Testing --auto-update bypasses interval throttling ==="
 
     make_fake_sandbox_mcp "v0.1.0"
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-throttle-autoupdate"
 
     # Recent timestamp -> a plain check would skip, but an explicit --auto-update
@@ -454,7 +458,7 @@ EOF
 
     local stdout_output
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=24 MOCK_LATEST_VERSION="v0.2.0" "$script" --auto-update) 2>/dev/null )
+        CHECK_INTERVAL_HOURS=24 MOCK_LATEST_VERSION="v0.2.0" "$PYTHON3" "$SCRIPT" --auto-update) 2>/dev/null )
 
     if [ -n "$stdout_output" ]; then
         pass "--auto-update produces output even within the throttle interval"
@@ -479,14 +483,13 @@ test_fetch_failure_skips() {
     echo "=== Testing fetch failure skip behavior ==="
 
     make_fake_sandbox_mcp "v0.1.0"
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local mock_state="$TEST_TMP_DIR/state-fetchfail"
     rm -f "$mock_state"
 
-    # No MOCK_LATEST_VERSION set; force network failure via impossible connect timeout
+    # No MOCK_LATEST_VERSION set; force a simulated fetch failure via MOCK_FORCE_FETCH_FAILURE
     local stdout_output exit_code
     stdout_output=$( (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" \
-        CHECK_INTERVAL_HOURS=0 MOCK_FORCE_FETCH_FAILURE=1 "$script") 2>/dev/null )
+        CHECK_INTERVAL_HOURS=0 MOCK_FORCE_FETCH_FAILURE=1 "$PYTHON3" "$SCRIPT") 2>/dev/null )
     exit_code=$?
 
     if [ -z "$stdout_output" ]; then
@@ -509,36 +512,57 @@ test_show_update_notification() {
     echo ""
     echo "=== Testing show_update_notification verbosity ==="
 
-    # shellcheck source=/dev/null
-    source "$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh" 2>/dev/null || true
-    setup_messages
+    local result
+    result=$("$PYTHON3" - "$SCRIPT" <<'PYEOF'
+import importlib.util
+import io
+import sys
+from contextlib import redirect_stdout
 
-    local output
+script_path = sys.argv[1]
+spec = importlib.util.spec_from_file_location("check_sandbox_mcp_updates", script_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
 
-    # Quiet mode: single line with version transition
-    STARTUP_VERBOSITY="quiet"
-    output=$(show_update_notification "v0.1.0" "v0.2.0")
-    if echo "$output" | grep -q "v0.1.0 → v0.2.0"; then
-        pass "Quiet mode shows version transition"
+msgs = mod.get_messages(lang_ja=False)
+failures = []
+
+
+def capture(current, latest, verbosity):
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        mod.show_update_notification(current, latest, verbosity, msgs)
+    return buf.getvalue()
+
+
+# Quiet mode: single line with version transition
+out = capture("v0.1.0", "v0.2.0", "quiet")
+if "v0.1.0 → v0.2.0" not in out:
+    failures.append(f"quiet mode missing version transition: {out!r}")
+if len(out.splitlines()) != 1:
+    failures.append(f"quiet mode should be 1 line, got {len(out.splitlines())}: {out!r}")
+
+# Verbose mode: includes update command
+out = capture("v0.1.0", "v0.2.0", "verbose")
+if "check-sandbox-mcp-updates.py --auto-update" not in out:
+    failures.append(f"verbose mode missing --auto-update command: {out!r}")
+
+if failures:
+    for f in failures:
+        print(f"FAIL::{f}")
+else:
+    print("ALL_OK")
+PYEOF
+    )
+
+    if echo "$result" | grep -q "^ALL_OK$"; then
+        pass "show_update_notification: quiet/verbose both correct"
     else
-        fail "Quiet mode should show 'v0.1.0 → v0.2.0', got: '$output'"
-    fi
-
-    local line_count
-    line_count=$(echo "$output" | wc -l)
-    if [ "$line_count" -eq 1 ]; then
-        pass "Quiet mode outputs single line"
-    else
-        fail "Quiet mode should output 1 line, got $line_count"
-    fi
-
-    # Verbose mode: includes update command
-    STARTUP_VERBOSITY="verbose"
-    output=$(show_update_notification "v0.1.0" "v0.2.0")
-    if echo "$output" | grep -q "check-sandbox-mcp-updates.sh --auto-update"; then
-        pass "Verbose mode shows the --auto-update update command"
-    else
-        fail "Verbose mode should show --auto-update command, got: '$output'"
+        while IFS= read -r line; do
+            case "$line" in
+                FAIL::*) fail "${line#FAIL::}" ;;
+            esac
+        done <<< "$result"
     fi
 }
 
@@ -550,14 +574,13 @@ test_script_runs() {
     echo "=== Testing script execution with CHECK_UPDATES=false ==="
 
     make_fake_sandbox_mcp "v0.1.0"
-    local script="$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh"
     local exit_code
 
-    (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" CHECK_UPDATES=false "$script" >/dev/null 2>&1)
+    (PATH="$FAKE_BIN_DIR:$PATH" WORKSPACE="$TEST_TMP_DIR" CHECK_UPDATES=false "$PYTHON3" "$SCRIPT" >/dev/null 2>&1)
     exit_code=$?
 
     if [ "$exit_code" -eq 0 ]; then
-        pass "check-sandbox-mcp-updates.sh exits cleanly with CHECK_UPDATES=false"
+        pass "check-sandbox-mcp-updates.py exits cleanly with CHECK_UPDATES=false"
     else
         fail "Should exit cleanly with CHECK_UPDATES=false, got exit code $exit_code"
     fi

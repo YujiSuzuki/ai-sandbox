@@ -292,10 +292,20 @@ cleanup_backups() {
 # ============================================================
 # Update Check Helpers / 更新チェックヘルパー
 # ============================================================
-# Shared by check-upstream-updates.sh and check-sandbox-mcp-updates.sh.
-# Callers set $STATE_FILE and $CHECK_CHANNEL before invoking these.
-# check-upstream-updates.sh と check-sandbox-mcp-updates.sh で共有。
-# 呼び出し側は事前に $STATE_FILE と $CHECK_CHANNEL を設定すること。
+# No remaining bash dependents: both check-upstream-updates.sh and
+# check-sandbox-mcp-updates.sh have been ported to Python
+# (check-upstream-updates.py / check-sandbox-mcp-updates.py), which use the
+# equivalent functions in _python_common.py instead. No bash test exercises
+# these functions anymore either (their old test_*-sourcing coverage moved
+# to test-python-common-startup.sh along with the port). Kept here only as a
+# bash reference, not because anything still calls it.
+# 残っているbash依存はゼロ: check-upstream-updates.sh と
+# check-sandbox-mcp-updates.sh はどちらもPythonに移植済み
+# （check-upstream-updates.py / check-sandbox-mcp-updates.py）で、代わりに
+# _python_common.py の同等関数を使う。これらの関数を検証するbashテストも
+# もう存在しない（sourceして検証していた旧テストは、移植と共に
+# test-python-common-startup.sh へ移動した）。ここに残しているのはbash側の
+# 参考実装としてのみで、何かが実際に呼んでいるわけではない。
 
 # Read timestamp from state file
 # 状態ファイルからタイムスタンプを読み取り

@@ -443,9 +443,9 @@ _check_hostmcp_update() {
     # GOPATH/~/.local/bin へのフォールバックも考慮しているため（同関数のコメント参照）。
     hostmcp_path=$(_resolve_hostmcp_bin) || hostmcp_path="?"
 
-    # Test seam: same convention as check-sandbox-mcp-updates.sh's MOCK_LATEST_VERSION,
+    # Test seam: same convention as check-sandbox-mcp-updates.py's MOCK_LATEST_VERSION,
     # so tests don't depend on a real network call or a faked curl+JSON response.
-    # テスト用フック: check-sandbox-mcp-updates.sh の MOCK_LATEST_VERSION と同じ規約。
+    # テスト用フック: check-sandbox-mcp-updates.py の MOCK_LATEST_VERSION と同じ規約。
     # テストが実ネットワーク呼び出しやcurl+JSONのモックに依存しなくて済む。
     if [ -n "${MOCK_LATEST_VERSION:-}" ]; then
         latest_version="$MOCK_LATEST_VERSION"
@@ -516,13 +516,13 @@ _check_hostmcp_update() {
 # status, not by comparing the resulting version to $latest: a plain
 # `go install pkg@latest` has no -ldflags, so the binary may keep its source
 # default version and would not reliably match a real release tag even on
-# success (same reasoning as sandbox-mcp's check-sandbox-mcp-updates.sh).
+# success (same reasoning as sandbox-mcp's check-sandbox-mcp-updates.py).
 # 新規インストールと同じ方式で更新する: Go があれば go install、なければ現在の
 # インストール先にビルド済みバイナリを再ダウンロード。成功判定はインストール
 # コマンド自体の終了コードで行う（バージョン文字列の一致では判定しない）:
 # 素の `go install pkg@latest` には -ldflags が付かないため、バイナリがソース側の
 # デフォルトバージョンのままとなり、更新に成功していても実際のリリースタグと
-# 一致するとは限らないため（sandbox-mcp の check-sandbox-mcp-updates.sh と同じ理由）。
+# 一致するとは限らないため（sandbox-mcp の check-sandbox-mcp-updates.py と同じ理由）。
 _upgrade_hostmcp() {
     local gopath_bin="$1"
 

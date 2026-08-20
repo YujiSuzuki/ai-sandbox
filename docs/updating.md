@@ -156,7 +156,7 @@ Regardless of how you applied the update, you may need to rebuild components.
 >
 > ```bash
 > # SandboxMCP (inside AI Sandbox)
-> .sandbox/scripts/check-sandbox-mcp-updates.sh --auto-update
+> .sandbox/scripts/check-sandbox-mcp-updates.py --auto-update
 > # or: go install github.com/YujiSuzuki/sandbox-mcp@latest
 >
 > # HostMCP (on host OS)

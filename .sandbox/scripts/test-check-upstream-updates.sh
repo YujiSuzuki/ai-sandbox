@@ -7,6 +7,19 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE="${WORKSPACE:-/workspace}"
+SCRIPT="$SCRIPT_DIR/check-upstream-updates.py"
+
+# Resolved once, up front, and always used to invoke Python scripts below
+# instead of relying on the `#!/usr/bin/env python3` shebang: a couple of
+# tests deliberately restrict PATH to simulate "not installed" states, and a
+# restricted PATH can hide python3 itself (unlike bash, whose `#!/bin/bash`
+# shebang is a fixed absolute path, not a PATH lookup).
+# 事前に一度だけ解決し、以下ではPythonスクリプトの実行に常にこれを使う
+# （`#!/usr/bin/env python3` シェバングには頼らない）: 以下のテストの一部は
+# 意図的にPATHを制限して「未インストール」状態を再現するが、制限された
+# PATHはpython3自体を隠してしまう場合がある（bashの`#!/bin/bash`は
+# 固定の絶対パスであり、PATH参照ではないため、この問題が起きない）。
+PYTHON3="$(command -v python3)"
 
 # Colors
 RED='\033[0;31m'
@@ -28,13 +41,17 @@ TEST_TMP_DIR=""
 
 setup() {
     TEST_TMP_DIR=$(mktemp -d)
-    # Create mock workspace structure for tests that override WORKSPACE
-    mkdir -p "$TEST_TMP_DIR/config"
+    # Only the config directory is needed: the Python script resolves
+    # _python_common.py via its own directory (sys.path[0]), not via
+    # $WORKSPACE, so no library file needs copying/symlinking here (unlike
+    # the bash original, which had to symlink _startup_common.sh into a
+    # fake $WORKSPACE/.sandbox/scripts/ for `source` to find it).
+    # config ディレクトリのみで足りる: Pythonスクリプトは _python_common.py を
+    # 自身のディレクトリ（sys.path[0]）経由でimportするため、$WORKSPACE
+    # 経由ではない。よってライブラリファイルのコピー/シンボリックリンクは
+    # 不要（bash版はsourceで見つけられるよう、_startup_common.shを偽の
+    # $WORKSPACE/.sandbox/scripts/ にシンボリックリンクする必要があった）。
     mkdir -p "$TEST_TMP_DIR/.sandbox/config"
-    mkdir -p "$TEST_TMP_DIR/.sandbox/scripts"
-    # Symlink shared files so mock WORKSPACE can source them
-    ln -sf "$WORKSPACE/.sandbox/scripts/_startup_common.sh" "$TEST_TMP_DIR/.sandbox/scripts/_startup_common.sh"
-    ln -sf "$WORKSPACE/.sandbox/config/startup.conf" "$TEST_TMP_DIR/.sandbox/config/startup.conf"
 }
 
 teardown() {
@@ -111,270 +128,23 @@ test_config_file() {
     fi
 }
 
-# ============================================================
-# Test: State file read/write (uses real functions from script)
-# ============================================================
-test_state_file() {
-    echo ""
-    echo "=== Testing state file read/write ==="
-
-    # Source the actual script
-    # shellcheck source=/dev/null
-    source "$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
-
-    # Override STATE_FILE for testing
-    STATE_FILE="$TEST_TMP_DIR/state"
-
-    # Test 1: No state file → is_first_run returns true
-    rm -f "$STATE_FILE"
-    if is_first_run; then
-        pass "is_first_run returns true when no state file"
-    else
-        fail "is_first_run should return true when no state file"
-    fi
-
-    # Test 2: No state file → get_last_notified_version returns empty
-    local result
-    result=$(get_last_notified_version)
-    if [ -z "$result" ]; then
-        pass "get_last_notified_version returns empty when no state file"
-    else
-        fail "get_last_notified_version should return empty, got '$result'"
-    fi
-
-    # Test 3: No state file → read_state_timestamp returns "0"
-    result=$(read_state_timestamp)
-    if [ "$result" = "0" ]; then
-        pass "read_state_timestamp returns '0' when no state file"
-    else
-        fail "read_state_timestamp should return '0', got '$result'"
-    fi
-
-    # Test 4: Write state and read back version
-    echo "1738300000:v0.2.0" > "$STATE_FILE"
-    result=$(get_last_notified_version)
-    if [ "$result" = "v0.2.0" ]; then
-        pass "get_last_notified_version reads 'v0.2.0' from state file"
-    else
-        fail "get_last_notified_version should return 'v0.2.0', got '$result'"
-    fi
-
-    # Test 5: Write state and read back timestamp
-    result=$(read_state_timestamp)
-    if [ "$result" = "1738300000" ]; then
-        pass "read_state_timestamp reads '1738300000' from state file"
-    else
-        fail "read_state_timestamp should return '1738300000', got '$result'"
-    fi
-
-    # Test 6: After writing state, is_first_run returns false
-    if is_first_run; then
-        fail "is_first_run should return false when state file exists"
-    else
-        pass "is_first_run returns false when state file exists"
-    fi
-
-    # Test 7: update_state writes correct format
-    update_state "v1.0.0"
-    result=$(get_last_notified_version)
-    if [ "$result" = "v1.0.0" ]; then
-        pass "update_state writes version correctly"
-    else
-        fail "update_state should write 'v1.0.0', got '$result'"
-    fi
-
-    # Test 8: Version with pre-release suffix (contains no extra colons)
-    echo "1738300000:v0.3.0-beta.1" > "$STATE_FILE"
-    result=$(get_last_notified_version)
-    if [ "$result" = "v0.3.0-beta.1" ]; then
-        pass "get_last_notified_version handles pre-release suffix"
-    else
-        fail "get_last_notified_version should return 'v0.3.0-beta.1', got '$result'"
-    fi
-}
-
-# ============================================================
-# Test: Interval checking logic (uses real function from script)
-# ============================================================
-test_interval_check() {
-    echo ""
-    echo "=== Testing interval check logic ==="
-
-    # Source the actual script to get the real should_check function
-    # shellcheck source=/dev/null
-    source "$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
-
-    # Override STATE_FILE for testing
-    STATE_FILE="$TEST_TMP_DIR/state"
-
-    # Test 1: No state file - should check
-    rm -f "$STATE_FILE"
-    CHECK_INTERVAL_HOURS=24
-    if should_check; then
-        pass "should_check returns true when no state file"
-    else
-        fail "should_check should return true when no state file"
-    fi
-
-    # Test 2: Interval 0 - always check
-    echo "$(date +%s):v0.1.0" > "$STATE_FILE"
-    CHECK_INTERVAL_HOURS=0
-    if should_check; then
-        pass "should_check returns true when interval is 0"
-    else
-        fail "should_check should return true when interval is 0"
-    fi
-
-    # Test 3: Recent timestamp - should not check
-    echo "$(date +%s):v0.1.0" > "$STATE_FILE"
-    CHECK_INTERVAL_HOURS=24
-    if should_check; then
-        fail "should_check should return false when timestamp is recent"
-    else
-        pass "should_check returns false when timestamp is recent"
-    fi
-
-    # Test 4: Old timestamp - should check
-    echo "$(($(date +%s) - 100000)):v0.1.0" > "$STATE_FILE"
-    CHECK_INTERVAL_HOURS=24
-    if should_check; then
-        pass "should_check returns true when timestamp is old"
-    else
-        fail "should_check should return true when timestamp is old"
-    fi
-
-    # Test 5: Invalid (non-numeric) interval - should fallback to 24 and work
-    echo "$(date +%s):v0.1.0" > "$STATE_FILE"
-    CHECK_INTERVAL_HOURS="abc"
-    if should_check; then
-        fail "should_check should return false with invalid interval (fallback to 24)"
-    else
-        pass "should_check handles invalid interval by falling back to 24"
-    fi
-
-    # Test 6: Empty interval - should fallback to 24 and work
-    echo "$(date +%s):v0.1.0" > "$STATE_FILE"
-    CHECK_INTERVAL_HOURS=""
-    if should_check; then
-        fail "should_check should return false with empty interval (fallback to 24)"
-    else
-        pass "should_check handles empty interval by falling back to 24"
-    fi
-}
-
-# ============================================================
-# Test: build_api_url returns correct URL per channel
-# ============================================================
-test_build_api_url() {
-    echo ""
-    echo "=== Testing build_api_url ==="
-
-    # Source the actual script
-    # shellcheck source=/dev/null
-    source "$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
-
-    local result
-
-    # Test 1: channel "all" → releases?per_page=1
-    CHECK_CHANNEL="all"
-    result=$(build_api_url "owner/repo")
-    if [ "$result" = "https://api.github.com/repos/owner/repo/releases?per_page=1" ]; then
-        pass "build_api_url with channel 'all' returns releases?per_page=1"
-    else
-        fail "build_api_url with channel 'all' should return releases?per_page=1, got '$result'"
-    fi
-
-    # Test 2: channel "stable" → releases/latest
-    CHECK_CHANNEL="stable"
-    result=$(build_api_url "owner/repo")
-    if [ "$result" = "https://api.github.com/repos/owner/repo/releases/latest" ]; then
-        pass "build_api_url with channel 'stable' returns releases/latest"
-    else
-        fail "build_api_url with channel 'stable' should return releases/latest, got '$result'"
-    fi
-
-    # Test 3: unset/default channel → releases?per_page=1
-    unset CHECK_CHANNEL
-    result=$(build_api_url "owner/repo")
-    if [ "$result" = "https://api.github.com/repos/owner/repo/releases?per_page=1" ]; then
-        pass "build_api_url with unset channel defaults to releases?per_page=1"
-    else
-        fail "build_api_url with unset channel should default to releases?per_page=1, got '$result'"
-    fi
-
-    # Test 4: unknown channel value → treated as "all"
-    CHECK_CHANNEL="unknown"
-    result=$(build_api_url "owner/repo")
-    if [ "$result" = "https://api.github.com/repos/owner/repo/releases?per_page=1" ]; then
-        pass "build_api_url with unknown channel falls back to 'all'"
-    else
-        fail "build_api_url with unknown channel should fall back to 'all', got '$result'"
-    fi
-}
-
-# ============================================================
-# Test: extract_tag_from_json parses both array and object JSON
-# ============================================================
-test_extract_tag_from_json() {
-    echo ""
-    echo "=== Testing extract_tag_from_json ==="
-
-    # Source the actual script
-    # shellcheck source=/dev/null
-    source "$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
-
-    # Skip if jq is not available (grep fallback is tested separately)
-    if ! command -v jq &>/dev/null; then
-        info "jq not available, testing grep fallback only"
-    fi
-
-    local result
-    local json_file="$TEST_TMP_DIR/release.json"
-
-    # Test 1: Array response (channel "all") — /releases?per_page=1 format
-    cat > "$json_file" <<'JSONEOF'
-[{"tag_name":"v0.2.0-beta.1","name":"Beta Release","prerelease":true}]
-JSONEOF
-    CHECK_CHANNEL="all"
-    result=$(extract_tag_from_json "$json_file")
-    if [ "$result" = "v0.2.0-beta.1" ]; then
-        pass "extract_tag_from_json parses array response (channel=all)"
-    else
-        fail "extract_tag_from_json array should return 'v0.2.0-beta.1', got '$result'"
-    fi
-
-    # Test 2: Object response (channel "stable") — /releases/latest format
-    cat > "$json_file" <<'JSONEOF'
-{"tag_name":"v1.0.0","name":"Stable Release","prerelease":false}
-JSONEOF
-    CHECK_CHANNEL="stable"
-    result=$(extract_tag_from_json "$json_file")
-    if [ "$result" = "v1.0.0" ]; then
-        pass "extract_tag_from_json parses object response (channel=stable)"
-    else
-        fail "extract_tag_from_json object should return 'v1.0.0', got '$result'"
-    fi
-
-    # Test 3: Empty array — no releases
-    echo '[]' > "$json_file"
-    CHECK_CHANNEL="all"
-    result=$(extract_tag_from_json "$json_file")
-    if [ -z "$result" ] || [ "$result" = "null" ]; then
-        pass "extract_tag_from_json returns empty for empty array"
-    else
-        fail "extract_tag_from_json should return empty for '[]', got '$result'"
-    fi
-
-    # Test 4: Object with no tag_name
-    echo '{"name":"No Tag"}' > "$json_file"
-    CHECK_CHANNEL="stable"
-    result=$(extract_tag_from_json "$json_file")
-    if [ -z "$result" ] || [ "$result" = "null" ]; then
-        pass "extract_tag_from_json returns empty when tag_name missing"
-    else
-        fail "extract_tag_from_json should return empty for missing tag_name, got '$result'"
-    fi
-}
+# Note: state file read/write, interval-check logic, build_api_url, and
+# extract_tag_from_json used to have their own test_* functions here that
+# sourced the bash script directly to reach its internal functions. That
+# logic now lives in the shared _python_common.py (read_state_timestamp,
+# get_last_notified_version, is_first_run, should_check, update_state,
+# build_api_url, extract_tag_from_json) and is covered there by
+# test-python-common-startup.sh -- re-testing it here would just duplicate
+# that coverage, since check-upstream-updates.py no longer implements any of
+# it itself.
+# 注: 状態ファイルの読み書き、間隔チェックロジック、build_api_url、
+# extract_tag_from_json は、以前はここでbashスクリプトを直接sourceして
+# 内部関数に到達するtest_*関数を持っていた。そのロジックは現在、共有の
+# _python_common.py（read_state_timestamp、get_last_notified_version、
+# is_first_run、should_check、update_state、build_api_url、
+# extract_tag_from_json）に存在し、test-python-common-startup.sh で
+# カバーされている -- check-upstream-updates.py はもうそれらを自前で
+# 実装していないため、ここで再テストすると重複するだけになる。
 
 # ============================================================
 # Test: Debug mode outputs diagnostic info to stderr
@@ -383,7 +153,6 @@ test_debug_mode() {
     echo ""
     echo "=== Testing debug mode ==="
 
-    local script="$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
     local stderr_output
 
     # テスト用の設定ファイルを作成（CHECK_UPDATES=false で即終了させる）
@@ -396,7 +165,7 @@ CHECK_INTERVAL_HOURS="0"
 EOF
 
     # Test 1: --debug flag produces debug output on stderr
-    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" "$script" --debug) 2>&1 1>/dev/null ) || true
+    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" "$PYTHON3" "$SCRIPT" --debug) 2>&1 1>/dev/null ) || true
     if echo "$stderr_output" | grep -q "^\[debug\]"; then
         pass "--debug flag produces [debug] output on stderr"
     else
@@ -404,7 +173,7 @@ EOF
     fi
 
     # Test 2: DEBUG_UPDATE_CHECK=1 environment variable also works
-    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" DEBUG_UPDATE_CHECK=1 "$script") 2>&1 1>/dev/null ) || true
+    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" DEBUG_UPDATE_CHECK=1 "$PYTHON3" "$SCRIPT") 2>&1 1>/dev/null ) || true
     if echo "$stderr_output" | grep -q "^\[debug\]"; then
         pass "DEBUG_UPDATE_CHECK=1 produces [debug] output on stderr"
     else
@@ -412,7 +181,7 @@ EOF
     fi
 
     # Test 3: Without debug, no [debug] output
-    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" "$script") 2>&1 1>/dev/null ) || true
+    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" "$PYTHON3" "$SCRIPT") 2>&1 1>/dev/null ) || true
     if echo "$stderr_output" | grep -q "^\[debug\]"; then
         fail "Without debug flag, should not produce [debug] output"
     else
@@ -420,7 +189,7 @@ EOF
     fi
 
     # Test 4: Debug shows config values when loaded
-    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" DEBUG_UPDATE_CHECK=1 "$script") 2>&1 1>/dev/null ) || true
+    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" DEBUG_UPDATE_CHECK=1 "$PYTHON3" "$SCRIPT") 2>&1 1>/dev/null ) || true
     if echo "$stderr_output" | grep -q "Config loaded:"; then
         pass "Debug output includes config values"
     else
@@ -436,7 +205,7 @@ EOF
 
     # Test 6: Debug output goes to stderr, not stdout (stdout should be empty)
     local stdout_output
-    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" DEBUG_UPDATE_CHECK=1 "$script") 2>/dev/null ) || true
+    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" DEBUG_UPDATE_CHECK=1 "$PYTHON3" "$SCRIPT") 2>/dev/null ) || true
     if [ -z "$stdout_output" ]; then
         pass "Debug output goes to stderr only, stdout is clean"
     else
@@ -450,8 +219,6 @@ EOF
 test_first_run_no_notification() {
     echo ""
     echo "=== Testing first run behavior ==="
-
-    local script="$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
 
     # テスト用の設定ファイル（CHECK_UPDATES=true, INTERVAL=0 で毎回チェック）
     local mock_config="$TEST_TMP_DIR/.sandbox/config/template-source.conf"
@@ -468,7 +235,7 @@ EOF
 
     # Test 1: 初回実行 → stdout に通知が出ない（記録のみ）
     local stdout_output
-    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>/dev/null ) || true
+    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$PYTHON3" "$SCRIPT") 2>/dev/null ) || true
     if [ -z "$stdout_output" ]; then
         pass "First run produces no notification on stdout"
     else
@@ -494,7 +261,7 @@ EOF
     # Test 4: Debug で "First run" が出る
     rm -f "$mock_state"
     local stderr_output
-    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" DEBUG_UPDATE_CHECK=1 MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>&1 1>/dev/null ) || true
+    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" DEBUG_UPDATE_CHECK=1 MOCK_LATEST_VERSION="v0.0.1-test" "$PYTHON3" "$SCRIPT") 2>&1 1>/dev/null ) || true
     if echo "$stderr_output" | grep -q "First run"; then
         pass "Debug output shows 'First run' on first execution"
     else
@@ -509,8 +276,6 @@ test_same_version_no_renotify() {
     echo ""
     echo "=== Testing same version dedup ==="
 
-    local script="$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
-
     # Test config file / テスト用の設定ファイル
     local mock_config="$TEST_TMP_DIR/.sandbox/config/template-source.conf"
     cat > "$mock_config" <<'EOF'
@@ -523,11 +288,11 @@ EOF
     # First run (records the version) / 初回実行（バージョン記録）
     local mock_state="$TEST_TMP_DIR/state"
     rm -f "$mock_state"
-    (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$script") >/dev/null 2>&1 || true
+    (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$PYTHON3" "$SCRIPT") >/dev/null 2>&1 || true
 
     # Second run (same version -> no notification) / 2回目実行（同バージョン → 通知なし）
     local stdout_output
-    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>/dev/null ) || true
+    stdout_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" MOCK_LATEST_VERSION="v0.0.1-test" "$PYTHON3" "$SCRIPT") 2>/dev/null ) || true
     if [ -z "$stdout_output" ]; then
         pass "Second run with same version produces no notification"
     else
@@ -536,7 +301,7 @@ EOF
 
     # Debug で "Same version" が出ることを確認
     local stderr_output
-    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" DEBUG_UPDATE_CHECK=1 MOCK_LATEST_VERSION="v0.0.1-test" "$script") 2>&1 1>/dev/null ) || true
+    stderr_output=$( (WORKSPACE="$TEST_TMP_DIR" STATE_FILE="$mock_state" DEBUG_UPDATE_CHECK=1 MOCK_LATEST_VERSION="v0.0.1-test" "$PYTHON3" "$SCRIPT") 2>&1 1>/dev/null ) || true
     if echo "$stderr_output" | grep -q "Same version"; then
         pass "Debug output shows 'Same version' on second run"
     else
@@ -547,116 +312,96 @@ EOF
 # ============================================================
 # Test: show_update_notification outputs correctly per verbosity
 # 各詳細度レベルで通知が正しく表示されるか
+#
+# Loaded directly via importlib (rather than driven black-box through state
+# files) for the same precision the bash original had sourcing the script:
+# exact line/separator counts and the "no previous version" case, which is
+# awkward to reach through the full state-file-driven flow.
+# ブラックボックスで状態ファイル経由に組み立てるのではなく、importlibで直接
+# ロードする。bash版がスクリプトをsourceしていたのと同じ精度（行数・
+# セパレータ数の厳密な検証、状態ファイル駆動のフローからは組み立てにくい
+# 「直前バージョンなし」ケース）を保つため。
 # ============================================================
 test_show_update_notification() {
     echo ""
     echo "=== Testing show_update_notification ==="
 
-    # Source the actual script
-    # shellcheck source=/dev/null
-    source "$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
+    local result
+    result=$("$PYTHON3" - "$SCRIPT" <<'PYEOF'
+import importlib.util
+import io
+import sys
+from contextlib import redirect_stdout
 
-    # Setup English messages
-    setup_messages
+script_path = sys.argv[1]
+spec = importlib.util.spec_from_file_location("check_upstream_updates", script_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
 
-    local output
+msgs = mod.get_messages(lang_ja=False)
+failures = []
 
-    # Test 1: Quiet mode — single line with version transition
-    STARTUP_VERBOSITY="quiet"
-    output=$(show_update_notification "v0.1.0" "v0.2.0" "https://example.com/releases")
-    if echo "$output" | grep -q "v0.1.0 → v0.2.0"; then
-        pass "Quiet mode shows version transition"
+
+def capture(previous, latest, url, verbosity):
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        mod.show_update_notification(previous, latest, url, verbosity, msgs)
+    return buf.getvalue()
+
+
+# Test 1/2: Quiet mode — single line with version transition, no decoration
+out = capture("v0.1.0", "v0.2.0", "https://example.com/releases", "quiet")
+if "v0.1.0 → v0.2.0" not in out:
+    failures.append(f"quiet mode missing version transition: {out!r}")
+if len(out.splitlines()) != 1:
+    failures.append(f"quiet mode should be 1 line, got {len(out.splitlines())}: {out!r}")
+
+# Test 3/4/5a-e: Summary mode
+out = capture("v0.1.0", "v0.2.0", "https://example.com/releases", "summary")
+if not ("v0.1.0" in out and "v0.2.0" in out and "https://example.com/releases" in out):
+    failures.append(f"summary mode missing version/url: {out!r}")
+if "━━━━" not in out:
+    failures.append("summary mode should include separator lines")
+if not (msgs["CURRENT"] in out and msgs["LATEST"] in out):
+    failures.append("summary mode should show current/latest labels")
+non_empty_lines = [line for line in out.splitlines() if line.strip()]
+if len(non_empty_lines) < 6:
+    failures.append(f"summary mode should have >= 6 non-empty lines, got {len(non_empty_lines)}: {out!r}")
+if msgs["RELEASE_NOTES"] not in out:
+    failures.append("summary mode should show release notes label")
+if out.count("━━━━") < 3:
+    failures.append(f"summary mode should have >= 3 separator lines, got {out.count('━━━━')}")
+if f"{msgs['HOW_TO_UPDATE']}:" in out:
+    failures.append("summary mode should NOT show how-to-update section")
+
+# Test 5/6: Verbose mode
+out = capture("v0.1.0", "v0.2.0", "https://example.com/releases", "verbose")
+if msgs["HOW_TO_UPDATE"] not in out:
+    failures.append(f"verbose mode missing how-to-update section: {out!r}")
+if not ("v0.1.0" in out and "v0.2.0" in out):
+    failures.append("verbose mode should show both versions")
+
+# Test 7: No previous version — shows latest only, no arrow
+out = capture("", "v0.3.0", "https://example.com/releases", "quiet")
+if "v0.3.0" not in out or "→" in out:
+    failures.append(f"no-previous-version case should show 'v0.3.0' without an arrow: {out!r}")
+
+if failures:
+    for f in failures:
+        print(f"FAIL::{f}")
+else:
+    print("ALL_OK")
+PYEOF
+    )
+
+    if echo "$result" | grep -q "^ALL_OK$"; then
+        pass "show_update_notification: quiet/summary/verbose/no-previous-version all correct"
     else
-        fail "Quiet mode should show 'v0.1.0 → v0.2.0', got: '$output'"
-    fi
-
-    # Test 2: Quiet mode — single line only (no extra decoration)
-    local line_count
-    line_count=$(echo "$output" | wc -l)
-    if [ "$line_count" -eq 1 ]; then
-        pass "Quiet mode outputs single line"
-    else
-        fail "Quiet mode should output 1 line, got $line_count"
-    fi
-
-    # Test 3: Summary mode — includes current version, latest version, and URL on separate lines
-    STARTUP_VERBOSITY="summary"
-    output=$(show_update_notification "v0.1.0" "v0.2.0" "https://example.com/releases")
-    if echo "$output" | grep -q "v0.1.0" && echo "$output" | grep -q "v0.2.0" && echo "$output" | grep -q "https://example.com/releases"; then
-        pass "Summary mode shows current version, latest version, and URL"
-    else
-        fail "Summary mode should show both versions and URL, got: '$output'"
-    fi
-
-    # Test 4: Summary mode — includes separator lines
-    if echo "$output" | grep -q "━━━━"; then
-        pass "Summary mode includes separator lines"
-    else
-        fail "Summary mode should include separator lines"
-    fi
-
-    # Test 5a: Summary mode — shows current and latest on separate lines (like verbose)
-    if echo "$output" | grep -q "$MSG_CURRENT" && echo "$output" | grep -q "$MSG_LATEST"; then
-        pass "Summary mode shows current/latest labels on separate lines"
-    else
-        fail "Summary mode should show current/latest labels, got: '$output'"
-    fi
-
-    # Test 5b: Summary mode — output has enough lines (title + content + footer, not truncated by set -e)
-    local summary_line_count
-    summary_line_count=$(echo "$output" | grep -c . || true)
-    if [ "$summary_line_count" -ge 6 ]; then
-        pass "Summary mode outputs at least 6 non-empty lines (not truncated)"
-    else
-        fail "Summary mode should have at least 6 non-empty lines, got $summary_line_count: '$output'"
-    fi
-
-    # Test 5c: Summary mode — has release notes URL line
-    if echo "$output" | grep -q "$MSG_RELEASE_NOTES"; then
-        pass "Summary mode shows release notes label"
-    else
-        fail "Summary mode should show release notes label, got: '$output'"
-    fi
-
-    # Test 5d: Summary mode — has footer separator (not just title separator)
-    local separator_count
-    separator_count=$(echo "$output" | grep -c "━━━━" || true)
-    if [ "$separator_count" -ge 3 ]; then
-        pass "Summary mode has title + footer separators (at least 3 separator lines)"
-    else
-        fail "Summary mode should have at least 3 separator lines, got $separator_count"
-    fi
-
-    # Test 5e: Summary mode — does NOT include how-to-update (that's verbose only)
-    if echo "$output" | grep -q "$MSG_HOW_TO_UPDATE:"; then
-        fail "Summary mode should NOT show how-to-update section"
-    else
-        pass "Summary mode omits how-to-update section (verbose only)"
-    fi
-
-    # Test 5: Verbose mode — includes how-to-update instructions
-    STARTUP_VERBOSITY="verbose"
-    output=$(show_update_notification "v0.1.0" "v0.2.0" "https://example.com/releases")
-    if echo "$output" | grep -q "$MSG_HOW_TO_UPDATE"; then
-        pass "Verbose mode shows how-to-update section"
-    else
-        fail "Verbose mode should show how-to-update section, got: '$output'"
-    fi
-
-    # Test 6: Verbose mode — shows current and latest version
-    if echo "$output" | grep -q "v0.1.0" && echo "$output" | grep -q "v0.2.0"; then
-        pass "Verbose mode shows both current and latest version"
-    else
-        fail "Verbose mode should show both versions"
-    fi
-
-    # Test 7: No previous version — shows latest only (no arrow)
-    STARTUP_VERBOSITY="quiet"
-    output=$(show_update_notification "" "v0.3.0" "https://example.com/releases")
-    if echo "$output" | grep -q "v0.3.0" && ! echo "$output" | grep -q "→"; then
-        pass "No previous version shows latest only without arrow"
-    else
-        fail "No previous version should show 'v0.3.0' without '→', got: '$output'"
+        while IFS= read -r line; do
+            case "$line" in
+                FAIL::*) fail "${line#FAIL::}" ;;
+            esac
+        done <<< "$result"
     fi
 }
 
@@ -667,26 +412,24 @@ test_script_executable() {
     echo ""
     echo "=== Testing script is executable ==="
 
-    local script="$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
-
-    if [ -f "$script" ]; then
-        pass "check-upstream-updates.sh exists"
+    if [ -f "$SCRIPT" ]; then
+        pass "check-upstream-updates.py exists"
     else
-        fail "check-upstream-updates.sh does not exist"
+        fail "check-upstream-updates.py does not exist"
         return
     fi
 
-    if [ -x "$script" ]; then
-        pass "check-upstream-updates.sh is executable"
+    if [ -x "$SCRIPT" ]; then
+        pass "check-upstream-updates.py is executable"
     else
-        fail "check-upstream-updates.sh should be executable"
+        fail "check-upstream-updates.py should be executable"
     fi
 
     # Check shebang
-    if head -1 "$script" | grep -q "^#!/bin/bash"; then
-        pass "check-upstream-updates.sh has correct shebang"
+    if head -1 "$SCRIPT" | grep -q "^#!/usr/bin/env python3"; then
+        pass "check-upstream-updates.py has correct shebang"
     else
-        fail "check-upstream-updates.sh should have #!/bin/bash shebang"
+        fail "check-upstream-updates.py should have #!/usr/bin/env python3 shebang"
     fi
 }
 
@@ -697,7 +440,6 @@ test_script_runs() {
     echo ""
     echo "=== Testing script execution ==="
 
-    local script="$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh"
     local exit_code
 
     # Test 1: Run with CHECK_UPDATES=false via mock config
@@ -709,13 +451,13 @@ CHECK_UPDATES="false"
 CHECK_INTERVAL_HOURS="0"
 EOF
 
-    (WORKSPACE="$TEST_TMP_DIR" "$script" >/dev/null 2>&1)
+    (WORKSPACE="$TEST_TMP_DIR" "$PYTHON3" "$SCRIPT" >/dev/null 2>&1)
     exit_code=$?
 
     if [ $exit_code -eq 0 ]; then
-        pass "check-upstream-updates.sh exits cleanly with CHECK_UPDATES=false"
+        pass "check-upstream-updates.py exits cleanly with CHECK_UPDATES=false"
     else
-        fail "check-upstream-updates.sh should exit cleanly, got exit code $exit_code"
+        fail "check-upstream-updates.py should exit cleanly, got exit code $exit_code"
     fi
 
     # Test 2: Run with empty TEMPLATE_REPO
@@ -726,13 +468,13 @@ CHECK_UPDATES="true"
 CHECK_INTERVAL_HOURS="0"
 EOF
 
-    (WORKSPACE="$TEST_TMP_DIR" "$script" >/dev/null 2>&1)
+    (WORKSPACE="$TEST_TMP_DIR" "$PYTHON3" "$SCRIPT" >/dev/null 2>&1)
     exit_code=$?
 
     if [ $exit_code -eq 0 ]; then
-        pass "check-upstream-updates.sh exits cleanly with empty TEMPLATE_REPO"
+        pass "check-upstream-updates.py exits cleanly with empty TEMPLATE_REPO"
     else
-        fail "check-upstream-updates.sh should exit cleanly with empty TEMPLATE_REPO, got exit code $exit_code"
+        fail "check-upstream-updates.py should exit cleanly with empty TEMPLATE_REPO, got exit code $exit_code"
     fi
 }
 
@@ -747,10 +489,6 @@ main() {
     setup
 
     test_config_file
-    test_state_file
-    test_interval_check
-    test_build_api_url
-    test_extract_tag_from_json
     test_debug_mode
     test_first_run_no_notification
     test_same_version_no_renotify

@@ -86,11 +86,15 @@ else
     MSG_COMPLETE="✅ Startup complete"
 fi
 
-# Note: install_sandbox_mcp_binary (download prebuilt binary from GitHub Releases,
-# used when Go is unavailable) is defined in _startup_common.sh, shared with
-# check-sandbox-mcp-updates.sh's --auto-update path.
-# 注: install_sandbox_mcp_binary は _startup_common.sh で定義（check-sandbox-mcp-updates.sh の
-# --auto-update と共有）。
+# Note: install_sandbox_mcp_binary (download prebuilt binary from GitHub
+# Releases, used when Go is unavailable) is defined in _startup_common.sh.
+# check-sandbox-mcp-updates.py's own --auto-update path has an independent
+# Python port of the same logic (startup.sh stays bash, so this copy must
+# stay too) -- the two are no longer shared, just parallel implementations.
+# 注: install_sandbox_mcp_binary は _startup_common.sh で定義。
+# check-sandbox-mcp-updates.py の --auto-update パスは同じロジックを独立に
+# Python移植している（startup.sh はbashのままなので、こちらのコピーは残す
+# 必要がある）-- 両者はもう共有されておらず、並行する別実装である。
 
 # Run startup scripts in order
 # 起動スクリプトを順番に実行
@@ -146,7 +150,7 @@ BANNER
 
 # 5. Check for upstream updates (informational only)
 # 上流更新チェック（情報提供のみ）
-"$WORKSPACE/.sandbox/scripts/check-upstream-updates.sh" || true
+"$WORKSPACE/.sandbox/scripts/check-upstream-updates.py" || true
 
 # 6. Show sponsor message (informational only, skip with --no-sponsor)
 # スポンサーメッセージ表示（情報提供のみ、--no-sponsor でスキップ）
@@ -164,7 +168,7 @@ sandbox_mcp_ready=false
 if command -v sandbox-mcp >/dev/null 2>&1; then
     echo "$MSG_ALREADY_INSTALLED"
     sandbox_mcp_ready=true
-    "$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.sh" || true
+    "$WORKSPACE/.sandbox/scripts/check-sandbox-mcp-updates.py" || true
 elif command -v go >/dev/null 2>&1; then
     echo "$MSG_FETCHING"
     if go install github.com/YujiSuzuki/sandbox-mcp@latest; then

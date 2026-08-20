@@ -156,7 +156,7 @@ jobs:
 >
 > ```bash
 > # SandboxMCP（AI Sandbox内で実行）
-> .sandbox/scripts/check-sandbox-mcp-updates.sh --auto-update
+> .sandbox/scripts/check-sandbox-mcp-updates.py --auto-update
 > # または: go install github.com/YujiSuzuki/sandbox-mcp@latest
 >
 > # HostMCP（ホストOS上で実行）

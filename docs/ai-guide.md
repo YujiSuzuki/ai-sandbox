@@ -149,7 +149,7 @@ git log HEAD..origin/main --oneline
    To update SandboxMCP or HostMCP themselves (independent of this repo's version):
    ```bash
    # SandboxMCP (inside AI Sandbox)
-   .sandbox/scripts/check-sandbox-mcp-updates.sh --auto-update
+   .sandbox/scripts/check-sandbox-mcp-updates.py --auto-update
    # or: go install github.com/YujiSuzuki/sandbox-mcp@latest
 
    # HostMCP (on host OS)
@@ -185,7 +185,7 @@ cat .sandbox/.state/update-check-sandbox-mcp
 sandbox-mcp version   # installed version
 ```
 
-`check-sandbox-mcp-updates.sh` runs automatically near the start of `startup.sh`'s SandboxMCP registration step, right after detecting that `sandbox-mcp` is already installed and before the CLI registration calls (`claude mcp add` / `gemini mcp add`) that follow. Unlike the template check, it notifies on every check while the installed version is behind the latest release (not just once) since there's a real installed-version ground truth to compare against.
+`check-sandbox-mcp-updates.py` runs automatically near the start of `startup.sh`'s SandboxMCP registration step, right after detecting that `sandbox-mcp` is already installed and before the CLI registration calls (`claude mcp add` / `gemini mcp add`) that follow. Unlike the template check, it notifies on every check while the installed version is behind the latest release (not just once) since there's a real installed-version ground truth to compare against.
 
 To update manually:
 ```bash
@@ -194,9 +194,9 @@ go install github.com/YujiSuzuki/sandbox-mcp@latest
 
 To update automatically instead, pass `--auto-update` (or set `AUTO_UPDATE_SANDBOX_MCP=true`). This is off by default — opt in explicitly, since it changes an installed binary as a side effect:
 ```bash
-.sandbox/scripts/check-sandbox-mcp-updates.sh --auto-update
+.sandbox/scripts/check-sandbox-mcp-updates.py --auto-update
 ```
-When an update is available, this installs it the same way `startup.sh` installs `sandbox-mcp` fresh: `go install` if Go is available, otherwise a prebuilt binary download from GitHub Releases (`install_sandbox_mcp_binary`, shared via `_startup_common.sh`). Success is judged by the install command's own exit status, not by re-reading and comparing the installed version — a plain `go install pkg@latest` has no `-ldflags`, so the binary keeps its source default version (`dev`) and would never match a real release tag even on success.
+When an update is available, this installs it the same way `startup.sh` installs `sandbox-mcp` fresh: `go install` if Go is available, otherwise a prebuilt binary download from GitHub Releases (`install_sandbox_mcp_binary` — the script's own Python port of the same-named bash function in `_startup_common.sh`, which `startup.sh` itself still uses independently). Success is judged by the install command's own exit status, not by re-reading and comparing the installed version — a plain `go install pkg@latest` has no `-ldflags`, so the binary keeps its source default version (`dev`) and would never match a real release tag even on success.
 
 Other flags and env vars:
 - `--debug` / `DEBUG_UPDATE_CHECK=1` — print debug logging to stderr
