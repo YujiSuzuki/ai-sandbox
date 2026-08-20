@@ -129,21 +129,17 @@ test_config_file() {
 }
 
 # Note: state file read/write, interval-check logic, build_api_url, and
-# extract_tag_from_json used to have their own test_* functions here that
-# sourced the bash script directly to reach its internal functions. That
-# logic now lives in the shared _python_common.py (read_state_timestamp,
-# get_last_notified_version, is_first_run, should_check, update_state,
-# build_api_url, extract_tag_from_json) and is covered there by
-# test-python-common-startup.sh -- re-testing it here would just duplicate
-# that coverage, since check-upstream-updates.py no longer implements any of
-# it itself.
+# extract_tag_from_json live in the shared _python_common.py
+# (read_state_timestamp, get_last_notified_version, is_first_run,
+# should_check, update_state, build_api_url, extract_tag_from_json) and are
+# covered there by test-python-common-startup.sh -- re-testing them here
+# would just duplicate that coverage, since check-upstream-updates.py
+# doesn't implement any of it itself.
 # 注: 状態ファイルの読み書き、間隔チェックロジック、build_api_url、
-# extract_tag_from_json は、以前はここでbashスクリプトを直接sourceして
-# 内部関数に到達するtest_*関数を持っていた。そのロジックは現在、共有の
-# _python_common.py（read_state_timestamp、get_last_notified_version、
-# is_first_run、should_check、update_state、build_api_url、
-# extract_tag_from_json）に存在し、test-python-common-startup.sh で
-# カバーされている -- check-upstream-updates.py はもうそれらを自前で
+# extract_tag_from_json は共有の _python_common.py（read_state_timestamp、
+# get_last_notified_version、is_first_run、should_check、update_state、
+# build_api_url、extract_tag_from_json）に存在し、test-python-common-startup.sh
+# でカバーされている -- check-upstream-updates.py はそれらを自前で
 # 実装していないため、ここで再テストすると重複するだけになる。
 
 # ============================================================
@@ -332,8 +328,10 @@ import importlib.util
 import io
 import sys
 from contextlib import redirect_stdout
+from pathlib import Path
 
 script_path = sys.argv[1]
+sys.path.insert(0, str(Path(script_path).resolve().parent))
 spec = importlib.util.spec_from_file_location("check_upstream_updates", script_path)
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

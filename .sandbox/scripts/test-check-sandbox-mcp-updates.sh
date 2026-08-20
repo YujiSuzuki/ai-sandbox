@@ -518,8 +518,10 @@ import importlib.util
 import io
 import sys
 from contextlib import redirect_stdout
+from pathlib import Path
 
 script_path = sys.argv[1]
+sys.path.insert(0, str(Path(script_path).resolve().parent))
 spec = importlib.util.spec_from_file_location("check_sandbox_mcp_updates", script_path)
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
