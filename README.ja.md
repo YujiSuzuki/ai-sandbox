@@ -1,4 +1,4 @@
-# AI Sandbox Environment + HostMCP + SandboxMCP
+# 現場で使える、安全なAI駆動開発環境 — AI Sandbox Environment + HostMCP + SandboxMCP
 
 [English README is here](README.md)
 

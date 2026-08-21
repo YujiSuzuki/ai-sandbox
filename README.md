@@ -1,4 +1,4 @@
-# AI Sandbox Environment + HostMCP + SandboxMCP
+# A Practical, Safe Environment for AI-Driven Development — AI Sandbox Environment + HostMCP + SandboxMCP
 
 [日本語の README はこちら](README.ja.md)
 
