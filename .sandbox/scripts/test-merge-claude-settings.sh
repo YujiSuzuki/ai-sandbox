@@ -255,6 +255,51 @@ EOF
     cleanup
 }
 
+# Test 4b: Under ja_JP locale + quiet verbosity, the "manual changes detected"
+# warning must be fully Japanese -- not an English "Claude settings:" label
+# glued to a Japanese message
+# テスト4b: ja_JPロケール＋quiet詳細度では、「手動変更検出」の警告が完全に
+# 日本語でなければならない -- 英語の "Claude settings:" ラベルに日本語
+# メッセージが接続された状態になってはいけない
+test_manual_changes_ja_locale_not_mixed() {
+    info "Test 4b: ja_JP locale + quiet verbosity warning is not English/Japanese mixed"
+    info "テスト4b: ja_JPロケール＋quiet詳細度の警告が英日混在にならない"
+
+    setup
+
+    mkdir -p "$TEST_WORKSPACE/project-a/.claude"
+    cat > "$TEST_WORKSPACE/project-a/.claude/settings.json" << 'EOF'
+{
+  "permissions": {
+    "deny": ["Read(.env)"]
+  }
+}
+EOF
+
+    "$SCRIPT" > /dev/null 2>&1
+
+    echo '{"permissions":{"deny":["Read(.env)","Read(manual.txt)"]}}' | jq '.' > "$TEST_WORKSPACE/.claude/settings.json"
+
+    local output
+    output=$(STARTUP_VERBOSITY=quiet LANG=ja_JP.UTF-8 LC_ALL=ja_JP.UTF-8 "$SCRIPT" 2>&1)
+
+    if echo "$output" | grep -q "手動変更が検出されました"; then
+        pass "Warning reported in Japanese under ja_JP locale + quiet verbosity"
+    else
+        fail "Warning should be reported in Japanese under ja_JP locale + quiet verbosity"
+        echo "Output: $output"
+    fi
+
+    if echo "$output" | grep -qi "Claude settings:"; then
+        fail "Warning still hardcodes the English 'Claude settings:' label under ja_JP locale"
+        echo "Output: $output"
+    else
+        pass "Warning has no leftover English label under ja_JP locale"
+    fi
+
+    cleanup
+}
+
 # Test 5: Skip merge when settings exist without backup
 # テスト5: バックアップなしで設定が存在する場合はマージをスキップ
 test_skip_without_backup() {
@@ -510,6 +555,7 @@ test_no_project_settings
 test_create_by_merge
 test_remerge_no_changes
 test_skip_on_manual_changes
+test_manual_changes_ja_locale_not_mixed
 test_skip_without_backup
 test_merge_multiple_projects
 test_preserve_other_keys_on_remerge

@@ -108,6 +108,48 @@ test_registers_hook_any_locale() {
     cleanup
 }
 
+# Test 1b: the completion message itself follows the locale (English under a
+# non-Japanese locale, Japanese under ja_JP) -- registration is locale-
+# independent (Test 1), but the message reporting it is user-facing output
+# and must not always be Japanese regardless of locale
+# テスト1b: 完了メッセージ自体はロケールに従う（非日本語ロケールでは英語、
+# ja_JPでは日本語）-- 登録自体はロケール非依存だが（テスト1）、それを
+# 伝えるメッセージはユーザー向け出力であり、常に日本語固定であってはならない
+test_completion_message_follows_locale() {
+    info "Test 1b: Completion message follows locale (not always Japanese)"
+    info "テスト1b: 完了メッセージがロケールに従う（常に日本語にならない）"
+
+    setup
+    local output
+    output=$(LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 "$SCRIPT")
+
+    if echo "$output" | grep -q "registered"; then
+        pass "Completion message is English under a non-Japanese locale"
+    else
+        fail "Completion message should be English under a non-Japanese locale"
+        echo "Output: $output"
+    fi
+
+    if echo "$output" | grep -qF "リマインダー"; then
+        fail "Completion message still contains Japanese text under a non-Japanese locale"
+        echo "Output: $output"
+    else
+        pass "Completion message has no leftover Japanese text under a non-Japanese locale"
+    fi
+    cleanup
+
+    setup
+    output=$(LANG=ja_JP.UTF-8 LC_ALL=ja_JP.UTF-8 "$SCRIPT")
+
+    if echo "$output" | grep -q "登録しました"; then
+        pass "Completion message is Japanese under ja_JP locale"
+    else
+        fail "Completion message should be Japanese under ja_JP locale"
+        echo "Output: $output"
+    fi
+    cleanup
+}
+
 # Test 2: registers the hook in a fresh settings.json
 # テスト2: 新規settings.jsonにフックを登録する
 test_registers_hook_fresh_settings() {
@@ -217,6 +259,7 @@ echo "=========================================="
 echo ""
 
 test_registers_hook_any_locale
+test_completion_message_follows_locale
 test_registers_hook_fresh_settings
 test_preserves_existing_settings
 test_idempotent

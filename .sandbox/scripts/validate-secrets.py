@@ -59,6 +59,8 @@ def get_messages(lang_ja: bool) -> dict:
             "FILES_SECTION": "📄 ファイル（/dev/null マウント）",
             "DIRS_SECTION": "📁 ディレクトリ（tmpfs マウント）",
             "CHECK_CONFIG": "docker-compose.yml の volumes/tmpfs 設定を確認してください",
+            "SUMMARY_NO_SECRETS": "✓ シークレット隠蔽: 秘匿設定が見つかりませんでした",
+            "SUMMARY_OK": "✓ シークレット隠蔽: %d/%d 件検証済み",
         }
     return {
         "TITLE": "🔍 Secret Hiding Validation",
@@ -74,6 +76,8 @@ def get_messages(lang_ja: bool) -> dict:
         "FILES_SECTION": "📄 Files (/dev/null mounts)",
         "DIRS_SECTION": "📁 Directories (tmpfs mounts)",
         "CHECK_CONFIG": "Check your docker-compose.yml volumes/tmpfs configuration",
+        "SUMMARY_NO_SECRETS": "✓ Secret hiding: No secret hiding configuration found",
+        "SUMMARY_OK": "✓ Secret hiding: %d/%d validated",
     }
 
 
@@ -279,9 +283,9 @@ def main() -> None:
             print(msgs["CHECK_CONFIG"])
             print()
         elif total_secrets == 0:
-            print(f"✓ Secret hiding: {msgs['NO_SECRETS']}")
+            print(msgs["SUMMARY_NO_SECRETS"])
         else:
-            print(f"✓ Secret hiding: {validated_count}/{total_secrets} validated")
+            print(msgs["SUMMARY_OK"] % (validated_count, total_secrets))
         sys.exit(exit_code)
 
     # ============================================================

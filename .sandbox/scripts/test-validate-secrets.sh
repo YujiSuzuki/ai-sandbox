@@ -163,6 +163,39 @@ test_hidden_secrets_empty() {
     cleanup
 }
 
+# Test 2b: Under ja_JP locale, the summary-mode success line must be fully
+# Japanese -- not an English "Secret hiding:" label glued to a Japanese message
+# テスト2b: ja_JPロケールでは、サマリーモードの成功行が完全に日本語で
+# なければならない -- 英語の "Secret hiding:" ラベルに日本語メッセージが
+# 接続された状態になってはいけない
+test_hidden_secrets_ja_locale_not_mixed() {
+    echo ""
+    echo "=== Test: ja_JP locale summary line is not English/Japanese mixed ==="
+
+    setup
+    create_compose_with_secrets
+    touch "$TEST_SECRET_DIR/.env"
+
+    local output
+    output=$(WORKSPACE="$TEST_COMPOSE_DIR" STARTUP_VERBOSITY=summary LANG=ja_JP.UTF-8 LC_ALL=ja_JP.UTF-8 "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -q "シークレット隠蔽"; then
+        pass "Script reports the summary line in Japanese under ja_JP locale"
+    else
+        fail "Script should report the summary line in Japanese under ja_JP locale"
+        echo "Output: $output"
+    fi
+
+    if echo "$output" | grep -qi "Secret hiding:"; then
+        fail "Summary line still hardcodes the English 'Secret hiding:' label under ja_JP locale"
+        echo "Output: $output"
+    else
+        pass "Summary line has no leftover English label under ja_JP locale"
+    fi
+
+    cleanup
+}
+
 # Test 3: Script fails when secret file has content
 # テスト3: 秘匿ファイルに内容がある場合に失敗するか
 test_exposed_secret_file() {
@@ -346,6 +379,7 @@ main() {
 
     test_script_executable_and_valid
     test_hidden_secrets_empty
+    test_hidden_secrets_ja_locale_not_mixed
     test_exposed_secret_file
     test_exposed_secret_dir
     test_missing_compose_file

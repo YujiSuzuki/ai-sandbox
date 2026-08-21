@@ -247,6 +247,40 @@ test_no_claude_settings() {
     cleanup
 }
 
+# Test 4b: Under ja_JP locale, the default-mode summary line must be fully
+# Japanese -- not an English "Secret sync:" label glued to a Japanese message
+# テスト4b: ja_JPロケールでは、デフォルトモードのサマリー行が完全に日本語で
+# なければならない -- 英語の "Secret sync:" ラベルに日本語メッセージが
+# 接続された状態になってはいけない
+test_no_claude_settings_ja_locale_not_mixed() {
+    echo ""
+    echo "=== Test: ja_JP locale summary line is not English/Japanese mixed ==="
+
+    setup
+
+    rm -f "$TEST_WORKSPACE/.claude/settings.json"
+    create_compose_file "" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" LANG=ja_JP.UTF-8 LC_ALL=ja_JP.UTF-8 "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -q "見つかりません"; then
+        pass "Script reports the message in Japanese under ja_JP locale"
+    else
+        fail "Script should report the message in Japanese under ja_JP locale"
+        echo "Output: $output"
+    fi
+
+    if echo "$output" | grep -qi "Secret sync:"; then
+        fail "Summary line still hardcodes the English 'Secret sync:' label under ja_JP locale"
+        echo "Output: $output"
+    else
+        pass "Summary line has no leftover English label under ja_JP locale"
+    fi
+
+    cleanup
+}
+
 # Test 5: No matching files in filesystem
 # テスト5: ファイルシステムに一致するファイルがない
 test_no_matching_files() {
@@ -979,6 +1013,7 @@ main() {
     test_regex_metacharacter_in_path_synced_correctly
     test_missing_file_warning
     test_no_claude_settings
+    test_no_claude_settings_ja_locale_not_mixed
     test_no_matching_files
     test_directory_tmpfs_covered
     test_directory_tmpfs_covered_with_other_options

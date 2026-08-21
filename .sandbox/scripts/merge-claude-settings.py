@@ -92,6 +92,10 @@ def get_messages(lang_ja: bool) -> dict:
             "MERGE_MANUALLY": "必要に応じて手動でマージしてください。",
             "PRESERVED": "手動変更を保護するため、自動マージを無効にしました。",
             "REENABLE": "自動マージを再開するには: {path} を削除してコンテナを再起動してください。",
+            "SUMMARY_CREATED": "✓ Claude 設定: 作成しました（%d 件のソース）",
+            "SUMMARY_MANUAL": "✓ Claude 設定: 手動変更のためマージをスキップ",
+            "SUMMARY_MERGED": "✓ Claude 設定: マージしました（%d 件のソース）",
+            "SUMMARY_CHANGES_DETECTED": "Claude 設定: workspace の .claude/settings.json に手動変更が検出されました",
         }
     return {
         "NO_SETTINGS": "No workspace .claude/settings.json found.",
@@ -106,6 +110,10 @@ def get_messages(lang_ja: bool) -> dict:
         "MERGE_MANUALLY": "Please merge manually if needed.",
         "PRESERVED": "Your manual changes are preserved. Auto-merge has been disabled to avoid overwriting them.",
         "REENABLE": "To re-enable auto-merge: delete {path} and restart the container.",
+        "SUMMARY_CREATED": "✓ Claude settings: created (%d sources)",
+        "SUMMARY_MANUAL": "✓ Claude settings: manual (skip merge)",
+        "SUMMARY_MERGED": "✓ Claude settings: merged (%d sources)",
+        "SUMMARY_CHANGES_DETECTED": "Claude settings: Manual changes detected in workspace .claude/settings.json",
     }
 
 
@@ -250,7 +258,7 @@ def main() -> None:
             print(f"{GREEN}{msgs['CREATED']}{NC}")
             print(f"{msgs['BACKUP']} {backup_file_path}")
         else:
-            print_default(f"✓ Claude settings: created ({source_count} sources)", verbosity)
+            print_default(msgs["SUMMARY_CREATED"] % source_count, verbosity)
         sys.exit(0)
 
     # Workspace settings exists
@@ -260,7 +268,7 @@ def main() -> None:
             print(f"{YELLOW}{msgs['NO_BACKUP']}{NC}")
             print(f"{YELLOW}{msgs['SKIP_MERGE']}{NC}")
         else:
-            print_default("✓ Claude settings: manual (skip merge)", verbosity)
+            print_default(msgs["SUMMARY_MANUAL"], verbosity)
         sys.exit(0)
 
     # Both workspace settings and backup exist - check for changes.
@@ -300,7 +308,7 @@ def main() -> None:
         if is_verbose(verbosity):
             print(f"{GREEN}{msgs['REMERGED']}{NC}")
         else:
-            print_default(f"✓ Claude settings: merged ({source_count} sources)", verbosity)
+            print_default(msgs["SUMMARY_MERGED"] % source_count, verbosity)
     else:
         # Case 3: Changes detected - don't merge, prompt manual merge
         # Remove backup to disable auto-merge (protect manual changes)
@@ -323,7 +331,7 @@ def main() -> None:
             print(msgs["PRESERVED"])
             print(reenable)
         elif is_quiet(verbosity):
-            print_warning(f"Claude settings: {msgs['CHANGES_DETECTED']}")
+            print_warning(msgs["SUMMARY_CHANGES_DETECTED"])
             print(f"   {msgs['MERGE_MANUALLY']}")
         else:
             print()

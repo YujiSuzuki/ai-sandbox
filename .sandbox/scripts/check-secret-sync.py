@@ -103,8 +103,8 @@ def get_messages(lang_ja: bool) -> dict:
     if lang_ja:
         return {
             "TITLE": "🔄 シークレット設定同期チェック",
-            "NO_SETTINGS": "Claude 設定ファイルが見つかりません",
-            "NO_COMPOSE": "docker-compose.yml が見つかりません",
+            "NO_SETTINGS": "✓ シークレット同期: Claude 設定ファイルが見つかりません",
+            "NO_COMPOSE": "✓ シークレット同期: docker-compose.yml が見つかりません",
             "ALL_SYNCED": "✅ すべての秘匿ファイルが docker-compose.yml に設定されています",
             "MISSING_HEADER": "⚠️  以下のファイルが docker-compose.yml に未設定です:",
             "MISSING_FOOTER": "これらのファイルはいずれかの AI設定でブロックされていますが、",
@@ -114,16 +114,16 @@ def get_messages(lang_ja: bool) -> dict:
             "ACTION1": "  手動で docker-compose.yml を編集する（ホストOS側で）",
             "ACTION2": "  または: .sandbox/scripts/sync-secrets.py を実行（シェル環境で）",
             "ACTION3": "  秘匿不要なら: .sandbox/config/sync-ignore にパターンを追加",
-            "NO_DENY": "AI設定にファイルパターンがありません",
-            "NO_FILES": "該当するファイルが見つかりませんでした",
+            "NO_DENY": "✓ シークレット同期: AI設定にファイルパターンがありません",
+            "NO_FILES": "✓ シークレット同期: 該当するファイルが見つかりませんでした",
             "QUIET_MISSING": "⚠️  %d 個のファイルが docker-compose.yml に未設定です",
-            "SUMMARY_OK": "✓ Secret sync: 全件設定済み（%d 件チェック、%d 件無視）",
+            "SUMMARY_OK": "✓ シークレット同期: 全件設定済み（%d 件チェック、%d 件無視）",
             "IGNORED_HEADER": "無視されたファイル (sync-ignore パターンにマッチ):",
         }
     return {
         "TITLE": "🔄 Secret Config Sync Check",
-        "NO_SETTINGS": "Claude settings file not found",
-        "NO_COMPOSE": "docker-compose.yml not found",
+        "NO_SETTINGS": "✓ Secret sync: Claude settings file not found",
+        "NO_COMPOSE": "✓ Secret sync: docker-compose.yml not found",
         "ALL_SYNCED": "✅ All secret files are configured in docker-compose.yml",
         "MISSING_HEADER": "⚠️  The following files are NOT configured in docker-compose.yml:",
         "MISSING_FOOTER": "These files are blocked in one or more AI settings but",
@@ -133,8 +133,8 @@ def get_messages(lang_ja: bool) -> dict:
         "ACTION1": "  Manually edit docker-compose.yml (on host OS)",
         "ACTION2": "  Or run: .sandbox/scripts/sync-secrets.py (in shell environment)",
         "ACTION3": "  If not secret: add pattern to .sandbox/config/sync-ignore",
-        "NO_DENY": "No file patterns in AI settings",
-        "NO_FILES": "No matching files found",
+        "NO_DENY": "✓ Secret sync: No file patterns in AI settings",
+        "NO_FILES": "✓ Secret sync: No matching files found",
         "QUIET_MISSING": "⚠️  %d files missing from docker-compose.yml",
         "SUMMARY_OK": "✓ Secret sync: all configured (%d checked, %d ignored)",
         "IGNORED_HEADER": "Ignored files (matched sync-ignore patterns):",
@@ -372,13 +372,13 @@ def main() -> None:
     # Check if settings file exists
     # 設定ファイルの存在確認
     if not CLAUDE_SETTINGS.is_file():
-        print_default(f"✓ Secret sync: {msgs['NO_SETTINGS']}", verbosity)
+        print_default(msgs['NO_SETTINGS'], verbosity)
         sys.exit(0)
 
     # Check if compose file exists
     # compose ファイルの存在確認
     if not COMPOSE_FILE.is_file():
-        print_default(f"✓ Secret sync: {msgs['NO_COMPOSE']}", verbosity)
+        print_default(msgs['NO_COMPOSE'], verbosity)
         sys.exit(0)
 
     # Get deny patterns from Claude settings
@@ -396,7 +396,7 @@ def main() -> None:
     patterns = sorted(set(claude_patterns) | set(gemini_patterns))
 
     if not patterns:
-        print_default(f"✓ Secret sync: {msgs['NO_DENY']}", verbosity)
+        print_default(msgs['NO_DENY'], verbosity)
         sys.exit(0)
 
     # Find all files matching deny patterns
@@ -407,7 +407,7 @@ def main() -> None:
     all_matching_files = sorted(all_matching)
 
     if not all_matching_files:
-        print_default(f"✓ Secret sync: {msgs['NO_FILES']}", verbosity)
+        print_default(msgs['NO_FILES'], verbosity)
         sys.exit(0)
 
     # Check which files are NOT in docker-compose.yml
