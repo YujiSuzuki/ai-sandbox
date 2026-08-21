@@ -381,6 +381,14 @@ If a sentence mixes both — history plus a live constraint (e.g. a warning agai
 
 The same "why did I just do this" reasoning being maximally active is just as likely to leak into the commit message itself, not only code comments — moving the narrative out of the comment doesn't automatically make it good commit-message content. A commit message should still state the rationale for the change directly (what changed, why it was needed now), not narrate the discovery process that led there. "Found and fixed X while testing Y" or "the fix learned during Z's earlier work" adds no information beyond just stating X — cut the discovery-journey framing and keep the fact.
 
+A separate failure mode from the narrative one above: a comment or commit message that only ever states durable, present-tense facts can still be too dense to parse, because several distinct claims get merged into one run-on sentence or paragraph instead of being separated. Watch for:
+
+- **Pre-justification embedded inline** — the claim and the defense of why it's designed this way (vs. some alternative) share one sentence, instead of being split so each can be read on its own (e.g. "requires both X and Y, since either alone would misfire on Z" crams a rule, a rejected alternative, and a counter-example into one clause).
+- **Counter-examples breaking up the main claim** — a parenthetical example is inserted mid-sentence rather than after the claim is finished, forcing the reader to hold the incomplete sentence in mind while parsing the example.
+- **Unstructured multi-condition prose** — two or more conditions, steps, or reasons are listed as flowing prose ("when A and B, or when C, unless D") instead of a short numbered/bulleted list, even though the code itself checks them as discrete conditions.
+
+The fix in each case is structural, not a search for more concise wording: separate the claim from its justification (state what, then why, as separate sentences or paragraphs), pull examples out to follow the claim rather than interrupt it, and turn enumerable conditions into a list that mirrors the code's own branches.
+
 `/ais-local-comment-review`'s Agent #4 (Whether It's Worth Having) checks for this.
 
 ---
