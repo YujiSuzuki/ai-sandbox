@@ -60,7 +60,7 @@ COLORTERM=truecolor       # Color output
 SANDBOX_MEMORY_LIMIT=4gb  # Container memory limit
 ```
 
-Note: `COMPOSE_PROJECT_NAME` has default values set within each startup script (`claude.sh` → `cli-claude`, `gemini.sh` → `cli-gemini`, etc.). Setting it in `.env` will override these defaults and apply the same project name across all scripts.
+Note: `COMPOSE_PROJECT_NAME` has default values set within each startup script (`claude.sh` → `cli-claude`, `gemini.sh` → `cli-gemini`, etc.). Unless overridden in `.env`, each script's default is further auto-suffixed with the workspace directory name, so different workspaces sharing this same `cli_sandbox/` template don't collide on the same named volume. Setting it in `.env` overrides both the per-script default and the auto-suffixing, applying the same project name across all scripts.
 
 ### SANDBOX_ENV
 
@@ -111,7 +111,7 @@ You can change `SANDBOX_MEMORY_LIMIT` and `SANDBOX_CPU_LIMIT` in `.env`.
 
 Credentials (`.claude.json`, `.claude/`, etc.) are stored in a named volume `cli-sandbox-home`. Different `COMPOSE_PROJECT_NAME` values result in different volumes, so the home directory is not shared between tools.
 
-To copy between volumes, use `.sandbox/host-tools/copy-credentials.sh`. See [docs/reference.md](../docs/reference.md#home-directory-exportimport) for details.
+To copy credentials between volumes manually, see [docs/reference.md](../docs/reference.md#home-directory-backup).
 
 ## Security Testing
 

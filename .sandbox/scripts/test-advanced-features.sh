@@ -9,11 +9,11 @@
 #     1. Custom HostMCP configuration / カスタムHostMCP設定
 #     2. Multiple HostMCP instances / 複数のHostMCPインスタンス
 #     3. Project name customization / プロジェクト名のカスタマイズ
-#     4. Multiple DevContainer instances / 複数DevContainer起動
+#     4. (unused — number intentionally skipped, sections 5+ keep their numbers)
 #   [Optional - requires flags / オプション - フラグ必須]
 #     5. Custom Config File Tests (--test-config)
 #     6. .env File Tests (--test-env)
-#     7. copy-credentials.sh Tests (--test-copy)
+#     7. (unused — number intentionally skipped, sections 8+ keep their numbers)
 #     8. Docker Volume Tests (--test-volume)
 #     9. Server Integration Tests (--all)
 #        9.1 Basic server tests (start, multiple instances)
@@ -79,7 +79,6 @@ RUN_ALL=false
 RUN_FULL=false
 TEST_CONFIG=false
 TEST_ENV=false
-TEST_COPY=false
 TEST_VOLUME=false
 DRY_RUN=false
 AUTO_YES=false
@@ -106,16 +105,16 @@ show_help() {
     echo "       複数HostMCPインスタンス         （3テスト）- 読み取り専用"
     echo "    3. Project Name Customization      (4 tests) - read-only"
     echo "       プロジェクト名カスタマイズ      （4テスト）- 読み取り専用"
-    echo "    4. Multiple DevContainer Instances (4 tests) - read-only"
-    echo "       複数DevContainer                （4テスト）- 読み取り専用"
+    echo "    4. (unused — number intentionally skipped)"
+    echo "       （未使用 — 番号は意図的に欠番）"
     echo ""
     echo "  [Optional - requires flags / オプション - フラグ必須]"
     echo "    5. Custom Config File Tests   (--test-config) - creates files"
     echo "       カスタム設定ファイルテスト                 - ファイル作成"
     echo "    6. .env File Tests            (--test-env)    - creates files"
     echo "       .envファイルテスト                         - ファイル作成"
-    echo "    7. copy-credentials.sh Tests  (--test-copy)   - creates temp files"
-    echo "       copy-credentials.shテスト                  - 一時ファイル作成"
+    echo "    7. (unused — number intentionally skipped)"
+    echo "       （未使用 — 番号は意図的に欠番）"
     echo "    8. Docker Volume Tests        (--test-volume) - requires Docker"
     echo "       Dockerボリュームテスト                     - Docker必須"
     echo "    9. Server Integration Tests   (--all)         - requires Docker"
@@ -145,9 +144,6 @@ show_help() {
     echo ""
     echo "  --test-env     Add section 6 (.env file tests)"
     echo "                 セクション6を追加（.envファイルテスト）"
-    echo ""
-    echo "  --test-copy    Add section 7 (copy-credentials.sh tests)"
-    echo "                 セクション7を追加（copy-credentials.shテスト）"
     echo ""
     echo "  --test-volume  Add section 8 (Docker volume tests, requires Docker)"
     echo "                 セクション8を追加（Dockerボリュームテスト、Docker必須）"
@@ -703,7 +699,7 @@ test_cli_sandbox_env_support() {
 
     # Check if .sh files set COMPOSE_PROJECT_NAME
     # 各 .sh ファイルが COMPOSE_PROJECT_NAME を設定しているか確認
-    # Pattern: ^COMPOSE_PROJECT_NAME= (see _common.sh for why this pattern)
+    # Pattern: ^COMPOSE_PROJECT_NAME= (must be at line start — this grep is what detects it below)
     local project_names
     project_names=$(grep -h "^COMPOSE_PROJECT_NAME=" "$CLI_SANDBOX_DIR"/*.sh 2>/dev/null | \
                     sed 's/COMPOSE_PROJECT_NAME=//' | sort -u)
@@ -755,7 +751,7 @@ test_cli_sandbox_project_isolation() {
         return
     fi
 
-    # Pattern: ^COMPOSE_PROJECT_NAME= (see _common.sh for why this pattern)
+    # Pattern: ^COMPOSE_PROJECT_NAME= (must be at line start — this grep is what detects it below)
     local project_names
     project_names=$(grep -h "^COMPOSE_PROJECT_NAME=" "$CLI_SANDBOX_DIR"/*.sh 2>/dev/null | \
                     sed 's/COMPOSE_PROJECT_NAME=//' | sort)
@@ -777,92 +773,80 @@ test_cli_sandbox_project_isolation() {
     fi
 }
 
+test_cli_sandbox_auto_isolation() {
+    info "cli_sandbox/_common.sh auto-isolates COMPOSE_PROJECT_NAME per workspace directory"
+
+    local common_sh="$CLI_SANDBOX_DIR/_common.sh"
+    if [ ! -f "$common_sh" ]; then
+        skip "cli_sandbox/_common.sh not found"
+        return
+    fi
+
+    # Actually source _common.sh from a throwaway workspace (with a stub
+    # cli_sandbox/docker-compose.yml so its directory check passes) so this test
+    # exercises the real auto-isolation code path rather than reimplementing it.
+    # 実際に使い捨てのワークスペースから _common.sh を source し（ディレクトリ
+    # チェックを通すためのスタブ cli_sandbox/docker-compose.yml を用意）、
+    # 自動分離ロジックの再実装ではなく実際のコードパスを検証する。
+    resolve_project_name_for() {
+        local workspace_name="$1"
+        local base_dir
+        base_dir=$(mktemp -d)
+        local workspace_dir="$base_dir/$workspace_name"
+        mkdir -p "$workspace_dir/cli_sandbox"
+        touch "$workspace_dir/cli_sandbox/docker-compose.yml"
+        (
+            cd "$workspace_dir" || exit 1
+            SCRIPT_NAME="claude.sh"
+            COMPOSE_PROJECT_NAME="cli-claude"
+            SANDBOX_ENV="cli_claude"
+            # shellcheck disable=SC1090
+            source "$common_sh" >/dev/null 2>&1
+            echo "$COMPOSE_PROJECT_NAME"
+        )
+        rm -rf "$base_dir"
+    }
+
+    local suffix_space suffix_dot suffix_ja
+    suffix_space=$(resolve_project_name_for "my project")
+    suffix_dot=$(resolve_project_name_for "my.project")
+    suffix_ja=$(resolve_project_name_for "日本語プロジェクト")
+
+    local all_ok=true
+
+    if [ "$suffix_space" = "cli-claude" ] || [ "$suffix_dot" = "cli-claude" ] || [ "$suffix_ja" = "cli-claude" ]; then
+        fail "COMPOSE_PROJECT_NAME was left unsuffixed for at least one workspace name"
+        all_ok=false
+    fi
+
+    if [ "$suffix_space" = "$suffix_dot" ]; then
+        fail "\"my project\" and \"my.project\" collided on the same COMPOSE_PROJECT_NAME ($suffix_space)"
+        all_ok=false
+    fi
+
+    if [ -z "$suffix_ja" ] || [ "$suffix_ja" = "cli-claude-" ]; then
+        fail "All-non-ASCII workspace name produced an empty/degenerate suffix ($suffix_ja)"
+        all_ok=false
+    fi
+
+    if $all_ok; then
+        pass "COMPOSE_PROJECT_NAME suffix stays unique across space/dot/non-ASCII workspace names"
+    fi
+
+    unset -f resolve_project_name_for
+}
+
 ###############################################################################
-# Section 4: Multiple DevContainer Instances Tests
-# 複数DevContainer起動のテスト
+# Section 4: (unused — number intentionally skipped, sections 5+ keep their numbers)
+# セクション4: （未使用 — 番号は意図的に欠番、5以降の番号はそのまま）
 ###############################################################################
-
-test_copy_credentials_script_exists() {
-    info "copy-credentials.sh script exists"
-
-    if [ -f "$SCRIPT_DIR/../host-tools/copy-credentials.sh" ]; then
-        pass "copy-credentials.sh exists"
-    else
-        fail "copy-credentials.sh not found"
-    fi
-}
-
-test_copy_credentials_help() {
-    info "copy-credentials.sh shows help"
-
-    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
-
-    if [ ! -f "$script" ]; then
-        skip "copy-credentials.sh not found"
-        return
-    fi
-
-    local output
-    output=$(bash "$script" --help 2>&1)
-
-    if echo "$output" | grep -q "Usage"; then
-        pass "copy-credentials.sh --help shows usage"
-    else
-        fail "copy-credentials.sh --help should show usage"
-    fi
-}
-
-test_copy_credentials_export_import() {
-    info "copy-credentials.sh supports --export and --import"
-
-    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
-
-    if [ ! -f "$script" ]; then
-        skip "copy-credentials.sh not found"
-        return
-    fi
-
-    local help_output
-    help_output=$(bash "$script" --help 2>&1)
-
-    if echo "$help_output" | grep -q "\-\-export" && echo "$help_output" | grep -q "\-\-import"; then
-        pass "copy-credentials.sh supports --export and --import"
-    else
-        fail "copy-credentials.sh should support --export and --import"
-    fi
-}
-
-test_copy_credentials_workspace_mode() {
-    info "copy-credentials.sh supports workspace mode"
-
-    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
-
-    if [ ! -f "$script" ]; then
-        skip "copy-credentials.sh not found"
-        return
-    fi
-
-    local help_output
-    help_output=$(bash "$script" --help 2>&1)
-
-    if echo "$help_output" | grep -qi "workspace"; then
-        pass "copy-credentials.sh supports workspace mode"
-    else
-        # Check script content
-        if grep -q "workspace" "$script"; then
-            pass "copy-credentials.sh has workspace support in code"
-        else
-            fail "copy-credentials.sh should support workspace mode"
-        fi
-    fi
-}
 
 ###############################################################################
 # Sections 5-7: File Creation/Deletion Tests
 # セクション5-7: ファイル作成/削除テスト
 #   5. Custom Config File Tests (--test-config)
 #   6. .env File Tests (--test-env)
-#   7. copy-credentials.sh Tests (--test-copy)
+#   7. (unused — number intentionally skipped, sections 8+ keep their numbers)
 ###############################################################################
 
 # Cleanup function for temporary files
@@ -1016,100 +1000,6 @@ test_env_file_multiple_projects() {
 
     # Cleanup
     cleanup_temp_files "${cleanup_files[@]}"
-}
-
-test_copy_credentials_export_dry_run() {
-    info "[File Test] copy-credentials.sh export (dry run validation)"
-
-    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
-    local test_backup="/tmp/test-backup-$$"
-    local cleanup_files=("$test_backup")
-
-    if [ ! -f "$script" ]; then
-        skip "copy-credentials.sh not found"
-        return
-    fi
-
-    # Test with a non-existent source (should fail gracefully)
-    local output
-    output=$(bash "$script" --export /nonexistent/path "$test_backup" 2>&1) || true
-
-    if echo "$output" | grep -q "Cannot find docker-compose.yml"; then
-        pass "copy-credentials.sh validates source path correctly"
-    else
-        fail "copy-credentials.sh should validate source path"
-        echo "  Output: $output"
-    fi
-
-    # Cleanup (backup dir shouldn't be created on failure)
-    cleanup_temp_files "${cleanup_files[@]}"
-}
-
-test_copy_credentials_backup_structure() {
-    info "[File Test] copy-credentials.sh creates correct backup structure (new format)"
-
-    local test_backup="/tmp/test-backup-structure-$$"
-    local cleanup_files=("$test_backup")
-
-    # Create expected backup structure (new format with multi-project cli_sandbox)
-    # 新しい形式（マルチプロジェクト cli_sandbox）のバックアップ構造を作成
-    mkdir -p "$test_backup/devcontainer/home"
-    mkdir -p "$test_backup/devcontainer/gcloud"
-    mkdir -p "$test_backup/cli_sandbox/cli-claude/home"
-    mkdir -p "$test_backup/cli_sandbox/cli-gemini/home"
-    mkdir -p "$test_backup/cli_sandbox/cli-ai-sandbox/home"
-
-    # Create dummy files
-    echo "test" > "$test_backup/devcontainer/home/.bashrc"
-    echo "claude" > "$test_backup/cli_sandbox/cli-claude/home/.bashrc"
-    echo "gemini" > "$test_backup/cli_sandbox/cli-gemini/home/.bashrc"
-    echo "sandbox" > "$test_backup/cli_sandbox/cli-ai-sandbox/home/.bashrc"
-
-    # Verify structure
-    if [ -d "$test_backup/devcontainer/home" ] && \
-       [ -d "$test_backup/cli_sandbox/cli-claude/home" ] && \
-       [ -d "$test_backup/cli_sandbox/cli-gemini/home" ] && \
-       [ -d "$test_backup/cli_sandbox/cli-ai-sandbox/home" ]; then
-        pass "Backup directory structure created correctly (new format)"
-        echo "  Structure:"
-        echo "    $test_backup/"
-        echo "    ├── devcontainer/"
-        echo "    │   └── home/"
-        echo "    └── cli_sandbox/"
-        echo "        ├── cli-claude/"
-        echo "        │   └── home/"
-        echo "        ├── cli-gemini/"
-        echo "        │   └── home/"
-        echo "        └── cli-ai-sandbox/"
-        echo "            └── home/"
-    else
-        fail "Backup directory structure is incorrect"
-    fi
-
-    # Cleanup
-    cleanup_temp_files "${cleanup_files[@]}"
-}
-
-test_copy_credentials_import_validation() {
-    info "[File Test] copy-credentials.sh import validates backup path"
-
-    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
-
-    if [ ! -f "$script" ]; then
-        skip "copy-credentials.sh not found"
-        return
-    fi
-
-    # Test with non-existent backup directory
-    local output
-    output=$(bash "$script" --import /nonexistent/backup "$WORKSPACE_DIR" 2>&1) || true
-
-    if echo "$output" | grep -q "Backup directory not found"; then
-        pass "copy-credentials.sh validates backup directory exists"
-    else
-        fail "copy-credentials.sh should validate backup directory"
-        echo "  Output: $output"
-    fi
 }
 
 ###############################################################################
@@ -1271,7 +1161,7 @@ test_volume_copy_between_volumes() {
         echo 'nested' > /data/subdir/nested.txt
     " 2>/dev/null
 
-    # Copy from source to destination (similar to copy-credentials.sh logic)
+    # Copy from source to destination
     docker run --rm \
         -v "${src_vol}:/source:ro" \
         -v "${dst_vol}:/target" \
@@ -1301,7 +1191,7 @@ test_volume_copy_between_volumes() {
 }
 
 test_volume_export_import_simulation() {
-    info "[Volume Test] Simulate copy-credentials.sh export/import flow"
+    info "[Volume Test] Simulate volume export/import flow"
 
     if ! has_docker; then
         skip "Docker not available"
@@ -1337,7 +1227,7 @@ test_volume_export_import_simulation() {
         echo 'cache data' > /home/node/.cache/temp
     " 2>/dev/null
 
-    # Export (similar to copy-credentials.sh --export)
+    # Export
     mkdir -p "$backup_dir/home"
     track_file "$backup_dir"
     docker run --rm \
@@ -2198,7 +2088,6 @@ main() {
                 RUN_ALL=true
                 TEST_CONFIG=true
                 TEST_ENV=true
-                TEST_COPY=true
                 TEST_VOLUME=true
                 shift
                 ;;
@@ -2208,10 +2097,6 @@ main() {
                 ;;
             --test-env)
                 TEST_ENV=true
-                shift
-                ;;
-            --test-copy)
-                TEST_COPY=true
                 shift
                 ;;
             --test-volume)
@@ -2310,12 +2195,10 @@ main() {
     test_cli_sandbox_env_support
     test_cli_sandbox_multi_project
     test_cli_sandbox_project_isolation
+    test_cli_sandbox_auto_isolation
 
-    section "4. Multiple DevContainer Instances / 複数DevContainer"
-    test_copy_credentials_script_exists
-    test_copy_credentials_help
-    test_copy_credentials_export_import
-    test_copy_credentials_workspace_mode
+    # Section 4: (unused — number intentionally skipped, sections 5+ keep their numbers)
+    # セクション4: （未使用 — 番号は意図的に欠番、5以降の番号はそのまま）
 
     # File creation/deletion tests (require confirmation)
     # ファイル作成/削除テスト（確認が必要）
@@ -2347,20 +2230,8 @@ main() {
         fi
     fi
 
-    if [ "$TEST_COPY" = "true" ]; then
-        if confirm_section "7" "copy-credentials.sh Tests / copy-credentials.shテスト" \
-            "Creates temporary backup directories in /tmp (test-backup-*)" \
-            "/tmp に一時バックアップディレクトリを作成（test-backup-*）" \
-            "Low - Only creates temp files, no Docker operations" \
-            "低 - 一時ファイルのみ作成、Docker操作なし" \
-            "Delete manually if needed: rm -rf /tmp/test-backup-*" \
-            "必要なら手動で削除: rm -rf /tmp/test-backup-*"; then
-            section "7. copy-credentials.sh Tests / copy-credentials.shテスト"
-            test_copy_credentials_export_dry_run
-            test_copy_credentials_backup_structure
-            test_copy_credentials_import_validation
-        fi
-    fi
+    # Section 7: (unused — number intentionally skipped, sections 8+ keep their numbers)
+    # セクション7: （未使用 — 番号は意図的に欠番、8以降の番号はそのまま）
 
     # Docker volume tests (requires Docker)
     if [ "$TEST_VOLUME" = "true" ]; then

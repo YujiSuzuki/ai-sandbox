@@ -108,7 +108,6 @@ A tool that regularly needs more time than the global `timeout` (e.g. `xcode-tes
 
 | Tool | Description |
 |------|-------------|
-| `copy-credentials.sh` | Copy home directory between DevContainer projects |
 | `mac-memory.sh` | macOS memory usage report |
 | `run-host-setup-tests.sh` | Run `.sandbox/host-setup/test-*.sh` suites on the host OS |
 | `xcode-build.sh` / `xcode-test.sh` / `xcode-archive.sh` / `xcode-install-app.sh` | Xcode build / test / archive / install to a fixed directory (macOS only) |

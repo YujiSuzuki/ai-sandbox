@@ -39,7 +39,6 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 | `xcode-test.sh` | Xcode テスト実行 | macOS のみ |
 | `xcode-archive.sh` | Xcode アーカイブ（TestFlight / App Store 提出用） | macOS のみ |
 | `xcode-install-app.sh` | ビルドして .app を固定ディレクトリ（デフォルト: `~/.hostmcp/Applications`）にコピー | macOS のみ |
-| `copy-credentials.sh` | 認証情報のコピー | クロスプラットフォーム |
 | `mac-memory.sh` | macOS メモリ使用状況確認 | macOS のみ |
 | `run-host-setup-tests.sh` | `.sandbox/host-setup/test-*.sh` を全件(または `--test-script` で1件)実行 | クロスプラットフォーム |
 | `docker-compose-up.sh` | 任意の docker-compose ファイルからコンテナを起動 | クロスプラットフォーム |
@@ -164,20 +163,6 @@ UI テストは `--no-skip-ui-tests` を付けると実行されます（デフ�
 ```
 
 コンテナ内から Read ツールで直接読めます。
-
----
-
-## copy-credentials.sh
-
-`docker-compose.yml` を元に、DevContainerプロジェクト間でホームディレクトリ（認証情報・設定・履歴）をエクスポート/インポートします。クロスプラットフォームで動作します。
-
-```bash
-# 現在のワークスペースのホームディレクトリをバックアップ先にエクスポート
-./copy-credentials.sh --export /path/to/workspace ~/backup
-
-# 別のワークスペースにインポート
-./copy-credentials.sh --import ~/backup /path/to/other-workspace
-```
 
 ---
 

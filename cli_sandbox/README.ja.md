@@ -60,7 +60,7 @@ COLORTERM=truecolor       # カラー出力
 SANDBOX_MEMORY_LIMIT=4gb  # コンテナのメモリ上限
 ```
 
-注意： `COMPOSE_PROJECT_NAME` は各起動スクリプト内でデフォルト値が設定されています（`claude.sh` → `cli-claude`、`gemini.sh` → `cli-gemini` 等）。`.env` で設定すると上書きされ、全スクリプトで同じプロジェクト名が使われます
+注意： `COMPOSE_PROJECT_NAME` は各起動スクリプト内でデフォルト値が設定されています（`claude.sh` → `cli-claude`、`gemini.sh` → `cli-gemini` 等）。`.env` で上書きしない限り、各スクリプトのデフォルト値にはさらにワークスペースディレクトリ名が自動的にサフィックスとして付加されるため、同じ `cli_sandbox/` テンプレートを使う別のワークスペース同士が同じ名前付きボリュームで衝突することはありません。`.env` で設定すると、このデフォルト値と自動サフィックスの両方が上書きされ、全スクリプトで同じプロジェクト名が使われます
 
 ### SANDBOX_ENV
 
@@ -111,7 +111,7 @@ deploy:
 
 認証情報（`.claude.json`、`.claude/` 等）は名前付きボリューム `cli-sandbox-home` に保存されます。`COMPOSE_PROJECT_NAME` が異なると別のボリュームになるため、ツール間でホームディレクトリは共有されません。
 
-ボリューム間のコピーが必要な場合は `.sandbox/host-tools/copy-credentials.sh` を使えます。詳細は [docs/reference.ja.md](../docs/reference.ja.md#ホームディレクトリのエクスポートインポート) を参照してください。
+ボリューム間で手動コピーする方法は [docs/reference.ja.md](../docs/reference.ja.md#ホームディレクトリのバックアップ) を参照してください。
 
 ## セキュリティテスト
 

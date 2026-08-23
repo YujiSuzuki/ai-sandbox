@@ -12,12 +12,25 @@
 #   COMPOSE_PROJECT_NAME - Docker Compose project name (e.g., "cli-claude")
 #   SANDBOX_ENV          - Sandbox environment name (e.g., "cli_claude")
 #
-# NOTE: COMPOSE_PROJECT_NAME must be set as "COMPOSE_PROJECT_NAME=value" at line start.
-#       copy-credentials.sh detects projects by searching "^COMPOSE_PROJECT_NAME=" pattern.
-#       Do NOT use default value syntax like "${VAR:-default}" in this file.
-# 注意: COMPOSE_PROJECT_NAME は行頭で "COMPOSE_PROJECT_NAME=値" の形式で設定すること。
-#       copy-credentials.sh が "^COMPOSE_PROJECT_NAME=" パターンでプロジェクトを検出するため。
-#       このファイルで "${VAR:-default}" のようなデフォルト値構文を使用しないこと。
+# NOTE: Below, COMPOSE_PROJECT_NAME is auto-suffixed with the workspace directory
+#       name (unless overridden via cli_sandbox/.env) so that different workspaces
+#       sharing this same cli_sandbox/ template don't collide on the same named
+#       volume. See the auto-isolation block below.
+# 注意: 下記で、COMPOSE_PROJECT_NAME にはワークスペースディレクトリ名が自動的に
+#       サフィックスとして付加されます（cli_sandbox/.env で上書きされている場合を除く）。
+#       これは、同じ cli_sandbox/ テンプレートを使う別のワークスペース同士が、
+#       同じ名前付きボリュームで衝突しないようにするためです。下記の自動分離ブロックを参照。
+#
+# NOTE: claude.sh / gemini.sh / ai_sandbox.sh must set COMPOSE_PROJECT_NAME as
+#       `COMPOSE_PROJECT_NAME=value` at line start — no default-value syntax like
+#       `${VAR:-default}`. .sandbox/scripts/test-advanced-features.sh detects each
+#       script's project name via `grep "^COMPOSE_PROJECT_NAME="`, which only
+#       matches a literal, unindented assignment.
+# 注意: claude.sh / gemini.sh / ai_sandbox.sh では、COMPOSE_PROJECT_NAME を
+#       `COMPOSE_PROJECT_NAME=value` の形で行頭に設定すること。`${VAR:-default}`
+#       のようなデフォルト値構文は使わない。.sandbox/scripts/test-advanced-features.sh
+#       が `grep "^COMPOSE_PROJECT_NAME="` で各スクリプトのプロジェクト名を検出しており、
+#       行頭のリテラルな代入でなければマッチしない。
 
 # Validate required variables
 # 必須変数の検証
@@ -42,6 +55,7 @@ fi
 
 # Export environment variables
 # 環境変数をエクスポート
+_default_compose_project_name="$COMPOSE_PROJECT_NAME"
 export COMPOSE_PROJECT_NAME
 export SANDBOX_ENV
 
@@ -103,6 +117,40 @@ fi
 if [ -f cli_sandbox/.env ]; then
     set -a && source cli_sandbox/.env && set +a
 fi
+
+# Auto-isolate COMPOSE_PROJECT_NAME per workspace, unless cli_sandbox/.env overrode
+# it above. Without this, COMPOSE_PROJECT_NAME is fixed per script (e.g. always
+# "cli-claude"), so two different workspaces both using claude.sh would collide
+# on the same named volume (cli-claude_cli-sandbox-home), silently sharing one
+# home directory (credentials, go/bin, shell history) across unrelated projects.
+# .envで上書きされていない場合に限り、COMPOSE_PROJECT_NAMEをワークスペースごとに
+# 自動分離する。これがないと COMPOSE_PROJECT_NAME はスクリプトごとに固定（例: 常に
+# "cli-claude"）なので、claude.sh を使う別々のワークスペースが同じ名前付きボリューム
+# （cli-claude_cli-sandbox-home）に衝突し、無関係なプロジェクト間でホームディレクトリ
+# （認証情報、go/bin、シェル履歴）が黙って共有されてしまう。
+if [ "$COMPOSE_PROJECT_NAME" = "$_default_compose_project_name" ]; then
+    # A readable sanitized name alone isn't collision-proof: different names can
+    # sanitize to the same string (e.g. "my project" and "my.project" both become
+    # "my-project"), and an all-non-ASCII name (e.g. an all-Japanese directory)
+    # sanitizes to an empty string. A checksum of the untouched path is appended
+    # (or used alone, when sanitization yields nothing) so the suffix stays unique
+    # regardless of what characters the workspace directory name contains.
+    # 読みやすいサニタイズ済み名だけでは衝突を防げない。異なる名前が同じ文字列に
+    # サニタイズされうる（例: "my project" と "my.project" はどちらも "my-project"
+    # になる）うえ、全角文字のみの名前（日本語ディレクトリ名等）はサニタイズ後に
+    # 空文字になる。そのため、元のパスのチェックサムを付加（サニタイズ結果が空の
+    # 場合はチェックサムのみを使用）し、ディレクトリ名に含まれる文字種に関わらず
+    # サフィックスの一意性を保つ。
+    _workspace_sanitized=$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9_-]/-/g' -e 's/-\{2,\}/-/g' -e 's/^-//' -e 's/-$//')
+    _workspace_hash=$(pwd | cksum | cut -d' ' -f1)
+    if [ -n "$_workspace_sanitized" ]; then
+        _workspace_suffix="${_workspace_sanitized}-${_workspace_hash}"
+    else
+        _workspace_suffix="$_workspace_hash"
+    fi
+    COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME}-${_workspace_suffix}"
+fi
+unset _default_compose_project_name _workspace_suffix _workspace_sanitized _workspace_hash
 
 # Run startup scripts
 # 起動時スクリプトを実行

@@ -196,28 +196,14 @@ volumes:
 - ホストのディレクトリ構造に依存
 - Linuxホストでは UID/GID の調整が必要な場合あり
 
-### ホームディレクトリのエクスポート/インポート
+### ホームディレクトリのバックアップ
 
-ホームディレクトリ（認証情報・設定・履歴）をバックアップまたは別のワークスペースに移行できます：
+名前付きボリュームのホームディレクトリ（認証情報・設定・履歴）を手動でバックアップ/移行するには：
 
 ```bash
-# ワークスペース全体をエクスポート（devcontainer と cli_sandbox の両方）
-./.sandbox/host-tools/copy-credentials.sh --export /path/to/workspace ~/backup
-
-# 特定の docker-compose.yml からエクスポート
-./.sandbox/host-tools/copy-credentials.sh --export .devcontainer/docker-compose.yml ~/backup
-
-# ワークスペースにインポート
-./.sandbox/host-tools/copy-credentials.sh --import ~/backup /path/to/workspace
+docker run --rm -v <volume名>:/data -v ~/backup:/backup alpine \
+  tar czf /backup/home.tar.gz -C /data .
 ```
-
-**注意:** インポート先のボリュームが存在しない場合、先に環境を一度起動してボリュームを作成する必要があります。
-
-用途：
-- `~/.claude/` の使用量データを確認
-- 設定のバックアップ
-- 新しいワークスペースへの認証情報の移行
-- トラブルシューティング
 
 </details>
 

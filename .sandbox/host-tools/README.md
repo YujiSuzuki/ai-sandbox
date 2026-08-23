@@ -39,7 +39,6 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `xcode-test.sh` | Xcode test runner | macOS only |
 | `xcode-archive.sh` | Xcode archive (for TestFlight / App Store submission) | macOS only |
 | `xcode-install-app.sh` | Build and copy the resulting .app to a fixed directory (default: `~/.hostmcp/Applications`) | macOS only |
-| `copy-credentials.sh` | Copy credentials | Cross-platform |
 | `mac-memory.sh` | macOS memory usage report | macOS only |
 | `run-host-setup-tests.sh` | Run all (or one, via `--test-script`) `.sandbox/host-setup/test-*.sh` files | Cross-platform |
 | `docker-compose-up.sh` | Start containers from any docker-compose file | Cross-platform |
@@ -164,20 +163,6 @@ Full output per suite is also saved to:
 ```
 
 Readable from inside the container with the Read tool.
-
----
-
-## copy-credentials.sh
-
-Exports or imports the home directory (credentials, settings, history) between DevContainer projects, based on `docker-compose.yml`. Works cross-platform.
-
-```bash
-# Export the current workspace's home directory to a backup path
-./copy-credentials.sh --export /path/to/workspace ~/backup
-
-# Import it back into another workspace
-./copy-credentials.sh --import ~/backup /path/to/other-workspace
-```
 
 ---
 

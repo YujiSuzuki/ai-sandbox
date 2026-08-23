@@ -196,28 +196,14 @@ volumes:
 - Depends on host directory structure
 - May need UID/GID adjustments on Linux hosts
 
-### Home Directory Export/Import
+### Home Directory Backup
 
-You can backup or migrate the home directory (credentials, settings, history):
+To back up or migrate a named volume's home directory (credentials, settings, history) manually:
 
 ```bash
-# Export entire workspace (both devcontainer and cli_sandbox)
-./.sandbox/host-tools/copy-credentials.sh --export /path/to/workspace ~/backup
-
-# Export from specific docker-compose.yml
-./.sandbox/host-tools/copy-credentials.sh --export .devcontainer/docker-compose.yml ~/backup
-
-# Import to workspace
-./.sandbox/host-tools/copy-credentials.sh --import ~/backup /path/to/workspace
+docker run --rm -v <volume-name>:/data -v ~/backup:/backup alpine \
+  tar czf /backup/home.tar.gz -C /data .
 ```
-
-**Note:** If target volumes don't exist, start the environment once first to create them.
-
-Use cases:
-- Check `~/.claude/` usage data
-- Backup settings
-- Migrate credentials to a new workspace
-- Troubleshooting
 
 </details>
 

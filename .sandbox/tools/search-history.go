@@ -19,9 +19,11 @@
 //   -after/-before filter by message timestamps (not session start), so they work with -list and -session too.
 //
 //   -dir merges an additional JSONL directory with the default ~/.claude/projects/ data.
-//   Useful for combining data from multiple Sandbox environments. Export data with
-//   .sandbox/host-tools/copy-credentials.sh --export. Duplicate session IDs are skipped
-//   (the first occurrence, typically from ~/.claude, takes priority).
+//   Useful for combining data from multiple Sandbox environments — copy the other
+//   environment's ~/.claude/projects/ out of its named volume first (e.g. via
+//   `docker run --rm -v <volume>:/data -v ~/backup:/backup alpine tar czf ...`).
+//   Duplicate session IDs are skipped (the first occurrence, typically from
+//   ~/.claude, takes priority).
 //
 // Examples:
 //   go run .sandbox/tools/search-history.go "DockMCP"
@@ -73,8 +75,9 @@
 //
 // -dir オプション:
 //   通常の ~/.claude/projects/ に加えて、別ディレクトリの JSONL も統合して分析できる。
-//   複数の Sandbox 環境のデータを横断的に集計したい場合に便利。
-//   データのエクスポートには .sandbox/host-tools/copy-credentials.sh --export を使用する。
+//   複数の Sandbox 環境のデータを横断的に集計したい場合に便利。他環境の
+//   ~/.claude/projects/ は、名前付きボリュームから事前にコピーしておく
+//   （例: `docker run --rm -v <ボリューム名>:/data -v ~/backup:/backup alpine tar czf ...`）。
 //   同一セッションID が重複する場合は、先に見つかった方（通常 ~/.claude 側）が優先される。
 
 package main

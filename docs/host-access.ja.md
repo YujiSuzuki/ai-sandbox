@@ -109,7 +109,6 @@ host_access:
 
 | ツール | 説明 |
 |--------|------|
-| `copy-credentials.sh` | DevContainer プロジェクト間でホームディレクトリをコピー |
 | `mac-memory.sh` | macOS のメモリ使用状況レポート |
 | `run-host-setup-tests.sh` | ホストOS上で `.sandbox/host-setup/test-*.sh` を実行 |
 | `xcode-build.sh` / `xcode-test.sh` / `xcode-archive.sh` / `xcode-install-app.sh` | Xcode のビルド・テスト・アーカイブ・固定ディレクトリへのインストール（macOS専用） |

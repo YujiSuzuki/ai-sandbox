@@ -448,7 +448,6 @@ A specific bash 3.2 pitfall: a bare `$var` immediately followed by a non-ASCII c
 │   │   ├── init-host-env.sh          # Host-side init: language/timezone, env files, host OS info
 │   │   └── install-hostmcp.sh        # HostMCP install/config/update wizard
 │   ├── host-tools/            # 🖥️ Host-only tool scripts
-│   │   ├── copy-credentials.sh       # Export/Import home directory
 │   │   ├── mac-memory.sh             # macOS memory usage check
 │   │   ├── xcode-build.sh            # Xcode build (syntax check)
 │   │   ├── xcode-test.sh             # Xcode test runner
@@ -504,13 +503,7 @@ echo $SANDBOX_ENV
 
 Use `COMPOSE_PROJECT_NAME` for isolated instances. Different names create separate volumes (home directory not shared automatically).
 
-Copy home directory between projects:
-```bash
-./.sandbox/host-tools/copy-credentials.sh --export /path/to/workspace ~/backup
-./.sandbox/host-tools/copy-credentials.sh --import ~/backup /path/to/workspace
-```
-
-See [docs/reference.md](reference.md) → "Running Multiple DevContainers" for details.
+See [docs/reference.md](reference.md) → "Running Multiple DevContainers" for details on isolating and backing up home directories.
 
 ---
 
