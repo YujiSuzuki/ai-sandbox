@@ -189,9 +189,11 @@ UI テストは `--no-skip-ui-tests` を付けると実行されます（デフ�
 
 # -- の後に docker compose の追加オプションを渡せる
 ./docker-compose-up.sh ./docker-compose.yml -- --build
-./docker-compose-down.sh ./docker-compose.yml -- --volumes
+./docker-compose-down.sh ./docker-compose.yml -- --remove-orphans
 ./docker-compose-build.sh ./docker-compose.yml -- --no-cache
 ```
+
+`docker-compose-down.sh` は破壊的なフラグ（`-v`/`--volumes`, `--rmi`）を拒否します — コンテナの停止/削除のみを行い、ボリュームやイメージは削除しません。
 
 HostMCP の `run_host_tool` 経由で実行されるため、Docker ソケットへのアクセスがない
 AI Sandbox 内からでも、ユーザーに `docker compose` の手動実行を頼まずにコンテナの

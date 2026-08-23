@@ -189,9 +189,11 @@ These are sample scripts — a working starting point, not a full solution for e
 
 # Extra docker compose flags after --
 ./docker-compose-up.sh ./docker-compose.yml -- --build
-./docker-compose-down.sh ./docker-compose.yml -- --volumes
+./docker-compose-down.sh ./docker-compose.yml -- --remove-orphans
 ./docker-compose-build.sh ./docker-compose.yml -- --no-cache
 ```
+
+`docker-compose-down.sh` rejects destructive flags (`-v`/`--volumes`, `--rmi`) — it only stops/removes containers, never volumes or images.
 
 Since these run through HostMCP's `run_host_tool`, you can start/stop/build containers
 from inside the AI Sandbox even without Docker socket access — no need to ask the user
