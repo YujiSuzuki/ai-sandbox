@@ -10,7 +10,6 @@
 #   --project <path>         Path to the .xcodeproj (auto-detected under WORKSPACE_DIR if omitted)
 #   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
 #   --destination <dest>     xcodebuild destination (default: iOS Simulator, latest iPhone)
-#   --workspace <path>       Workspace root path (if not auto-detected via .project)
 #   --help, -h               Show this help
 #
 # Examples:
@@ -30,7 +29,6 @@
 #   --project <path>         .xcodeproj のパス（未指定時は WORKSPACE_DIR 内を自動検出）
 #   --scheme <scheme>        Xcode スキーム名（デフォルト: .xcodeproj のベース名）
 #   --destination <dest>     xcodebuild destination（デフォルト: iOS Simulator, 最新 iPhone）
-#   --workspace <path>       ワークスペースルートパス（.project で自動取得できない場合）
 #   --help, -h               このヘルプを表示
 #
 # Examples:
@@ -88,9 +86,6 @@ while [[ $# -gt 0 ]]; do
         --destination)
             [[ $# -lt 2 ]] && { error "--destination requires an argument"; exit 1; }
             DESTINATION="$2"; shift 2 ;;
-        --workspace)
-            [[ $# -lt 2 ]] && { error "--workspace requires an argument"; exit 1; }
-            WORKSPACE_DIR="$2"; shift 2 ;;
         --help|-h)
             show_help ;;
         *)
@@ -101,7 +96,7 @@ done
 # Resolve the workspace path / ワークスペースパスの確定
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
-    error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
+    error ".project ファイルが存在するか確認してください。"
     exit 1
 fi
 

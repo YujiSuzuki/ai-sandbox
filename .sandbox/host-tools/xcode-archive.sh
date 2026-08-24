@@ -12,7 +12,6 @@
 #   --project <path>         Path to the .xcodeproj (auto-detected under WORKSPACE_DIR if omitted)
 #   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
 #   --archive-path <path>    Output path for the .xcarchive (default: ~/Library/Developer/Xcode/Archives/<date>/<Scheme> <date>.xcarchive)
-#   --workspace <path>       Workspace root path (if not auto-detected via .project)
 #   --help, -h               Show this help
 #
 # After completion:
@@ -37,7 +36,6 @@
 #   --project <path>         .xcodeproj のパス（未指定時は WORKSPACE_DIR 内を自動検出）
 #   --scheme <scheme>        Xcode スキーム名（デフォルト: .xcodeproj のベース名）
 #   --archive-path <path>    .xcarchive の出力先（デフォルト: ~/Library/Developer/Xcode/Archives/<date>/<Scheme> <date>.xcarchive）
-#   --workspace <path>       ワークスペースルートパス（.project で自動取得できない場合）
 #   --help, -h               このヘルプを表示
 #
 # 完了後:
@@ -99,9 +97,6 @@ while [[ $# -gt 0 ]]; do
         --archive-path)
             [[ $# -lt 2 ]] && { error "--archive-path requires an argument"; exit 1; }
             ARCHIVE_PATH="$2"; shift 2 ;;
-        --workspace)
-            [[ $# -lt 2 ]] && { error "--workspace requires an argument"; exit 1; }
-            WORKSPACE_DIR="$2"; shift 2 ;;
         --help|-h)
             show_help ;;
         *)
@@ -112,7 +107,7 @@ done
 # Resolve the workspace path / ワークスペースパスの確定
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
-    error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
+    error ".project ファイルが存在するか確認してください。"
     exit 1
 fi
 

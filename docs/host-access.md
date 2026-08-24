@@ -82,7 +82,7 @@ Only the approved copy is executed. If the staging version changes, `hostmcp too
 `.project` is a JSON file (`{"workspace": "<absolute host path>"}`) written into each `<project-id>/` directory. It exists because approved tools run from `~/.hostmcp/host-tools/<project-id>/` on the host OS — a location outside the container's `/workspace` mount — so a tool has no built-in way to know which workspace it belongs to, especially when multiple AI Sandbox projects are approved on the same host.
 
 - **Written by:** `hostmcp tools sync`, every time it runs (even when no tool content changed) — it's rewritten alongside the approved-directory setup, before any tool comparison happens.
-- **Read by:** tools that accept a `--workspace <path>` option (e.g. `xcode-build.sh`, `xcode-test.sh`, `xcode-archive.sh`, `xcode-install-app.sh`, `run-host-setup-tests.sh`). When `--workspace` is omitted, these tools look for `.project` next to themselves and use its `workspace` value to auto-resolve `WORKSPACE_DIR`. Passing `--workspace` explicitly overrides this.
+- **Read by:** tools that resolve `WORKSPACE_DIR` from it (e.g. `xcode-build.sh`, `xcode-test.sh`, `xcode-archive.sh`, `xcode-install-app.sh`, `xcode-simulator-screenshot.sh`, `run-host-setup-tests.sh`) — they look for `.project` next to themselves and use its `workspace` value to auto-resolve `WORKSPACE_DIR`.
 - **Also read by `docker-compose-up.sh` / `-down.sh` / `-build.sh`:** these take the compose file path as a plain (non-flag) argument. If that path isn't found as given — e.g. it's a workspace-relative path like `mainte/app/docker-compose.yml`, the only kind visible from inside the container — they retry it joined with `.project`'s `workspace` value before giving up. A host-OS absolute path always works regardless of `.project`.
 - This file lives on the host OS only (`~/.hostmcp/...`); it is not visible from inside the container, since that path falls outside the `/workspace` volume mount.
 
@@ -114,6 +114,8 @@ A tool that regularly needs more time than the global `timeout` (e.g. `xcode-tes
 | `docker-compose-up.sh` / `docker-compose-down.sh` / `docker-compose-build.sh` | Generic wrappers around `docker compose up` / `down` / `build` |
 | `docker-compose-config.sh` | Validate/render the merged config of one or more docker-compose files (read-only) |
 | `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) |
+| `check-xcode.sh` | Check whether Xcode is installed and usable (read-only) |
+| `xcode-simulator-screenshot.sh` | Build, install, and launch an iOS app on a Simulator, then capture a screenshot |
 
 > See [.sandbox/host-tools/README.md](../.sandbox/host-tools/README.md) for full usage details of each tool.
 

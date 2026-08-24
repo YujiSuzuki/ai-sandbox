@@ -47,6 +47,8 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `docker-compose-config.sh` | Validate/render the merged config of one or more docker-compose files (read-only) | Cross-platform |
 | `xcodegen-generate.sh` | Generate an `.xcodeproj` from an XcodeGen `project.yml` spec | macOS only |
 | `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) | Cross-platform |
+| `check-xcode.sh` | Check whether Xcode is installed and usable (read-only) | Cross-platform (macOS-specific checks) |
+| `xcode-simulator-screenshot.sh` | Build, install, and launch an iOS app on a Simulator, then capture a screenshot | macOS only |
 
 ---
 
@@ -260,3 +262,51 @@ On macOS, Docker Desktop / OrbStack already run containers inside their own Linu
 and that VM boundary provides a layer of isolation on its own, so adding gVisor on top
 is generally unnecessary (see [docs/comparison.md](../../docs/comparison.md#where-this-project-sits-among-isolation-technologies)
 for details).
+
+---
+
+## check-xcode.sh
+
+A read-only diagnostic that checks whether Xcode is installed and usable on the
+host OS. Makes no changes. Run this before `xcode-build.sh` / `xcode-test.sh` /
+`xcode-archive.sh` / `xcode-install-app.sh` / `xcodegen-generate.sh` to find out
+in advance whether they'll work on this host, instead of discovering it from a
+build failure.
+
+```bash
+./check-xcode.sh
+```
+
+What it checks:
+- Whether the host OS is macOS (the other scripts above are macOS-only)
+- Whether Command Line Tools or full Xcode is the active developer directory (`xcode-select -p`)
+- Whether `xcodebuild` runs (including license-not-accepted errors)
+- Which iOS Simulator runtimes are installed (via `xcrun simctl`)
+
+---
+
+## xcode-simulator-screenshot.sh
+
+> **macOS only.** Requires Xcode and at least one iOS Simulator runtime installed on the host OS.
+
+Builds an iOS app, installs and launches it on a Simulator, and saves a screenshot to a
+path under `WORKSPACE_DIR` — the shared workspace mount is the only channel back to the
+AI, since there's no other way to see what's on the host's screen.
+
+```bash
+# Auto-detect the .xcodeproj, save to tmp/simulator-screenshot.png
+./xcode-simulator-screenshot.sh
+
+# Specify scheme and output path (relative to WORKSPACE_DIR)
+./xcode-simulator-screenshot.sh --scheme MyApp --output tmp/home.png
+
+# Wait longer after launch before capturing (default: 3s)
+./xcode-simulator-screenshot.sh --wait 5
+```
+
+`--output` must be a `WORKSPACE_DIR`-relative path (no `..`, no absolute paths). Build
+output is also saved to:
+
+```
+<workspace>/tmp/xcode-simulator-screenshot-build.log
+```

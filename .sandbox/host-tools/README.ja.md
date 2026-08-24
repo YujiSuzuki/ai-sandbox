@@ -47,6 +47,8 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 | `docker-compose-config.sh` | 1つ以上の docker-compose ファイルをマージした結果を検証・表示（読み取り専用） | クロスプラットフォーム |
 | `xcodegen-generate.sh` | XcodeGen の `project.yml` から `.xcodeproj` を生成 | macOS のみ |
 | `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） | クロスプラットフォーム |
+| `check-xcode.sh` | Xcodeがインストールされ使用可能な状態か確認（読み取り専用） | クロスプラットフォーム（macOS固有のチェックあり） |
+| `xcode-simulator-screenshot.sh` | iOSアプリをビルドしシミュレータにインストール・起動してスクリーンショットを撮影 | macOSのみ |
 
 ---
 
@@ -261,3 +263,51 @@ macOS では Docker Desktop / OrbStack がコンテナを独自の Linux VM 内�
 この VM 境界によって既に一段階の隔離が働いているため、gVisor の追加導入は基本的に
 不要です（詳細は [docs/comparison.ja.md](../../docs/comparison.ja.md#隔離技術としての位置づけ)
 を参照）。
+
+---
+
+## check-xcode.sh
+
+ホスト OS 上で Xcode がインストールされ使用可能な状態かどうかを確認する、
+読み取り専用の診断スクリプトです。設定変更は一切行いません。`xcode-build.sh` /
+`xcode-test.sh` / `xcode-archive.sh` / `xcode-install-app.sh` / `xcodegen-generate.sh`
+を実行する前に、これらがこのホストで動作するかどうかをビルド失敗で気づく前に
+事前確認できます。
+
+```bash
+./check-xcode.sh
+```
+
+確認内容:
+- ホスト OS が macOS かどうか（上記スクリプト群は macOS 専用のため）
+- アクティブな開発者ディレクトリが Command Line Tools か フル Xcode か（`xcode-select -p`）
+- `xcodebuild` が動作するか（ライセンス未同意エラーを含む）
+- インストール済みの iOS Simulator ランタイム（`xcrun simctl` で確認）
+
+---
+
+## xcode-simulator-screenshot.sh
+
+> **macOS専用。** ホストOSに Xcode と iOS Simulator ランタイムが1つ以上インストールされている必要があります。
+
+iOSアプリをビルドし、シミュレータにインストール・起動した上で、`WORKSPACE_DIR` 配下の
+パスにスクリーンショットを保存します。共有ワークスペースのマウントだけが、ホストの画面を
+AIに見せられる唯一の経路です。
+
+```bash
+# .xcodeproj を自動検出し、tmp/simulator-screenshot.png に保存
+./xcode-simulator-screenshot.sh
+
+# スキームと保存先（WORKSPACE_DIR からの相対パス）を指定
+./xcode-simulator-screenshot.sh --scheme MyApp --output tmp/home.png
+
+# 起動後、撮影までの待機秒数を延ばす（デフォルト: 3秒）
+./xcode-simulator-screenshot.sh --wait 5
+```
+
+`--output` は `WORKSPACE_DIR` からの相対パスで指定する必要があります（`..` や絶対パスは不可）。
+ビルドログの保存先:
+
+```
+<workspace>/tmp/xcode-simulator-screenshot-build.log
+```

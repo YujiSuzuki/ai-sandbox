@@ -83,7 +83,7 @@ HostMCP サーバー（ホスト OS）
 `.project` は、各 `<project-id>/` ディレクトリに書き込まれる JSON ファイルです（内容は `{"workspace": "<ホストOS上の絶対パス>"}`）。承認済みツールはコンテナの `/workspace` マウントの外側にあたるホストOS上の `~/.hostmcp/host-tools/<project-id>/` から実行されるため、ツール自身は自分がどのワークスペースに属しているかを知る手段を持ちません。特に同一ホスト上で複数の AI Sandbox プロジェクトを承認している場合、この区別が必要になります。
 
 - **書き込まれるタイミング:** `hostmcp tools sync` を実行するたび（ツールの中身に変更がなくても）。承認済みディレクトリを準備した直後、ツールの差分比較より前に毎回上書きされます。
-- **読み取るツール:** `--workspace <path>` オプションを持つツール（`xcode-build.sh`、`xcode-test.sh`、`xcode-archive.sh`、`xcode-install-app.sh`、`run-host-setup-tests.sh` など）。`--workspace` を省略すると、これらのツールは自分と同じディレクトリの `.project` を探し、その `workspace` の値から `WORKSPACE_DIR` を自動解決します。`--workspace` を明示すればこの自動解決より優先されます。
+- **読み取るツール:** `.project` から `WORKSPACE_DIR` を解決するツール（`xcode-build.sh`、`xcode-test.sh`、`xcode-archive.sh`、`xcode-install-app.sh`、`xcode-simulator-screenshot.sh`、`run-host-setup-tests.sh`）。これらは自分と同じディレクトリの `.project` を探し、その `workspace` の値から `WORKSPACE_DIR` を自動解決します。
 - **`docker-compose-up.sh` / `-down.sh` / `-build.sh` も読み取る:** これらは compose ファイルのパスを単純な引数として受け取ります。与えられたパスがそのまま見つからない場合（`mainte/app/docker-compose.yml` のような、コンテナ内からしか見えないワークスペース相対パスを渡した場合など）、`.project` の `workspace` の値と結合して再度探してから失敗を報告します。ホストOS上の絶対パスを渡した場合は `.project` の有無に関わらず常にそのまま使われます。
 - このファイルはホストOS側（`~/.hostmcp/...`）にのみ存在します。`/workspace` ボリュームマウントの範囲外にあるため、コンテナ内からは見えません。
 
@@ -115,6 +115,8 @@ host_access:
 | `docker-compose-up.sh` / `docker-compose-down.sh` / `docker-compose-build.sh` | `docker compose up` / `down` / `build` の汎用ラッパー |
 | `docker-compose-config.sh` | 1つ以上の docker-compose ファイルをマージした結果を検証・表示（読み取り専用） |
 | `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） |
+| `check-xcode.sh` | Xcodeがインストールされ使用可能な状態か確認（読み取り専用） |
+| `xcode-simulator-screenshot.sh` | iOSアプリをビルドしシミュレータにインストール・起動してスクリーンショットを撮影 |
 
 > 各ツールの詳しい使い方は [.sandbox/host-tools/README.ja.md](../.sandbox/host-tools/README.ja.md) を参照してください。
 

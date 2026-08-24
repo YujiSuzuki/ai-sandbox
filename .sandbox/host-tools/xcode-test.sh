@@ -17,7 +17,6 @@
 #   --test-target <name>     Unit test target name (default: <scheme>Tests)
 #   --no-skip-ui-tests       Also run UI tests (default: UI tests are skipped)
 #   --destination <dest>     xcodebuild destination (default: iOS Simulator, latest iPhone)
-#   --workspace <path>       Workspace root path (if not auto-detected via .project)
 #   --help, -h               Show this help
 #
 # Examples:
@@ -78,7 +77,6 @@
 #   --test-target <name>     UT ターゲット名（デフォルト: <scheme>Tests）
 #   --no-skip-ui-tests       UI テストもあわせて実行（デフォルト: UI テストはスキップ）
 #   --destination <dest>     xcodebuild destination（デフォルト: iOS Simulator, 最新 iPhone）
-#   --workspace <path>       ワークスペースルートパス（.project で自動取得できない場合）
 #   --help, -h               このヘルプを表示
 #
 # Examples:
@@ -178,9 +176,6 @@ while [[ $# -gt 0 ]]; do
         --destination)
             [[ $# -lt 2 ]] && { error "--destination requires an argument"; exit 1; }
             DESTINATION="$2"; shift 2 ;;
-        --workspace)
-            [[ $# -lt 2 ]] && { error "--workspace requires an argument"; exit 1; }
-            WORKSPACE_DIR="$2"; shift 2 ;;
         --help|-h)
             show_help ;;
         *)
@@ -191,7 +186,7 @@ done
 # Resolve the workspace path / ワークスペースパスの確定
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
-    error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
+    error ".project ファイルが存在するか確認してください。"
     exit 1
 fi
 

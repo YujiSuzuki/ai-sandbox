@@ -13,7 +13,6 @@
 #   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
 #   --configuration <cfg>    Build configuration (default: Debug)
 #   --dest-dir <path>        Install destination directory (default: ~/.hostmcp/Applications)
-#   --workspace <path>       Workspace root path (if not auto-detected via .project)
 #   --help, -h               Show this help
 #
 # Examples:
@@ -35,7 +34,6 @@
 #   --scheme <scheme>        Xcode スキーム名（デフォルト: .xcodeproj のベース名）
 #   --configuration <cfg>    ビルド構成（デフォルト: Debug）
 #   --dest-dir <path>        インストール先ディレクトリ（デフォルト: ~/.hostmcp/Applications）
-#   --workspace <path>       ワークスペースルートパス（.project で自動取得できない場合）
 #   --help, -h               このヘルプを表示
 #
 # Examples:
@@ -88,12 +86,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 PROJECT_META="${SCRIPT_DIR}/.project"
 WORKSPACE_DIR=""
-WORKSPACE_FROM_PROJECT_META=false
 if [ -f "$PROJECT_META" ]; then
     # `|| WORKSPACE_DIR=""` を付けないと、.project が壊れたJSONの場合に jq が非ゼロ終了し、
     # set -e でここで無言のまま終了してしまう（後段の親切なエラーメッセージに到達しない）。
     WORKSPACE_DIR=$(jq -r '.workspace // ""' "$PROJECT_META" 2>/dev/null) || WORKSPACE_DIR=""
-    [ -n "$WORKSPACE_DIR" ] && WORKSPACE_FROM_PROJECT_META=true
 fi
 
 XCODEPROJ=""
@@ -123,16 +119,6 @@ while [[ $# -gt 0 ]]; do
         --dest-dir)
             [[ $# -lt 2 ]] && { error "--dest-dir requires an argument"; exit 1; }
             DEST_DIR="$2"; shift 2 ;;
-        --workspace)
-            [[ $# -lt 2 ]] && { error "--workspace requires an argument"; exit 1; }
-            # .project は HostMCP が自動生成する信頼済みの値なので、CLI引数による
-            # 上書きを許すと --project の require_within チェックが無意味になる
-            # （--workspace と --project を両方好きに指定できてしまうため）。
-            if [ "$WORKSPACE_FROM_PROJECT_META" = true ]; then
-                error "--workspace は .project に既に設定されているため上書きできません: ${WORKSPACE_DIR}"
-                exit 1
-            fi
-            WORKSPACE_DIR="$2"; shift 2 ;;
         --help|-h)
             show_help ;;
         *)
@@ -143,7 +129,7 @@ done
 # Resolve the workspace path / ワークスペースパスの確定
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
-    error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
+    error ".project ファイルが存在するか確認してください。"
     exit 1
 fi
 

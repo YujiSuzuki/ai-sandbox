@@ -13,11 +13,9 @@
 # Usage:
 #   ./run-host-setup-tests.sh
 #   ./run-host-setup-tests.sh --test-script test-install-hostmcp.sh
-#   ./run-host-setup-tests.sh --workspace <path>
 #
 # Options:
 #   --test-script <name>  Run only this specific test file under host-setup/ (default: all)
-#   --workspace <path>    Workspace root path (if not auto-detected via .project)
 #   --help, -h             Show this help
 #
 # Command-line usage example
@@ -38,11 +36,9 @@
 # Usage:
 #   ./run-host-setup-tests.sh
 #   ./run-host-setup-tests.sh --test-script test-install-hostmcp.sh
-#   ./run-host-setup-tests.sh --workspace <path>
 #
 # Options:
 #   --test-script <name>  host-setup/ 配下の特定のテストファイル名のみ実行（省略時は全件）
-#   --workspace <path>    ワークスペースルートパス（.project で自動取得できない場合）
 #   --help, -h             このヘルプを表示
 #
 # コマンドラインからの使用例
@@ -78,9 +74,6 @@ while [[ $# -gt 0 ]]; do
         --test-script)
             [[ $# -lt 2 ]] && { error "--test-script requires an argument"; exit 1; }
             TEST_SCRIPT_FILTER="$2"; shift 2 ;;
-        --workspace)
-            [[ $# -lt 2 ]] && { error "--workspace requires an argument"; exit 1; }
-            WORKSPACE_DIR="$2"; shift 2 ;;
         --help|-h)
             show_help ;;
         *)
@@ -90,7 +83,7 @@ done
 
 if [ -z "$WORKSPACE_DIR" ]; then
     error "ワークスペースパスを特定できません。"
-    error ".project ファイルが存在するか確認するか、--workspace <path> で指定してください。"
+    error ".project ファイルが存在するか確認してください。"
     exit 1
 fi
 
