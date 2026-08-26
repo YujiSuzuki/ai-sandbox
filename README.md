@@ -6,8 +6,7 @@
 
 **Your AI agent's filesystem has no `.env`, no API keys, no secrets — not hidden by a rule, just not there. It can still read and edit everything else in your repo.**
 
-<!-- TODO(demo-gif): record and embed here before publishing/posting. -->
-<!-- ![AI Sandbox demo: secrets stay invisible while AI keeps working](docs/assets/demo.gif) -->
+![AI Sandbox demo: secrets stay invisible while AI keeps working](docs/assets/demo.gif)
 
 AI coding agents normally read everything in your project directory — including `.env` files, API keys, and private certificates. Application-level deny rules can help, but they depend on correct configuration and have [scope limitations](docs/comparison.md). This template takes a different approach, via Docker volume mounts, to make it true at the filesystem level.
 
