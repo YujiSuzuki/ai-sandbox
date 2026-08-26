@@ -1,26 +1,22 @@
 #!/bin/bash
 # setup-language-hook.sh
-# Idempotently register the Japanese-response-language reminder hook
+# Idempotently register the response-language reminder hook
 # (UserPromptSubmit -> .sandbox/hooks/language-reminder.sh) in the workspace's
-# .claude/settings.json when the container's default locale is Japanese.
-# No-op for any other locale.
+# .claude/settings.json. Registered regardless of locale: the hook itself
+# branches on $LANG at call time to remind the AI to stay in Japanese or
+# English, since surrounding context (tool output, nested project docs, etc.)
+# can pull responses away from the $LANG-derived default in either direction.
 # ---
-# コンテナのデフォルトロケールが日本語の場合、日本語応答リマインダーフック
-# （UserPromptSubmit -> .sandbox/hooks/language-reminder.sh）を workspace の
-# .claude/settings.json に冪等に登録する。それ以外のロケールでは何もしない。
+# 応答言語リマインダーフック（UserPromptSubmit ->
+# .sandbox/hooks/language-reminder.sh）を workspace の .claude/settings.json
+# に冪等に登録する。フック自体が呼び出し時に$LANGを見て日本語/英語のどちらを
+# 維持すべきか伝えるため、ロケールによらず登録する -- 周囲のコンテキスト
+# （ツール出力・ネストしたプロジェクトのドキュメント等）に引っ張られて
+# $LANG由来のデフォルトからずれることは、どちらの方向にも起こりうるため。
 
 set -euo pipefail
 
 WORKSPACE_ROOT="${WORKSPACE_ROOT:-/workspace}"
-
-# Only relevant for Japanese locale -- the hook itself also checks $LANG at
-# call time, but registering it for other locales would just add a dead
-# entry to settings.json.
-# 日本語ロケールの場合のみ対象 -- フック自体も呼び出し時に$LANGを確認するが、
-# 他ロケールで登録しても settings.json に無意味なエントリが増えるだけになる。
-if [[ "${LANG:-}" != ja_JP* ]] && [[ "${LC_ALL:-}" != ja_JP* ]]; then
-    exit 0
-fi
 
 # shellcheck source=/dev/null
 source "${WORKSPACE_ROOT}/.sandbox/scripts/_startup_common.sh"

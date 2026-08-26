@@ -91,21 +91,29 @@ trap cleanup EXIT
 # Test Cases / テストケース
 # ========================================
 
-# Test 1: Non-Japanese locale is a no-op
-# テスト1: 日本語以外のロケールでは何もしない
-test_noop_non_japanese_locale() {
-    info "Test 1: Non-Japanese locale is a no-op"
-    info "テスト1: 日本語以外のロケールでは何もしない"
+# Test 1: Non-Japanese locale also registers the hook -- the hook itself
+# branches on $LANG at call time (Japanese vs. English reminder), so it must
+# be registered regardless of locale.
+# テスト1: 日本語以外のロケールでもフックを登録する -- フック自体が
+# 呼び出し時に$LANGで日本語用/英語用のリマインダーを出し分けるため、
+# ロケールによらず登録が必要。
+test_registers_hook_non_japanese_locale() {
+    info "Test 1: Non-Japanese locale also registers the hook"
+    info "テスト1: 日本語以外のロケールでもフックを登録する"
 
     setup
     export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
     "$SCRIPT"
 
-    if [ ! -f "$TEST_WORKSPACE/.claude/settings.json" ]; then
-        pass "No settings.json created for non-Japanese locale"
+    if jq -e --arg cmd "bash $TEST_WORKSPACE/.sandbox/hooks/language-reminder.sh" '
+        [(.hooks.UserPromptSubmit // [])[].hooks[]? | select(.type == "command") | .command]
+        | any(. == $cmd)
+    ' "$TEST_WORKSPACE/.claude/settings.json" > /dev/null 2>&1; then
+        pass "Hook registered for non-Japanese locale too"
     else
-        fail "settings.json should not be created for non-Japanese locale"
+        fail "Hook not registered for non-Japanese locale"
+        cat "$TEST_WORKSPACE/.claude/settings.json" 2>&1
     fi
 
     cleanup
@@ -207,7 +215,7 @@ echo "setup-language-hook.sh のテスト"
 echo "=========================================="
 echo ""
 
-test_noop_non_japanese_locale
+test_registers_hook_non_japanese_locale
 test_registers_hook_fresh_settings
 test_preserves_existing_settings
 test_idempotent

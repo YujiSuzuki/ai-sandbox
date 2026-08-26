@@ -565,6 +565,32 @@ test_self_repo_readme_still_excerpted() {
 }
 
 # ============================================================
+# Test: EXCERPT_LINES is overridable via environment variable
+# ============================================================
+test_excerpt_lines_env_override() {
+    echo ""
+    echo "=== Testing EXCERPT_LINES environment override ==="
+
+    local output
+    if ! output=$(WORKSPACE="$FAKE_WORKSPACE" EXCERPT_LINES=1 bash "$TARGET_SCRIPT"); then
+        fail "22-nested-repo-docs.sh exited non-zero with EXCERPT_LINES=1"
+        return
+    fi
+
+    if echo "$output" | grep -qF "This app helps users track daily habits."; then
+        pass "EXCERPT_LINES=1 still includes the first excerpt line"
+    else
+        fail "Should still include the first excerpt line, got: '$output'"
+    fi
+
+    if echo "$output" | grep -qF "It syncs across devices automatically."; then
+        fail "EXCERPT_LINES=1 should drop the second excerpt line, got: '$output'"
+    else
+        pass "EXCERPT_LINES=1 drops the second excerpt line"
+    fi
+}
+
+# ============================================================
 # Test: workspace with no nested repos at all produces no output
 # ============================================================
 test_no_nested_repos_silent() {
@@ -609,6 +635,7 @@ main() {
     test_non_git_depth1_project_discovered
     test_claude_fallback_heuristics
     test_self_repo_readme_still_excerpted
+    test_excerpt_lines_env_override
     test_no_nested_repos_silent
 
     echo ""

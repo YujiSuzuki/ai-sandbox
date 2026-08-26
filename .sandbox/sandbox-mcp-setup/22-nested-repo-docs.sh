@@ -43,7 +43,7 @@
 WORKSPACE="${WORKSPACE:-/workspace}"
 while [ "${WORKSPACE: -1}" = "/" ]; do WORKSPACE="${WORKSPACE%/}"; done
 DOC_FILES=(CLAUDE.md README.md README.ja.md)
-EXCERPT_LINES=5
+EXCERPT_LINES="${EXCERPT_LINES:-5}"
 
 # Extract a short excerpt from a Markdown doc, skipping structural
 # boilerplate (headings, horizontal rules, raw HTML, badges, language-switch
