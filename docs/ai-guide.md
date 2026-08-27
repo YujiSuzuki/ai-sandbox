@@ -79,6 +79,12 @@ hostmcp client exec securenote-api "npm test"
 hostmcp client host-tools list
 hostmcp client host-tools info my-tool.sh
 hostmcp client host-tools run my-tool.sh arg1 arg2
+# Flag-like args need a "--" separator so they aren't parsed as flags of
+# this CLI command itself; for a tool whose declared @timeout exceeds
+# HostMCP's server-side default, also raise --timeout to at least that many
+# seconds (it doubles as this CLI's own wait budget and as the value it
+# reports to the server so the run isn't refused upfront):
+hostmcp client --timeout 300 host-tools run my-slow-tool.sh -- --wait 5 --scheme MyApp
 
 # Container lifecycle (if enabled)
 hostmcp client restart securenote-api
