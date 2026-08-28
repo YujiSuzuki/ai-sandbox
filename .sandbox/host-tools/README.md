@@ -27,6 +27,8 @@ Changes are detected via SHA256 hash, so **re-approval is required after every e
 
 If a script declares its own timeout (`# @timeout: <seconds>` in its header — see `xcode-test.sh`), `hostmcp tools sync` always shows that declaration before asking for approval, so review it there before typing `y`.
 
+**`@timeout` is not the only timeout layer.** It only raises how long HostMCP lets the script run on the host OS before force-killing it. Calling the script via MCP's `run_host_tool` is a separate layer with its own default wait (60s unless `MCP_TOOL_TIMEOUT` is set) — it can report an apparent failure even though the host-side script keeps running past 60s. When a script's `@timeout` exceeds that MCP default, either pass `client_timeout_seconds` to `run_host_tool`, or fall back to `hostmcp client --timeout <seconds> ...` (matching the script's own `@timeout`) via Bash. See `xcode-test.sh`'s header for a worked example of both layers together.
+
 Details: [docs/host-access.md](../../docs/host-access.md)
 
 ---

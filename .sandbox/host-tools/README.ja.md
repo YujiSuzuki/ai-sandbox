@@ -27,6 +27,8 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 
 スクリプトが独自のタイムアウトを宣言している場合（ヘッダーの `# @timeout: <秒数>` 行。例: `xcode-test.sh`）、`hostmcp tools sync` は承認を求める前に必ずその宣言を表示します。`y` と入力する前にそこで確認してください。
 
+**`@timeout` だけでは足りない場合があります。** これはホスト OS 上でスクリプトを強制終了するまでの時間を延ばすだけです。MCP の `run_host_tool` 経由の呼び出しは別レイヤーの待機時間を持ち（デフォルト60秒、`MCP_TOOL_TIMEOUT` 未設定時）、ホスト側のスクリプトが60秒を超えて動き続けていても、呼び出し側には失敗したように見えることがあります。スクリプトの `@timeout` がこのMCP側の既定値を超える場合は、`run_host_tool` に `client_timeout_seconds` を渡すか、Bash経由で `hostmcp client --timeout <秒数> ...`（スクリプト自身の `@timeout` に合わせる）にフォールバックしてください。両レイヤーを揃えた具体例は `xcode-test.sh` のヘッダーを参照してください。
+
 詳細: [docs/host-access.md](../../docs/host-access.md)
 
 ---

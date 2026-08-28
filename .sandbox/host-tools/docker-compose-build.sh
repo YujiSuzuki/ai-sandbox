@@ -1,6 +1,17 @@
 #!/bin/bash
 # docker-compose-build.sh
+# @timeout: 300
 # Build images defined in a docker-compose file (host OS execution).
+#
+# Some images (e.g. a Rust build compiling from scratch) take well over the
+# default 60s host-tools timeout, hence the @timeout override above.
+#
+# Note: @timeout only raises the host-side kill timer. Calling this via MCP's
+#   run_host_tool has its own separate 60s default wait and may still report
+#   an apparent failure on a slow build. Pass client_timeout_seconds to
+#   run_host_tool, or fall back to `hostmcp client --timeout 300 ...` via
+#   Bash — see README.md and xcode-test.sh's header for the two-layer
+#   explanation and a worked example.
 #
 # Usage:
 #   docker-compose-build.sh <compose-file> [-- <extra docker compose args>]
@@ -8,8 +19,18 @@
 # Examples:
 #   docker-compose-build.sh /path/to/docker-compose.yml
 #   docker-compose-build.sh ./docker-compose.yml -- --no-cache
+#
+# Command-line usage example (client-side --timeout must match @timeout above)
+# hostmcp client --timeout 300 --url http://host.docker.internal:18080 host-tools run docker-compose-build.sh -- /path/to/docker-compose.yml
 # ---
 # 指定した docker-compose ファイルのイメージをホスト OS 上でビルドする汎用スクリプトです。
+#
+# 注: @timeout はホスト側の強制終了タイマーを延ばすだけです。MCP の
+#   run_host_tool 経由の呼び出しは別レイヤーで既定60秒の待機時間を持ち、
+#   ビルドが遅い場合は失敗したように見えることがあります。run_host_tool に
+#   client_timeout_seconds を渡すか、Bash経由で
+#   `hostmcp client --timeout 300 ...` にフォールバックしてください
+#   （二層構造の詳細と実例は README.md と xcode-test.sh のヘッダーを参照）。
 
 set -e
 

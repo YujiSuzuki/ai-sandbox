@@ -30,8 +30,10 @@
 #   60s; rather than raising that shared default, this tool extends its own
 #   timeout individually). The declaration only takes effect once approved
 #   via `hostmcp tools sync`, and is clamped to hostmcp.yaml's
-#   host_access.host_tools.max_tool_timeout (default 1800s). The AI (via MCP)
-#   has no way to change the timeout per-call when invoking run_host_tool.
+#   host_access.host_tools.max_tool_timeout (default 1800s). When invoking
+#   via MCP's run_host_tool, pass client_timeout_seconds (a separate layer
+#   from this header's @timeout) to raise the client-side wait to match --
+#   see README.md for the two-layer explanation.
 #
 # WARNING: --only takes a Swift struct name (the type matching @Suite), not a
 #   filename. If the filename and struct name differ, --only silently matches
@@ -90,8 +92,9 @@
 #   で60秒。全ツール共通のこの既定値を上げる代わりに、このツールだけ個別に延長する
 #   仕組み）。この宣言は `hostmcp tools sync` で承認されて初めて有効になり、
 #   hostmcp.yamlの host_access.host_tools.max_tool_timeout（既定1800秒）を超える
-#   宣言はクランプされる。AI（MCP経由）がrun_host_tool呼び出し時にper-callで
-#   タイムアウトを変更する手段は無い。
+#   宣言はクランプされる。MCP の run_host_tool 経由で呼び出す場合は、
+#   client_timeout_seconds（このヘッダーの @timeout とは別レイヤー）を渡すことで
+#   クライアント側の待機時間も合わせて延ばせる（二層構造の詳細は README.md 参照）。
 #
 # ⚠️ --only に指定するのはファイル名ではなく Swift の struct 名（@Suite に対応する型名）。
 #   ファイル名と struct 名が異なる場合、--only でテストが 0 件になる（エラーにはならない）。
