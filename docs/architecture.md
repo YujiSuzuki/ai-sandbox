@@ -86,6 +86,9 @@ Host OS
 
 **Result:**
 - AI cannot read secret files (security ensured)
+- The AI's own process environment never receives the secret in any form — file or
+  env var — so there's nothing to leak via `env` or `/proc/self/environ` either (the
+  sandbox container itself always runs Linux, regardless of the host OS)
 - Apps can read secret files (functionality maintained)
 - AI can still check logs and run tests via HostMCP
 
