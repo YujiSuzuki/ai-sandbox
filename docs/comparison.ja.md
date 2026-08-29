@@ -109,7 +109,7 @@ Claude Code Sandboxは対象が異なり、Bashコマンドの実行のみをOS�
 
 強い隔離を必要とするクラウドのマネージドAIエージェントサービスでは、実際に次のような隔離技術が使われている：
 
-- **AWS Bedrock AgentCore Code Interpreter**：セッションごとに専用のFirecracker microVMを起動する「one-session-one-microVM」方式（[AWS公式ドキュメント](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/built-in-tools-how-it-works.html)）
+- **AWS Bedrock AgentCore Code Interpreter**：セッションごとに専用のFirecracker microVMを起動する「one-session-one-microVM」方式（[AWS公式ドキュメント](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/code-interpreter-session-characteristics.html)）
 - **Google Cloud GKE Agent Sandbox**：gVisorによるカーネルレベルの強い隔離（[Google Cloud公式ドキュメント](https://docs.cloud.google.com/kubernetes-engine/docs/concepts/machine-learning/agent-sandbox)）
 
 > **注記**：上記のAWS/Googleのサービスは、いずれもクラウドAPI／マネージドサービスであり、本プロジェクトのようなローカル開発環境の代替候補ではない。ここでは「gVisor/Firecrackerという隔離技術が、実運用で使われている本物の技術である」ことを示す実例として挙げているだけである。ワークスペース全体の同期可否や他コンテナとの通信可否といった、[Docker AI Sandboxesとの比較](#docker-ai-sandboxes)で扱ったような製品レベルの機能比較は、これらクラウドサービスにはそもそも当てはまらない（同じカテゴリの製品ではないため）。
@@ -130,7 +130,7 @@ Firecrackerは「軽量な仮想マシン（microVM）を1つ作り、その中�
 
 カーネルエクスプロイトそのものを脅威モデルに含める必要があるかどうかは、開発機のOSによっても事情が変わる：
 
-- **macOS上でDocker Desktop/OrbStackなどを使っている場合**：普段は意識されないことが多いが、コンテナは実際にはmacOS本体とは別の、使い捨ての軽量Linux VMの中で動いている。コンテナ内でのカーネルエクスプロイトが成功しても、直接乗っ取られるのはこのLinux VMまでで、macOS本体(Darwinカーネル)に到達するには、ハイパーバイザー自体の脆弱性を突く別の攻撃(VMエスケープ)がもう一段階必要になる。つまりMac上の開発環境では、本プロジェクトの設定とは無関係に、Docker Desktop/OrbStack自身の実装によって、既に1段階分の追加の隔離が働いている。**そのため、Mac開発機ではgVisorを追加で導入する必要性は基本的に低い。**（さらにOrbStackの場合、現時点ではgVisorのrunscがVM内の`/tmp`シンボリックリンクと衝突して起動時にクラッシュする既知の不具合があり（[orbstack/orbstack#2362](https://github.com/orbstack/orbstack/issues/2362)）、導入自体が実用的でない）
+- **macOS上でDocker Desktop/OrbStackなどを使っている場合**：普段は意識されないことが多いが、コンテナは実際にはmacOS本体とは別の、使い捨ての軽量Linux VMの中で動いている。コンテナ内でのカーネルエクスプロイトが成功しても、直接乗っ取られるのはこのLinux VMまでで、macOS本体(Darwinカーネル)に到達するには、ハイパーバイザー自体の脆弱性を突く別の攻撃(VMエスケープ)がもう一段階必要になる。つまりMac上の開発環境では、本プロジェクトの設定とは無関係に、Docker Desktop/OrbStack自身の実装によって、既に1段階分の追加の隔離が働いている。**そのため、Mac開発機ではgVisorを追加で導入する必要性は基本的に低い。**
 - **Linux上で直接Dockerを使っている場合**：コンテナ内でのカーネルエクスプロイトは、そのままホストOSのカーネルに対する攻撃になる。本プロジェクトは`docker-compose.yml`でランタイムを特に指定していないため、Docker標準の`runc`のままであり、この経路を止める層がない。**そのため、Linux開発機ではDockerランタイムを`runsc`（gVisor）に切り替えることを検討する価値がある。** 上記の通りシークレット隠蔽（[ギャップ1](#ギャップ1-ファイルシステムレベルのシークレット隠蔽)）とは別軸の上乗せ対策であり、実際に使える状態かどうかは[`check-gvisor.sh`](../.sandbox/host-tools/check-gvisor.sh)で確認できる。
 
 この前提の違いにより、gVisorベースの隔離を追加で検討する優先度は、Linux開発機とMac開発機とで異なる。

@@ -78,19 +78,7 @@ case "$OS" in
         echo "  Desktop / OrbStack / etc.), regardless of container runtime. A kernel"
         echo "  exploit inside a container is contained by that VM boundary already,"
         echo "  so gVisor is generally not necessary here -- see docs/comparison.md."
-        case "$DOCKER_CONTEXT" in
-            orbstack)
-                warn "Docker context is 'orbstack': gVisor's runsc is currently known"
-                echo "  to fail on OrbStack. OrbStack's VM has /tmp symlinked to"
-                echo "  /private/tmp, and runsc's chroot safety check rejects that,"
-                echo "  crashing the sandbox on startup. See current status at"
-                echo "  https://github.com/orbstack/orbstack/issues/2362 before"
-                echo "  attempting this."
-                ;;
-            *)
-                echo "  Docker context: '$DOCKER_CONTEXT'."
-                ;;
-        esac
+        echo "  Docker context: '$DOCKER_CONTEXT'."
         ;;
     *)
         warn "Unrecognized OS ($OS); no specific guidance available."
