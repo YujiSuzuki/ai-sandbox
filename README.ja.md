@@ -73,7 +73,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 
 ### 📖 はじめに
 - [はじめてのセットアップガイド](docs/getting-started.ja.md) — ゼロから動く状態まで一歩ずつ案内
-- [既存ソリューションとの関係](docs/comparison.ja.md) — Claude Code Sandbox、Docker AI Sandboxes等との比較
+- [既存ソリューションとの関係](docs/comparison.ja.md) — Claude Code Sandbox、Docker AI Sandboxes、firejail等との比較
 - [ai-sandbox-demo ハンズオン](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.ja.md) — デモアプリを使ってセキュリティ機能を実際に体験する演習
 
 ### 🔧 セットアップ・運用
@@ -533,7 +533,7 @@ A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられま�
 | ドキュメント | 内容 |
 |-------------|------|
 | [はじめてのセットアップガイド](docs/getting-started.ja.md) | ゼロから動く状態まで一歩ずつ案内 |
-| [既存ソリューションとの関係](docs/comparison.ja.md) | Claude Code Sandbox、Docker AI Sandboxes等との比較 |
+| [既存ソリューションとの関係](docs/comparison.ja.md) | Claude Code Sandbox、Docker AI Sandboxes、firejail等との比較 |
 | [ai-sandbox-demo ハンズオン](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.ja.md) | デモアプリを使ってセキュリティ機能を実際に体験する演習 |
 | [自分のプロジェクトへの適用](docs/customization.ja.md) | テンプレートのカスタマイズ手順 |
 | [リファレンス](docs/reference.ja.md) | 環境設定、オプション、トラブルシューティング |

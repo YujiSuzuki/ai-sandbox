@@ -58,7 +58,7 @@ This project is designed for local development environments and is not intended 
 
 ### 📖 Getting Started
 - [Getting Started Guide](docs/getting-started.md) — Step-by-step setup from zero to a working environment
-- [Relationship to Existing Solutions](docs/comparison.md) — How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc.
+- [Relationship to Existing Solutions](docs/comparison.md) — How this compares to Claude Code Sandbox, Docker AI Sandboxes, firejail, etc.
 - [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md) — Hands-on exercises for security features, using the demo apps
 
 ### 🔧 Setup & Operations
@@ -528,7 +528,7 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 | Document | Description |
 |----------|-------------|
 | [Getting Started Guide](docs/getting-started.md) | Step-by-step setup from zero to a working environment |
-| [Relationship to Existing Solutions](docs/comparison.md) | How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc. |
+| [Relationship to Existing Solutions](docs/comparison.md) | How this compares to Claude Code Sandbox, Docker AI Sandboxes, firejail, etc. |
 | [ai-sandbox-demo Hands-on Guide](https://github.com/YujiSuzuki/ai-sandbox-demo/blob/main/hands-on.md) | Hands-on exercises for security features, using the demo apps |
 | [Customization Guide](docs/customization.md) | How to adapt this template to your project |
 | [Reference](docs/reference.md) | Environment settings, options, troubleshooting |
