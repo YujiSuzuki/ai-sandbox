@@ -50,7 +50,7 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 | `xcodegen-generate.sh` | XcodeGen の `project.yml` から `.xcodeproj` を生成 | macOS のみ |
 | `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） | クロスプラットフォーム |
 | `check-xcode.sh` | Xcodeがインストールされ使用可能な状態か確認（読み取り専用） | クロスプラットフォーム（macOS固有のチェックあり） |
-| `xcode-simulator-screenshot.sh` | iOSアプリをビルドしシミュレータにインストール・起動してスクリーンショットを撮影 | macOSのみ |
+| `xcode-simulator-screenshot.sh` | iOSアプリをビルドしシミュレータにインストール・起動してスクリーンショットを撮影（`--ui-test`で起動画面より先の特定画面も可） | macOSのみ |
 
 ---
 
@@ -305,6 +305,10 @@ AIに見せられる唯一の経路です。
 
 # 起動後、撮影までの待機秒数を延ばす（デフォルト: 3秒）
 ./xcode-simulator-screenshot.sh --wait 5
+
+# 起動画面より先の画面を、自分で遷移してスクリーンショットを撮るUIテスト経由で撮影
+# （そのテストの書き方は docs/ai-guide.md の「XCUITest Screenshot Automation」節を参照）
+./xcode-simulator-screenshot.sh --scheme MyApp --ui-test "MyAppUITests/MyAppUITests/testSettingsScreenshot" --output tmp/settings.png
 ```
 
 `--output` は `WORKSPACE_DIR` からの相対パスで指定する必要があります（`..` や絶対パスは不可）。
@@ -313,3 +317,13 @@ AIに見せられる唯一の経路です。
 ```
 <workspace>/tmp/xcode-simulator-screenshot-build.log
 ```
+
+`--ui-test <Target>/<Class>/<method>` は、指定した1つのXCUITestメソッドを`xcodebuild test`
+経由で実行し、そのテストが`XCTAttachment`で撮ったスクリーンショットを`xcresulttool`で取り出します
+（デフォルトのsimctl install/launch/screenshotフローの代わりに）。起動画面より先の画面を
+撮影できるのはこの経路です。`--wait`はこのモードでは無視されます（テスト自身の
+`waitForExistence`がタイミングを制御するため）。このモードのbuild+testはプレーンな
+ビルドより余裕を持たせる必要があるため、このスクリプトは`@timeout: 600`を宣言しています——
+このスクリプトへの変更を取り込んだ後は、ホスト上で`hostmcp tools sync`を再実行して承認し、
+呼び出し時は`--timeout 600`（CLI）または`client_timeout_seconds: 600`（`run_host_tool`）を
+渡してください。

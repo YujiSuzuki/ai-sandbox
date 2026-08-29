@@ -50,7 +50,7 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `xcodegen-generate.sh` | Generate an `.xcodeproj` from an XcodeGen `project.yml` spec | macOS only |
 | `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) | Cross-platform |
 | `check-xcode.sh` | Check whether Xcode is installed and usable (read-only) | Cross-platform (macOS-specific checks) |
-| `xcode-simulator-screenshot.sh` | Build, install, and launch an iOS app on a Simulator, then capture a screenshot | macOS only |
+| `xcode-simulator-screenshot.sh` | Build, install, and launch an iOS app on a Simulator, then capture a screenshot (or, via `--ui-test`, a specific screen beyond the launch screen) | macOS only |
 
 ---
 
@@ -304,6 +304,11 @@ AI, since there's no other way to see what's on the host's screen.
 
 # Wait longer after launch before capturing (default: 3s)
 ./xcode-simulator-screenshot.sh --wait 5
+
+# Capture a screen beyond the launch screen, via a UI test that navigates
+# there itself and takes its own screenshot (see docs/ai-guide.md's
+# "XCUITest Screenshot Automation" section for how to write that test)
+./xcode-simulator-screenshot.sh --scheme MyApp --ui-test "MyAppUITests/MyAppUITests/testSettingsScreenshot" --output tmp/settings.png
 ```
 
 `--output` must be a `WORKSPACE_DIR`-relative path (no `..`, no absolute paths). Build
@@ -312,3 +317,12 @@ output is also saved to:
 ```
 <workspace>/tmp/xcode-simulator-screenshot-build.log
 ```
+
+`--ui-test <Target>/<Class>/<method>` runs that one XCUITest method via `xcodebuild test`
+and extracts the screenshot it captured (via `XCTAttachment`) using `xcresulttool`,
+instead of the default simctl install/launch/screenshot flow — this is how a screen
+beyond the app's launch screen gets captured. `--wait` is ignored in this mode, since
+the test's own `waitForExistence` controls timing. This mode's build+test run needs more
+headroom than a plain build, so this script declares `@timeout: 600` — after pulling a
+change to this script, re-run `hostmcp tools sync` on the host to approve it, and pass
+`--timeout 600` (CLI) or `client_timeout_seconds: 600` (`run_host_tool`) when calling it.

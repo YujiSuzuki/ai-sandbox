@@ -55,24 +55,24 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ────────────────────────────────────────────
-# Memory pressure (normal / warning / critical) / メモリプレッシャー（normal / warning / critical）
+# Memory pressure (normal / warning / critical)
 # ────────────────────────────────────────────
-header "メモリプレッシャー"
+header "Memory pressure"
 PRESSURE=$(memory_pressure 2>/dev/null | grep "System-wide memory free percentage" | head -1 || true)
 LEVEL=$(memory_pressure 2>/dev/null | grep "The system memory pressure" | head -1 || true)
 [ -n "$LEVEL" ]    && echo "  $LEVEL"
 [ -n "$PRESSURE" ] && echo "  $PRESSURE"
 
 # ────────────────────────────────────────────
-# Total physical memory / vm_stat / 物理メモリ合計 / vm_stat
+# Total physical memory / vm_stat
 # ────────────────────────────────────────────
-header "物理メモリ"
+header "Physical memory"
 TOTAL_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
 TOTAL_GB=$(echo "scale=1; $TOTAL_BYTES / 1073741824" | bc 2>/dev/null || echo "?")
-echo "  搭載RAM: ${TOTAL_GB} GB"
+echo "  Installed RAM: ${TOTAL_GB} GB"
 echo ""
 
-# vm_stat でページ情報を取得
+# Get page info via vm_stat
 PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo 16384)
 VM=$(vm_stat 2>/dev/null)
 
@@ -98,25 +98,25 @@ INACTIVE_MB=$(to_mb "$PAGES_INACTIVE")
 COMPRESSED_MB=$(to_mb "$PAGES_COMPRESSED")
 USED_MB=$(( WIRED_MB + ACTIVE_MB + COMPRESSED_MB ))
 
-echo "  空き       : ${FREE_MB} MB"
-echo "  使用中     : ${USED_MB} MB  (active: ${ACTIVE_MB} + wired: ${WIRED_MB} + compressed: ${COMPRESSED_MB})"
-echo "  非アクティブ: ${INACTIVE_MB} MB"
+echo "  Free    : ${FREE_MB} MB"
+echo "  Used    : ${USED_MB} MB  (active: ${ACTIVE_MB} + wired: ${WIRED_MB} + compressed: ${COMPRESSED_MB})"
+echo "  Inactive: ${INACTIVE_MB} MB"
 
 # ────────────────────────────────────────────
-# Simulator processes / シミュレーター プロセス
+# Simulator processes
 # ────────────────────────────────────────────
-header "起動中のシミュレーター"
+header "Running simulators"
 SIM_PROCS=$(ps aux 2>/dev/null | grep -i "Simulator\|simctl\|CoreSimulator" | grep -v grep || true)
 if [ -z "$SIM_PROCS" ]; then
-    echo "  （シミュレータープロセスなし）"
+    echo "  (no simulator processes)"
 else
     echo "$SIM_PROCS" | awk '{printf "  %-8s %5s MB  %s\n", $1, int($6/1024), $11}' | head -20
 fi
 
 # ────────────────────────────────────────────
-# Top processes by memory usage / メモリ使用量上位プロセス
+# Top processes by memory usage
 # ────────────────────────────────────────────
-header "メモリ使用量 上位 ${TOP_N} プロセス"
+header "Top ${TOP_N} processes by memory usage"
 ps aux 2>/dev/null \
     | sort -k6 -rn \
     | head -$(( TOP_N + 1 )) \

@@ -43,7 +43,7 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────
-# Color output / カラー出力
+# Color output
 # ────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -57,38 +57,37 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 header()  { echo -e "${BLUE}=== $* ===${NC}"; }
 
 # ────────────────────────────────────────────
-# Path validation helper / パス検証ヘルパー
+# Path validation helper
 # ────────────────────────────────────────────
 # HostMCP doesn't validate arguments once a Host Tool is approved, so this
 # check is the only line of defense confirming that a target path (e.g. for
 # rm -rf) stays within the expected range.
-# HostMCP は Host Tool 承認後の引数を検証しないため、rm -rf 等の対象パスが
-# 想定範囲に収まっているかどうかは、このチェックが唯一の防衛線になる。
 require_within() {
     local target="$1" base="$2" label="$3"
     local resolved_base resolved_target
-    resolved_base="$(cd "$base" 2>/dev/null && pwd -P)" || { error "${label}: 基点ディレクトリが解決できません: ${base}"; exit 1; }
-    resolved_target="$(cd "$target" 2>/dev/null && pwd -P)" || { error "${label}: パスが解決できません: ${target}"; exit 1; }
+    resolved_base="$(cd "$base" 2>/dev/null && pwd -P)" || { error "${label}: cannot resolve base directory: ${base}"; exit 1; }
+    resolved_target="$(cd "$target" 2>/dev/null && pwd -P)" || { error "${label}: cannot resolve path: ${target}"; exit 1; }
     case "$resolved_target" in
         "$resolved_base"|"$resolved_base"/*) ;;
         *)
-            error "${label} が許可された範囲外です: ${target}"
-            error "許可範囲: ${resolved_base} 配下のみ"
+            error "${label} is outside the allowed range: ${target}"
+            error "Allowed range: under ${resolved_base} only"
             exit 1
             ;;
     esac
 }
 
 # ────────────────────────────────────────────
-# Defaults / デフォルト値
+# Defaults
 # ────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 PROJECT_META="${SCRIPT_DIR}/.project"
 WORKSPACE_DIR=""
 if [ -f "$PROJECT_META" ]; then
-    # `|| WORKSPACE_DIR=""` を付けないと、.project が壊れたJSONの場合に jq が非ゼロ終了し、
-    # set -e でここで無言のまま終了してしまう（後段の親切なエラーメッセージに到達しない）。
+    # Without `|| WORKSPACE_DIR=""`, a malformed .project (broken JSON) makes jq
+    # exit non-zero, and set -e would abort silently here before reaching the
+    # friendlier error message further down.
     WORKSPACE_DIR=$(jq -r '.workspace // ""' "$PROJECT_META" 2>/dev/null) || WORKSPACE_DIR=""
 fi
 
@@ -98,7 +97,7 @@ CONFIGURATION="Debug"
 DEST_DIR="${HOME}/.hostmcp/Applications"
 
 # ────────────────────────────────────────────
-# Argument parsing / 引数パース
+# Argument parsing
 # ────────────────────────────────────────────
 show_help() {
     sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
@@ -126,70 +125,71 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Resolve the workspace path / ワークスペースパスの確定
+# Resolve the workspace path
 if [ -z "$WORKSPACE_DIR" ]; then
-    error "ワークスペースパスを特定できません。"
-    error ".project ファイルが存在するか確認してください。"
+    error "Cannot determine the workspace path."
+    error "Check that a .project file exists."
     exit 1
 fi
 
-# .xcodeproj の解決（未指定時は自動検出）
+# Resolve .xcodeproj (auto-detect if not specified)
 if [ -z "$XCODEPROJ" ]; then
     XCODEPROJ_LIST=$(find "$WORKSPACE_DIR" -maxdepth 2 -name "*.xcodeproj" -type d 2>/dev/null)
     XCODEPROJ_COUNT=$(echo "$XCODEPROJ_LIST" | grep -c . 2>/dev/null || true)
     if [ "$XCODEPROJ_COUNT" -eq 0 ]; then
-        error ".xcodeproj が見つかりません（WORKSPACE_DIR 2階層以内を検索）: ${WORKSPACE_DIR}"
-        error "--project で明示指定してください。"
+        error "No .xcodeproj found (searched up to 2 levels under WORKSPACE_DIR): ${WORKSPACE_DIR}"
+        error "Specify one explicitly with --project."
         exit 1
     elif [ "$XCODEPROJ_COUNT" -gt 1 ]; then
-        error "複数の .xcodeproj が見つかりました。--project で明示指定してください:"
+        error "Multiple .xcodeproj found. Specify one explicitly with --project:"
         echo "$XCODEPROJ_LIST" >&2
         exit 1
     fi
     XCODEPROJ=$(echo "$XCODEPROJ_LIST" | head -1)
 fi
 
-# SCHEME の自動導出（.xcodeproj のベース名から）
+# Derive SCHEME automatically from the .xcodeproj's base name, if not specified
 if [ -z "$SCHEME" ]; then
     SCHEME=$(basename "$XCODEPROJ" .xcodeproj)
 fi
 
 # ────────────────────────────────────────────
-# Preflight checks / 事前チェック
+# Preflight checks
 # ────────────────────────────────────────────
 if ! command -v xcodebuild &>/dev/null; then
-    error "xcodebuild が見つかりません。Xcode がインストールされているか確認してください。"
+    error "xcodebuild not found. Check that Xcode is installed."
     exit 1
 fi
 
 if [ ! -d "$XCODEPROJ" ]; then
-    error "Xcode プロジェクトが見つかりません: ${XCODEPROJ}"
+    error "Xcode project not found: ${XCODEPROJ}"
     exit 1
 fi
 
-# --project でホスト上の無関係なプロジェクトを指定されると、Build Phase 経由で
-# 任意コード実行を許すことになるため、WORKSPACE_DIR 配下であることを必須にする。
+# Allowing --project to point at an unrelated project elsewhere on the host
+# would permit arbitrary code execution via its Build Phases, so require it
+# to stay under WORKSPACE_DIR.
 require_within "$XCODEPROJ" "$WORKSPACE_DIR" "--project"
 
 XCODE_VERSION=$(set +o pipefail; xcodebuild -version 2>/dev/null | head -1 || echo "unknown")
-info "使用 Xcode: ${XCODE_VERSION}"
+info "Using Xcode: ${XCODE_VERSION}"
 
 DESTINATION="platform=macOS"
 
 # ────────────────────────────────────────────
-# Run build / ビルド実行
+# Run build
 # ────────────────────────────────────────────
-header "Xcode ビルド実行"
-echo "  プロジェクト : ${XCODEPROJ}"
-echo "  スキーム     : ${SCHEME}"
-echo "  構成         : ${CONFIGURATION}"
-echo "  destination  : ${DESTINATION}"
+header "Running Xcode build"
+echo "  Project       : ${XCODEPROJ}"
+echo "  Scheme        : ${SCHEME}"
+echo "  Configuration : ${CONFIGURATION}"
+echo "  destination   : ${DESTINATION}"
 echo ""
 
 LOG_FILE="${WORKSPACE_DIR}/tmp/xcode-install-app-last.log"
 mkdir -p "${WORKSPACE_DIR}/tmp"
-info "ログ保存先: ${LOG_FILE}"
-info "xcodebuild 実行中（完了まで数分かかります）..."
+info "Log: ${LOG_FILE}"
+info "Running xcodebuild (this can take a few minutes)..."
 
 set +e
 xcodebuild build \
@@ -202,19 +202,19 @@ EXIT_CODE=$?
 set -e
 
 if [ $EXIT_CODE -ne 0 ]; then
-    header "ビルド失敗"
+    header "Build failed"
     grep -E "error:" "$LOG_FILE" | head -60 || true
     error "BUILD FAILED (exit code: ${EXIT_CODE})"
-    error "ログ: ${LOG_FILE}"
+    error "Log: ${LOG_FILE}"
     exit $EXIT_CODE
 fi
 info "BUILD SUCCEEDED"
 
 # ────────────────────────────────────────────
-# Resolve the build product path / ビルド成果物のパスを取得
+# Resolve the build product path
 # ────────────────────────────────────────────
 if ! command -v jq &>/dev/null; then
-    error "jq が見つかりません。"
+    error "jq not found."
     exit 1
 fi
 
@@ -230,15 +230,16 @@ SETTINGS_EXIT=$?
 set -e
 
 if [ $SETTINGS_EXIT -ne 0 ]; then
-    error "ビルド設定の取得に失敗しました(exit code: ${SETTINGS_EXIT})。"
+    error "Failed to fetch build settings (exit code: ${SETTINGS_EXIT})."
     tail -20 "$SETTINGS_ERR_FILE" >&2 2>/dev/null || true
     exit $SETTINGS_EXIT
 fi
 
-# -showBuildSettings -json はスキームがビルドする全ターゲット分(メインアプリ＋
-# 組み込みExtension/Widget/Framework等)の要素を返すため、先頭要素をそのまま
-# 使うとメインアプリ以外の設定を拾う場合がある。SCHEME名と一致するターゲットを
-# 優先し、一致がなければ先頭要素にフォールバックする。
+# -showBuildSettings -json returns entries for every target the scheme builds
+# (main app plus any embedded extensions/widgets/frameworks), so naively using
+# the first entry can pick up settings from something other than the main app.
+# Prefer the target whose name matches SCHEME, falling back to the first entry
+# if there's no match.
 TARGET_SETTINGS=$(echo "$SETTINGS_JSON" | jq -c --arg t "$SCHEME" \
     '([.[] | select(.target == $t)] + .)[0].buildSettings // {}')
 
@@ -246,89 +247,98 @@ BUILT_PRODUCTS_DIR=$(echo "$TARGET_SETTINGS" | jq -r '.BUILT_PRODUCTS_DIR // emp
 WRAPPER_NAME=$(echo "$TARGET_SETTINGS" | jq -r '.WRAPPER_NAME // empty')
 
 if [ -z "$BUILT_PRODUCTS_DIR" ] || [ -z "$WRAPPER_NAME" ]; then
-    error "ビルド成果物のパスを特定できませんでした（BUILT_PRODUCTS_DIR/WRAPPER_NAME）。"
+    error "Could not determine the build product path (BUILT_PRODUCTS_DIR/WRAPPER_NAME)."
     exit 1
 fi
 
-# WRAPPER_NAME はこの後 DEST_DIR と結合してコピー先パスを組み立てる。ビルド
-# 設定由来の値をそのままパス結合に使うと、"/"や".."を含む値でコピー先
-# ディレクトリの外に書き込めてしまうため、単一のファイル/ディレクトリ名
-# であることを要求する。"."も単体で許すと DEST_APP が DEST_DIR 自身と
-# 一致し、直後の rsync --delete が DEST_DIR 配下を丸ごと消してしまうため拒否する。
+# WRAPPER_NAME gets joined with DEST_DIR below to build the copy destination
+# path. Using a build-settings-derived value directly in path construction
+# would let a value containing "/" or ".." write outside the destination
+# directory, so require it to be a single file/directory name. "." alone is
+# also rejected: allowing it would make DEST_APP equal DEST_DIR itself, and
+# the rsync --delete right after would wipe out everything under DEST_DIR.
 case "$WRAPPER_NAME" in
     */*|*..*|.)
-        error "ビルド成果物名(WRAPPER_NAME)が不正です: ${WRAPPER_NAME}"
+        error "Invalid build product name (WRAPPER_NAME): ${WRAPPER_NAME}"
         exit 1
         ;;
 esac
 
 SRC_APP="${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}"
 if [ ! -d "$SRC_APP" ]; then
-    error "ビルド成果物が見つかりません: ${SRC_APP}"
+    error "Build product not found: ${SRC_APP}"
     exit 1
 fi
 
 # ────────────────────────────────────────────
-# Copy to the fixed directory / 固定ディレクトリへコピー
+# Copy to the fixed directory
 # ────────────────────────────────────────────
-header "インストール"
-# require_within は cd による解決を要するため、まだ存在しないディレクトリには使えない。
-# mkdir -p で作成してしまう前に、$HOME 配下かどうかを文字列レベルで先に弾く。
-# 文字列マッチはパスを正規化しないため、"$HOME/../../tmp/evil" のような ".." を含む値は
-# "$HOME"/* パターンにそのまま一致してしまう。mkdir -p の前に ".." を明示的に拒否しておく。
+header "Installing"
+# require_within needs `cd` to resolve, so it can't be used on a directory
+# that doesn't exist yet. Reject anything outside $HOME at the string level
+# before mkdir -p creates it. String matching doesn't normalize the path, so
+# a value containing ".." (e.g. "$HOME/../../tmp/evil") would still match the
+# "$HOME"/* pattern as-is -- explicitly reject ".." before mkdir -p to guard
+# against that.
 case "$DEST_DIR" in
     *..*)
-        error "--dest-dir に '..' を含めることはできません: ${DEST_DIR}"
+        error "--dest-dir must not contain '..': ${DEST_DIR}"
         exit 1
         ;;
 esac
 case "$DEST_DIR" in
     "$HOME"|"$HOME"/*) ;;
     *)
-        error "--dest-dir が許可された範囲外です: ${DEST_DIR}"
-        error "許可範囲: ${HOME} 配下のみ"
+        error "--dest-dir is outside the allowed range: ${DEST_DIR}"
+        error "Allowed range: under ${HOME} only"
         exit 1
         ;;
 esac
-# $DEST_DIR 配下にシンボリックリンクが仕込まれていると、mkdir -p 自体がそれを辿って
-# $HOME 外にディレクトリを作成してしまう（作成後の require_within では防げない副作用）。
-# それを防ぐため、実在する最も近い祖先ディレクトリを先に require_within で検証してから
-# mkdir -p する（$HOME 自体は必ず存在するため、このループは必ず停止する）。
+# If a symlink is planted somewhere under $DEST_DIR, mkdir -p itself would
+# follow it and create a directory outside $HOME (a side effect that
+# require_within can't catch after the fact, since it only runs once the
+# directory already exists). To guard against that, validate the nearest
+# existing ancestor directory with require_within first, then mkdir -p ($HOME
+# itself always exists, so this loop is guaranteed to terminate).
 EXISTING_ANCESTOR="$DEST_DIR"
 while [ ! -d "$EXISTING_ANCESTOR" ]; do
     EXISTING_ANCESTOR="$(dirname "$EXISTING_ANCESTOR")"
 done
 require_within "$EXISTING_ANCESTOR" "$HOME" "--dest-dir"
 mkdir -p "$DEST_DIR"
-# --dest-dir を無検証で rsync / open に渡すと任意パス破壊につながるため、
-# $HOME 配下であることを必須にする（作成後の最終確認）。
+# Passing --dest-dir to rsync / open unvalidated would allow writing to
+# arbitrary paths, so require it to stay under $HOME (final check, after
+# creation).
 require_within "$DEST_DIR" "$HOME" "--dest-dir"
 DEST_APP="${DEST_DIR}/${WRAPPER_NAME}"
-# DEST_DIR 自体が $HOME 配下であっても、DEST_APP（rsync の実際の書き込み先）が
-# シンボリックリンクだった場合、rsync --delete はリンクを辿ってリンク先の中身を
-# 削除してしまう（DEST_DIR の検証では防げない）。WRAPPER_NAME の文字列チェックは
-# パス区切りや ".." を弾くだけで、その名前の場所に何が存在するかは見ていないため、
-# ここで別途シンボリックリンクの有無を確認する。
+# Even if DEST_DIR itself is under $HOME, if DEST_APP (rsync's actual write
+# target) is a symlink, rsync --delete would follow it and delete the
+# contents of whatever it points to -- something validating DEST_DIR alone
+# can't catch. The WRAPPER_NAME string check above only rejects path
+# separators and "..", not what actually exists at that name, so check for a
+# symlink separately here.
 if [ -L "$DEST_APP" ]; then
-    error "コピー先が既にシンボリックリンクです: ${DEST_APP}"
-    error "安全のため、シンボリックリンクへのインストールは拒否します。手動で削除してから再実行してください。"
+    error "Destination already exists as a symlink: ${DEST_APP}"
+    error "Refusing to install over a symlink for safety. Remove it manually and re-run."
     exit 1
 fi
 
-info "コピー元: ${SRC_APP}"
-info "コピー先: ${DEST_APP}"
+info "Source: ${SRC_APP}"
+info "Destination: ${DEST_APP}"
 
-# コピー元に存在しないファイルはコピー先から取り除き（--delete）、常に新しいビルドと
-# 完全に一致した状態にする。cp では新旧が混在した状態になりうる（cp -R は、コピー先に
-# 同名ディレクトリが既にあると中にネストしてコピーしてしまい、末尾ドット指定で中身を
-# 上書きしても新ビルドにないファイルは残ってしまう）。
+# --delete removes anything at the destination that isn't in the source, so
+# the destination always ends up matching the new build exactly. Plain cp
+# can leave old and new files mixed together (if the destination directory
+# already exists, cp -R nests the copy inside it, and copying with a trailing
+# dot to overwrite in place still leaves behind files the new build doesn't
+# have).
 if ! command -v rsync &>/dev/null; then
-    error "rsync が見つかりません。"
+    error "rsync not found."
     exit 1
 fi
 rsync -a --delete "${SRC_APP}/" "${DEST_APP}/"
 
-info "インストール完了: ${DEST_APP}"
-info "起動する場合は手動で: open \"${DEST_APP}\""
+info "Install complete: ${DEST_APP}"
+info "To launch it manually: open \"${DEST_APP}\""
 
 exit 0

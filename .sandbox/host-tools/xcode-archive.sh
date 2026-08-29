@@ -49,7 +49,7 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────
-# Color output / カラー出力
+# Color output
 # ────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -63,7 +63,7 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 header()  { echo -e "${BLUE}=== $* ===${NC}"; }
 
 # ────────────────────────────────────────────
-# Defaults / デフォルト値
+# Defaults
 # ────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -79,7 +79,7 @@ ARCHIVE_PATH=""
 ARCHIVE_DATE=$(date "+%Y-%m-%d")
 
 # ────────────────────────────────────────────
-# Argument parsing / 引数パース
+# Argument parsing
 # ────────────────────────────────────────────
 show_help() {
     sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
@@ -104,69 +104,69 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Resolve the workspace path / ワークスペースパスの確定
+# Resolve the workspace path
 if [ -z "$WORKSPACE_DIR" ]; then
-    error "ワークスペースパスを特定できません。"
-    error ".project ファイルが存在するか確認してください。"
+    error "Cannot determine the workspace path."
+    error "Check that a .project file exists."
     exit 1
 fi
 
-# .xcodeproj の解決（未指定時は自動検出）
+# Resolve .xcodeproj (auto-detect if not specified)
 if [ -z "$XCODEPROJ" ]; then
     XCODEPROJ_LIST=$(find "$WORKSPACE_DIR" -maxdepth 2 -name "*.xcodeproj" -type d 2>/dev/null)
     XCODEPROJ_COUNT=$(echo "$XCODEPROJ_LIST" | grep -c . 2>/dev/null || true)
     if [ "$XCODEPROJ_COUNT" -eq 0 ]; then
-        error ".xcodeproj が見つかりません（WORKSPACE_DIR 2階層以内を検索）: ${WORKSPACE_DIR}"
-        error "--project で明示指定してください。"
+        error "No .xcodeproj found (searched up to 2 levels under WORKSPACE_DIR): ${WORKSPACE_DIR}"
+        error "Specify one explicitly with --project."
         exit 1
     elif [ "$XCODEPROJ_COUNT" -gt 1 ]; then
-        error "複数の .xcodeproj が見つかりました。--project で明示指定してください:"
+        error "Multiple .xcodeproj found. Specify one explicitly with --project:"
         echo "$XCODEPROJ_LIST" >&2
         exit 1
     fi
     XCODEPROJ=$(echo "$XCODEPROJ_LIST" | head -1)
 fi
 
-# SCHEME の自動導出（.xcodeproj のベース名から）
+# Auto-derive SCHEME (from the .xcodeproj's base name)
 if [ -z "$SCHEME" ]; then
     SCHEME=$(basename "$XCODEPROJ" .xcodeproj)
 fi
 
-# ARCHIVE_PATH の自動導出（Xcode Organizer が拾える標準パス）
+# Auto-derive ARCHIVE_PATH (standard path that Xcode Organizer picks up)
 if [ -z "$ARCHIVE_PATH" ]; then
     ARCHIVE_PATH="${HOME}/Library/Developer/Xcode/Archives/${ARCHIVE_DATE}/${SCHEME} ${ARCHIVE_DATE}.xcarchive"
 fi
 
 # ────────────────────────────────────────────
-# Preflight checks / 事前チェック
+# Preflight checks
 # ────────────────────────────────────────────
 if ! command -v xcodebuild &>/dev/null; then
-    error "xcodebuild が見つかりません。Xcode がインストールされているか確認してください。"
+    error "xcodebuild not found. Check that Xcode is installed."
     exit 1
 fi
 
 if [ ! -d "$XCODEPROJ" ]; then
-    error "Xcode プロジェクトが見つかりません: ${XCODEPROJ}"
+    error "Xcode project not found: ${XCODEPROJ}"
     exit 1
 fi
 
 XCODE_VERSION=$(set +o pipefail; xcodebuild -version 2>/dev/null | head -1 || echo "unknown")
-info "使用 Xcode: ${XCODE_VERSION}"
+info "Xcode version: ${XCODE_VERSION}"
 
-# 既存アーカイブを削除（xcodebuild は上書き不可）
+# Remove any existing archive (xcodebuild can't overwrite one in place)
 if [ -e "$ARCHIVE_PATH" ]; then
     rm -rf "$ARCHIVE_PATH"
-    info "既存アーカイブを削除: ${ARCHIVE_PATH}"
+    info "Removed existing archive: ${ARCHIVE_PATH}"
 fi
 
 # ────────────────────────────────────────────
-# Build the xcodebuild command / xcodebuild コマンド組み立て
+# Build the xcodebuild command
 # ────────────────────────────────────────────
-header "Xcode アーカイブ実行"
-echo "  プロジェクト    : ${XCODEPROJ}"
-echo "  スキーム        : ${SCHEME}"
-echo "  設定            : Release"
-echo "  アーカイブ出力  : ${ARCHIVE_PATH}"
+header "Running Xcode archive"
+echo "  Project       : ${XCODEPROJ}"
+echo "  Scheme        : ${SCHEME}"
+echo "  Configuration : Release"
+echo "  Archive output: ${ARCHIVE_PATH}"
 echo ""
 
 CMD=(
@@ -180,11 +180,11 @@ CMD=(
 )
 
 # ────────────────────────────────────────────
-# Run archive / アーカイブ実行
+# Run archive
 # ────────────────────────────────────────────
 LOG_FILE="/tmp/xcode-archive-last.log"
-info "ログ保存先: ${LOG_FILE}"
-info "xcodebuild 実行中（完了まで数分かかります）..."
+info "Log: ${LOG_FILE}"
+info "Running xcodebuild (this can take a few minutes)..."
 
 set +e
 "${CMD[@]}" > "$LOG_FILE" 2>&1
@@ -192,27 +192,27 @@ EXIT_CODE=$?
 set -e
 
 # ────────────────────────────────────────────
-# Show results / 結果表示
+# Show results
 # ────────────────────────────────────────────
 echo ""
 if [ $EXIT_CODE -eq 0 ]; then
-    header "アーカイブ成功"
+    header "Archive succeeded"
     info "✅ ARCHIVE SUCCEEDED"
-    info "アーカイブ: ${ARCHIVE_PATH}"
+    info "Archive: ${ARCHIVE_PATH}"
     echo ""
-    echo -e "${GREEN}次のステップ:${NC}"
-    echo "  Xcode の Window → Organizer を開くと"
-    echo "  「${ARCHIVE_PATH}」が表示されます。"
-    echo "  「Distribute App」→「TestFlight & App Store」→「Upload」"
-    echo "  でアップロードしてください。"
+    echo -e "${GREEN}Next steps:${NC}"
+    echo "  Open Xcode's Window → Organizer and you'll see"
+    echo "  \"${ARCHIVE_PATH}\" listed there."
+    echo "  Use \"Distribute App\" → \"TestFlight & App Store\" → \"Upload\""
+    echo "  to upload it."
 else
-    header "アーカイブ失敗"
+    header "Archive failed"
     echo -e "${RED}❌ ARCHIVE FAILED (exit code: ${EXIT_CODE})${NC}"
     echo ""
-    echo "--- エラー一覧 ---"
+    echo "--- Errors ---"
     grep -E "error:" "$LOG_FILE" 2>/dev/null | head -40 || true
     echo ""
-    error "詳細ログ: ${LOG_FILE}"
+    error "Full log: ${LOG_FILE}"
 fi
 
 exit $EXIT_CODE

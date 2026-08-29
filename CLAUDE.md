@@ -213,6 +213,7 @@ For detailed information, read the relevant file when needed:
 | Template customization workflow | [docs/ai-guide.md → Customization](docs/ai-guide.md#customization-workflow) |
 | SandboxMCP extensions | [docs/ai-guide.md → SandboxMCP](docs/ai-guide.md#sandboxmcp-extensions) |
 | Writing meaningful tests | [docs/ai-guide.md → Tests](docs/ai-guide.md#writing-meaningful-tests) |
+| XCUITest screenshot automation | [docs/ai-guide.md → XCUITest](docs/ai-guide.md#xcuitest-screenshot-automation) |
 | Writing comments | [docs/ai-guide.md → Comments](docs/ai-guide.md#writing-comments) |
 | Host OS test script conventions | [docs/ai-guide.md → Host Scripts](docs/ai-guide.md#host-os-test-scripts) |
 | Two environment strategy | [docs/reference.md](docs/reference.md) |

@@ -377,6 +377,18 @@ If unsure whether a test is meaningful, ask the user before writing.
 
 ---
 
+## XCUITest Screenshot Automation
+
+`xcode-simulator-screenshot.sh`'s default flow only captures an app's launch screen (no tap capability). Its `--ui-test` mode instead runs one XCUITest method that navigates to a specific screen and captures its own screenshot — this is how a screen beyond the launch screen gets captured. The host-tool script itself is app-agnostic; only the per-app UI test code below is specific to each app, the same way any UI testing (XCUITest, Espresso, Playwright, ...) inherently is. Follow this recipe so adding the capability to a new app is a small, repeatable step rather than a bespoke redesign:
+
+1. **Add a UI test target if the app doesn't have one.** XcodeGen projects: add a `bundle.ui-testing` target (`dependencies: [{target: <App>}]`, `settings.base.TEST_TARGET_NAME: <App>`), wire it into the scheme's `build`/`test` targets, then regenerate via `xcodegen-generate.sh`. Plain Xcode projects created via the New Project wizard often already have an empty `<App>UITests` target from the "Include Tests" checkbox — check with `xcodebuild -list` before adding a new one.
+2. **Add a launch-argument-gated seeding hook** at the app's entry point (e.g. `@main` App struct's `init()`), wrapped in `#if DEBUG` so it never ships in a Release build. Gate it on a `--ui-testing` launch argument. Reuse the app's own existing idiomatic fixture-construction pattern (e.g. copy from its own unit tests) rather than inventing a new one. If reaching the target screen needs data to exist (a seeded record, a completed onboarding step, a bypassed "first launch" gate, an async status check that would otherwise stall waiting on a state the test environment can never produce — e.g. network/cloud-sync availability), bypass or seed it here too; a fresh app install can hit more than one such gate before the target screen is reachable, so check each screen the flow actually passes through, not just the destination.
+3. **Add `.accessibilityIdentifier("<Name>Screen")`** to each target screen's outermost view (naming: the view's type name minus `View`, plus `Screen`). Also add an identifier to any interactive element needed to *reach* that screen if its default accessibility label isn't guaranteed stable (icon-only buttons — an SF Symbol's accessibility label isn't guaranteed to match its system name).
+4. **Write one XCUITest method per target screen**, each with a real `XCTAssert`/`waitForExistence` on the identifier *before* taking the screenshot (never screenshot an unconfirmed state) — this is what makes it a meaningful test per the section above, not just a screenshot with no verification. Attach via `XCTAttachment(screenshot:)` with `.lifetime = .keepAlways` (attachments are discarded on a passing test otherwise) and a descriptive `.name`. Query elements via `app.descendants(matching: .any).matching(identifier:).firstMatch` rather than `.buttons[...]`/`.otherElements[...]`, since SwiftUI doesn't guarantee which accessibility trait an element surfaces as.
+5. **Invoke via the host tool**: `xcode-simulator-screenshot.sh --ui-test <Target>/<Class>/<method> --output <path>`. Validate the test itself first via `xcode-test.sh --only "<Target>/<Class>/<method>" --no-skip-ui-tests` — app-logic/navigation failures are easier to diagnose there than through the screenshot-extraction path.
+
+---
+
 ## Writing Comments
 
 Comments should state a durable constraint on the current code, not narrate how a change was made. That narrative belongs in the commit message or PR description, not permanent code.

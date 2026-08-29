@@ -39,7 +39,7 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────
-# Color output / カラー出力
+# Color output
 # ────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -53,7 +53,7 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 header()  { echo -e "${BLUE}=== $* ===${NC}"; }
 
 # ────────────────────────────────────────────
-# Defaults / デフォルト値
+# Defaults
 # ────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -68,7 +68,7 @@ SCHEME=""
 DESTINATION=""
 
 # ────────────────────────────────────────────
-# Argument parsing / 引数パース
+# Argument parsing
 # ────────────────────────────────────────────
 show_help() {
     sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
@@ -93,51 +93,51 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Resolve the workspace path / ワークスペースパスの確定
+# Resolve the workspace path
 if [ -z "$WORKSPACE_DIR" ]; then
-    error "ワークスペースパスを特定できません。"
-    error ".project ファイルが存在するか確認してください。"
+    error "Cannot determine the workspace path."
+    error "Check that a .project file exists."
     exit 1
 fi
 
-# .xcodeproj の解決（未指定時は自動検出）
+# Resolve .xcodeproj (auto-detect if not specified)
 if [ -z "$XCODEPROJ" ]; then
     XCODEPROJ_LIST=$(find "$WORKSPACE_DIR" -maxdepth 2 -name "*.xcodeproj" -type d 2>/dev/null)
     XCODEPROJ_COUNT=$(echo "$XCODEPROJ_LIST" | grep -c . 2>/dev/null || true)
     if [ "$XCODEPROJ_COUNT" -eq 0 ]; then
-        error ".xcodeproj が見つかりません（WORKSPACE_DIR 2階層以内を検索）: ${WORKSPACE_DIR}"
-        error "--project で明示指定してください。"
+        error "No .xcodeproj found (searched up to 2 levels under WORKSPACE_DIR): ${WORKSPACE_DIR}"
+        error "Specify one explicitly with --project."
         exit 1
     elif [ "$XCODEPROJ_COUNT" -gt 1 ]; then
-        error "複数の .xcodeproj が見つかりました。--project で明示指定してください:"
+        error "Multiple .xcodeproj found. Specify one explicitly with --project:"
         echo "$XCODEPROJ_LIST" >&2
         exit 1
     fi
     XCODEPROJ=$(echo "$XCODEPROJ_LIST" | head -1)
 fi
 
-# SCHEME の自動導出（.xcodeproj のベース名から）
+# Resolve SCHEME (from the .xcodeproj's base name if not specified)
 if [ -z "$SCHEME" ]; then
     SCHEME=$(basename "$XCODEPROJ" .xcodeproj)
 fi
 
 # ────────────────────────────────────────────
-# Preflight checks / 事前チェック
+# Preflight checks
 # ────────────────────────────────────────────
 if ! command -v xcodebuild &>/dev/null; then
-    error "xcodebuild が見つかりません。Xcode がインストールされているか確認してください。"
+    error "xcodebuild not found. Check that Xcode is installed."
     exit 1
 fi
 
 if [ ! -d "$XCODEPROJ" ]; then
-    error "Xcode プロジェクトが見つかりません: ${XCODEPROJ}"
+    error "Xcode project not found: ${XCODEPROJ}"
     exit 1
 fi
 
 XCODE_VERSION=$(set +o pipefail; xcodebuild -version 2>/dev/null | head -1 || echo "unknown")
-info "使用 Xcode: ${XCODE_VERSION}"
+info "Xcode version: ${XCODE_VERSION}"
 
-# destination が未指定の場合、最新 iOS の iPhone シミュレーターを自動選択
+# Auto-select the latest iOS iPhone simulator if destination is not specified
 if [ -z "$DESTINATION" ]; then
     SIM_ID=$(xcrun simctl list devices available -j 2>/dev/null | jq -r '
         .devices
@@ -150,19 +150,19 @@ if [ -z "$DESTINATION" ]; then
     ' 2>/dev/null || true)
     if [ -n "$SIM_ID" ] && [ "$SIM_ID" != "null" ]; then
         DESTINATION="platform=iOS Simulator,id=${SIM_ID}"
-        info "シミュレーター自動選択: ${SIM_ID}"
+        info "Simulator auto-selected: ${SIM_ID}"
     else
         DESTINATION="platform=iOS Simulator,name=iPhone 16,OS=18.6"
-        warn "シミュレーター自動選択失敗。フォールバック: ${DESTINATION}"
+        warn "Simulator auto-selection failed. Falling back to: ${DESTINATION}"
     fi
 fi
 
 # ────────────────────────────────────────────
-# Build the xcodebuild command / xcodebuild コマンド組み立て
+# Build the xcodebuild command
 # ────────────────────────────────────────────
-header "Xcode ビルド実行"
-echo "  プロジェクト : ${XCODEPROJ}"
-echo "  スキーム     : ${SCHEME}"
+header "Running Xcode build"
+echo "  Project      : ${XCODEPROJ}"
+echo "  Scheme       : ${SCHEME}"
 echo "  destination  : ${DESTINATION}"
 echo ""
 
@@ -174,12 +174,12 @@ CMD=(
 )
 
 # ────────────────────────────────────────────
-# Run build / ビルド実行
+# Run build
 # ────────────────────────────────────────────
 LOG_FILE="${WORKSPACE_DIR}/tmp/xcode-build-last.log"
 mkdir -p "${WORKSPACE_DIR}/tmp"
-info "ログ保存先: ${LOG_FILE}"
-info "xcodebuild 実行中（完了まで数分かかります）..."
+info "Log: ${LOG_FILE}"
+info "Running xcodebuild (this can take a few minutes)..."
 
 set +e
 "${CMD[@]}" > "$LOG_FILE" 2>&1
@@ -187,33 +187,33 @@ EXIT_CODE=$?
 set -e
 
 # ────────────────────────────────────────────
-# Show results / 結果表示
+# Show results
 # ────────────────────────────────────────────
 ERROR_SUMMARY="${WORKSPACE_DIR}/tmp/xcode-build-errors.txt"
 mkdir -p "$(dirname "$ERROR_SUMMARY")"
 
 set +o pipefail
 if [ $EXIT_CODE -eq 0 ]; then
-    header "ビルド成功"
+    header "Build succeeded"
     {
         echo "BUILD SUCCEEDED"
         grep -E "warning:" "$LOG_FILE" | head -10
     } > "$ERROR_SUMMARY" 2>/dev/null || true
     info "BUILD SUCCEEDED"
-    info "サマリー: ${ERROR_SUMMARY}"
+    info "Summary: ${ERROR_SUMMARY}"
 else
-    header "ビルド失敗"
-    # Extract error lines and save to a file (readable from the container too) / エラー行を抽出してファイルに保存（コンテナからも読める）
+    header "Build failed"
+    # Extract error lines and save to a file (readable from the container too)
     {
         echo "BUILD FAILED (exit code: ${EXIT_CODE})"
-        echo "--- エラー一覧 ---"
+        echo "--- Errors ---"
         grep -E "error:" "$LOG_FILE" | head -60
     } > "$ERROR_SUMMARY" 2>/dev/null || true
-    # Show only the first 20 lines on stdout / 標準出力には先頭20行だけ表示
+    # Show only the first 20 lines on stdout
     head -20 "$ERROR_SUMMARY" 2>/dev/null || true
     echo ""
     error "BUILD FAILED (exit code: ${EXIT_CODE})"
-    error "エラーサマリー: ${ERROR_SUMMARY}"
+    error "Error summary: ${ERROR_SUMMARY}"
 fi
 set -o pipefail
 
