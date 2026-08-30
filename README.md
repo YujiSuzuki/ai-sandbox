@@ -8,7 +8,7 @@
 
 ![AI Sandbox demo: secrets stay invisible while AI keeps working](https://raw.githubusercontent.com/YujiSuzuki/ai-sandbox-assets/main/demo.gif)
 
-AI coding agents normally read everything in your project directory — including `.env` files, API keys, and private certificates. Application-level deny rules can help, but they depend on correct configuration and have [scope limitations](docs/comparison.md). This template takes a different approach, via Docker volume mounts, to make it true at the filesystem level.
+AI coding agents have unrestricted read access to everything in your project directory — nothing stops them from opening `.env` files, API keys, or private certificates once a search or task leads there. Application-level deny rules can help, but they depend on correct configuration and have [scope limitations](docs/comparison.md). This template takes a different approach, via Docker volume mounts, to make secrets structurally absent at the filesystem level.
 
 This template creates a Docker-based development environment where:
 
