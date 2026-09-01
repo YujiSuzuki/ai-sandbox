@@ -92,6 +92,8 @@ Host OS
 - Apps can read secret files (functionality maintained)
 - AI can still check logs and run tests via HostMCP
 
+**This hiding mechanism stays necessary even if production secrets live in a managed secret store (AWS Secrets Manager, Google Cloud Secret Manager, Azure Key Vault, etc.).** Those services solve where secrets are stored in production, which is a separate problem from whether AI can see them during local development. Locally, either the secret value itself (e.g., a dev-only env file) or the credential needed to reach that store (a service account key, a CLI login token) ends up sitting somewhere AI can see inside the container. Either way, something sensitive still exists inside this sandbox that needs hiding from AI.
+
 ---
 
 ## Benefits of AI Sandbox Isolation
