@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 # claude-data.py
-# Lists Claude local data (memory, plans, optionally settings) by default; copies with --copy.
+# Lists Claude local data (memory, plans, latest-session scratchpad, optionally settings
+# and recent session transcripts) by default; --copy backs up memory/plans (not scratchpad
+# or session transcripts, which are per-session throwaway/log data).
 # @advertise: true
 # ---
-# Claude のローカルデータ（memory、plans、任意で settings）をデフォルトで一覧表示し、--copy 指定時のみコピーする。
+# Claude のローカルデータ（memory、plans、直近セッションの scratchpad、任意で settings と
+# 直近セッションのトランスクリプト）をデフォルトで一覧表示する。--copy は memory/plans のみ
+# バックアップする（scratchpad とセッショントランスクリプトはセッション単位のログのため対象外）。
 
+import glob as globmod
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 CLAUDE_DIR = Path("/home/node/.claude")
@@ -15,27 +21,46 @@ MEMORY_SRC = CLAUDE_DIR / "projects" / "-workspace" / "memory"
 PLANS_SRC = CLAUDE_DIR / "plans"
 SETTINGS_SRC = CLAUDE_DIR / "settings.json"
 PLUGINS_SRC = CLAUDE_DIR / "plugins"
+SCRATCHPAD_DIR_GLOB = "/tmp/claude-*/-workspace/*/scratchpad"
+SESSIONS_DIR = CLAUDE_DIR / "projects" / "-workspace"
+RECENT_SESSIONS_COUNT = 5
 
 
 def usage_text(prog: str) -> str:
-    return f"""Usage: {prog} [--with-settings]
+    return f"""Usage: {prog} [--with-settings] [--with-scratchpad-history] [--with-recent-sessions]
        {prog} --copy <dest-dir> [--with-settings]
 
 Options:
-  --copy <dest-dir>  Copy source files to dest-dir instead of listing them
-  --with-settings    Also list/copy settings.json and plugins/
-  -h, --help         Show this help
+  --copy <dest-dir>          Copy source files to dest-dir instead of listing them
+  --with-settings            Also list/copy settings.json and plugins/
+  --with-scratchpad-history  Also list older scratchpad sessions (collapsed to
+                              "dir (N file(s))"); omitted by default
+  --with-recent-sessions     Also list the {RECENT_SESSIONS_COUNT} most recently modified
+                              session transcripts (*.jsonl); omitted by default
+  -h, --help                 Show this help
 
-Listed/copied by default:
-  memory/   ({MEMORY_SRC})
-  plans/    ({PLANS_SRC})
+Listed by default:
+  memory/       ({MEMORY_SRC})
+  plans/        ({PLANS_SRC})
+  scratchpad/*  ({SCRATCHPAD_DIR_GLOB}/*)
+                (only the most recently active session, listed file-by-file)
+
+Copied by --copy (scratchpad and session transcripts are excluded — per-session log data):
+  memory/
+  plans/
 
 With --with-settings:
   settings.json
   plugins/
 
+With --with-recent-sessions:
+  *.jsonl       ({SESSIONS_DIR}/*.jsonl)
+                ({RECENT_SESSIONS_COUNT} most recently modified, listed with mtime)
+
 Example:
   {prog}
+  {prog} --with-scratchpad-history
+  {prog} --with-recent-sessions
   {prog} --with-settings
   {prog} --copy ~/backup/claude
   {prog} --copy ~/backup/claude --with-settings
@@ -53,6 +78,48 @@ def list_path(path: Path) -> list[str]:
     if path.is_file():
         return [str(path)]
     return []
+
+
+def list_scratchpads(include_history: bool) -> list[str]:
+    """Most-recently-active scratchpad dir listed file-by-file (clickable paths).
+    With include_history, older ones are also shown, collapsed to one line each
+    (dir path + file count) — the dir path is itself a clickable link that opens
+    the folder in VS Code. Without it, older sessions are omitted entirely."""
+    dirs = [Path(p) for p in globmod.glob(SCRATCHPAD_DIR_GLOB) if Path(p).is_dir()]
+
+    def files_of(d: Path) -> list[Path]:
+        return sorted(f for f in d.rglob("*") if f.is_file())
+
+    def latest_mtime(d: Path, files: list[Path]) -> float:
+        return max((f.stat().st_mtime for f in files), default=d.stat().st_mtime)
+
+    dirs_with_files = [(d, files_of(d)) for d in dirs]
+    dirs_with_files = [(d, files) for d, files in dirs_with_files if files]
+    dirs_with_files.sort(key=lambda item: latest_mtime(*item), reverse=True)
+
+    lines: list[str] = []
+    for i, (d, files) in enumerate(dirs_with_files):
+        if i == 0:
+            lines.extend(str(f) for f in files)
+        elif include_history:
+            lines.append(f"{d}  ({len(files)} file(s))")
+        else:
+            break
+    return lines
+
+
+def list_recent_sessions(count: int) -> list[str]:
+    """Most recently modified session transcripts (*.jsonl), newest first, each
+    annotated with its mtime since the filename (a session UUID) gives no clue
+    on its own which one is which."""
+    files = [p for p in SESSIONS_DIR.glob("*.jsonl") if p.is_file()]
+    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+    lines: list[str] = []
+    for p in files[:count]:
+        mtime = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+        lines.append(f"{p}  ({mtime})")
+    return lines
 
 
 def show_diff_if_changed(src: Path, dest: Path) -> None:
@@ -105,6 +172,8 @@ def main() -> None:
     argv = sys.argv[1:]
 
     with_settings = False
+    with_scratchpad_history = False
+    with_recent_sessions = False
     copy = False
     dest: str | None = None
 
@@ -122,6 +191,12 @@ def main() -> None:
         elif arg == "--with-settings":
             with_settings = True
             i += 1
+        elif arg == "--with-scratchpad-history":
+            with_scratchpad_history = True
+            i += 1
+        elif arg == "--with-recent-sessions":
+            with_recent_sessions = True
+            i += 1
         elif arg in ("-h", "--help"):
             exit_with_usage(prog)
         else:
@@ -133,10 +208,15 @@ def main() -> None:
             print(line)
         for line in list_path(PLANS_SRC):
             print(line)
+        for line in list_scratchpads(with_scratchpad_history):
+            print(line)
         if with_settings:
             for line in list_path(SETTINGS_SRC):
                 print(line)
             for line in list_path(PLUGINS_SRC):
+                print(line)
+        if with_recent_sessions:
+            for line in list_recent_sessions(RECENT_SESSIONS_COUNT):
                 print(line)
         sys.exit(0)
 
