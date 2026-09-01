@@ -10,6 +10,7 @@
 # バックアップする（scratchpad とセッショントランスクリプトはセッション単位のログのため対象外）。
 
 import glob as globmod
+import os
 import shutil
 import subprocess
 import sys
@@ -17,12 +18,17 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_DIR = Path("/home/node/.claude")
-MEMORY_SRC = CLAUDE_DIR / "projects" / "-workspace" / "memory"
+WORKSPACE = Path(os.environ.get("WORKSPACE", "/workspace"))
+# Claude Code names a project's dir under ~/.claude/projects/ (and its /tmp
+# scratchpad dir) by replacing "/" with "-" in the workspace path, e.g.
+# /workspace -> -workspace.
+PROJECT_DIR_NAME = str(WORKSPACE).replace("/", "-")
+MEMORY_SRC = CLAUDE_DIR / "projects" / PROJECT_DIR_NAME / "memory"
 PLANS_SRC = CLAUDE_DIR / "plans"
 SETTINGS_SRC = CLAUDE_DIR / "settings.json"
 PLUGINS_SRC = CLAUDE_DIR / "plugins"
-SCRATCHPAD_DIR_GLOB = "/tmp/claude-*/-workspace/*/scratchpad"
-SESSIONS_DIR = CLAUDE_DIR / "projects" / "-workspace"
+SCRATCHPAD_DIR_GLOB = f"/tmp/claude-*/{PROJECT_DIR_NAME}/*/scratchpad"
+SESSIONS_DIR = CLAUDE_DIR / "projects" / PROJECT_DIR_NAME
 RECENT_SESSIONS_COUNT = 5
 
 

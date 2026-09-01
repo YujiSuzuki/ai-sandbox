@@ -238,6 +238,26 @@ test_copy_excludes_settings_by_default() {
     rm -rf "$dest_dir"
 }
 
+# Test: WORKSPACE env var changes the derived project dir name (memory/plans/scratchpad paths)
+test_workspace_env_var_changes_project_dir() {
+    info "WORKSPACE env var changes the derived project dir name"
+
+    local dest_dir
+    dest_dir=$(mktemp -d)
+
+    local output
+    output=$(WORKSPACE=/some/other/path "$SCRIPT" --copy "$dest_dir" 2>&1) || true
+
+    if echo "$output" | grep -q -- "-some-other-path/memory"; then
+        pass "WORKSPACE override changes the project dir name"
+    else
+        fail "WORKSPACE override should change the project dir name used for memory/"
+        echo "  Output: $output"
+    fi
+
+    rm -rf "$dest_dir"
+}
+
 # Run all tests
 main() {
     echo "========================================"
@@ -257,6 +277,7 @@ main() {
     test_unknown_option
     test_copy_copies_files
     test_copy_excludes_settings_by_default
+    test_workspace_env_var_changes_project_dir
 
     echo ""
     echo "========================================"
