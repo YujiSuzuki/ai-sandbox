@@ -12,15 +12,35 @@
 #
 # Options:
 #   --only <TestClass>       Run only a specific test class (e.g. --only MyFeatureTests)
-#   --project <path>         Path to the .xcodeproj (auto-detected under WORKSPACE_DIR if omitted)
+#   --project <path>         Path to the .xcodeproj. Absolute, or relative to WORKSPACE_DIR
+#                             (auto-detected under WORKSPACE_DIR if omitted, but only up to
+#                             2 levels deep -- pass this explicitly for a project nested
+#                             deeper, e.g. inside a sub-repo's own ios/ subdirectory)
 #   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
-#   --test-target <name>     Unit test target name (default: <scheme>Tests)
+#   --test-target <name>     Unit test target name (default: <scheme>Tests). Only matters
+#                             when --only has no "/" at all (see WARNING below) -- needed to
+#                             filter a UI test class by name alone, since its real target
+#                             (<scheme>UITests) differs from this default.
 #   --no-skip-ui-tests       Also run UI tests (default: UI tests are skipped)
 #   --destination <dest>     xcodebuild destination (default: iOS Simulator, latest iPhone)
+#   --clean                  Run `xcodebuild clean test` instead of a plain incremental
+#                             test run. Use this when you suspect xcodebuild is reusing
+#                             stale build products instead of picking up a source change --
+#                             e.g. a symptom like "CoreData: warning: Multiple
+#                             NSEntityDescriptions claim the NSManagedObject subclass ..." in
+#                             the output, or a test you just added reporting 0 executed
+#                             tests with no compile steps in the log even though the class
+#                             itself is found. Takes noticeably longer (a full rebuild, not
+#                             incremental) -- raise --timeout / client_timeout_seconds to
+#                             match if the default 600s isn't enough (see the two-layer
+#                             timeout note below).
 #   --help, -h               Show this help
 #
 # Examples:
 #   ./xcode-test.sh
+#   ./xcode-test.sh --project myapp/ios/MyApp.xcodeproj  # relative to WORKSPACE_DIR; needed
+#                                                         # when nested deeper than auto-detect's 2 levels
+#   ./xcode-test.sh --clean  # force a full rebuild if stale build products are suspected
 #   ./xcode-test.sh --only MyFeatureTests
 #   ./xcode-test.sh --only "MyFeatureTests/test_something"
 #   ./xcode-test.sh --only "MyAppTests/MyFeatureTests"  # TargetName/ClassName form also works
@@ -45,6 +65,36 @@
 #
 #   Recommended: wrap tests in an outer struct named after the file, with inner nested structs
 #   (see .sandbox/host-tools/README.md).
+#
+# WARNING (XCTest, e.g. UI test targets): to run a single test *method*, all
+#   three segments -- Target/Class/Method -- are required. This script's
+#   auto-prefixing only adds the target when --only has no "/" at all; once you
+#   add one "/", the two segments you give are passed straight through, and
+#   xcodebuild's -only-testing: always reads the first of those as the target.
+#   That's harmless when the class name differs from the target name (the
+#   2-segment "Class/Method" form then falls back to being read correctly) --
+#   but a UI test class is conventionally named the same as its target (e.g.
+#   class MyAppUITests inside target MyAppUITests), and there the 2-segment
+#   form is read as Target/Class instead, silently matching 0 tests.
+#
+#   This is also where --test-target actually matters: with a single-segment
+#   --only (no "/" at all, e.g. --only MyFeatureUITests to run a whole UI test
+#   class), auto-prefixing builds "${TEST_TARGET}/${value}" -- pass
+#   --test-target explicitly, since the default (<scheme>Tests) won't match a
+#   UI test target's real name (<scheme>UITests) and silently matches 0 tests.
+#
+#   Example: testSomething() inside class MyAppUITests, target MyAppUITests
+#     WRONG:   --test-target MyAppUITests --only "MyAppUITests/testSomething"
+#              -> 0 tests (read as Target=MyAppUITests / Class=testSomething)
+#     CORRECT: --test-target MyAppUITests --only "MyAppUITests/MyAppUITests/testSomething"
+#
+#   Put together, running one UI test method inside a project nested deeper
+#   than auto-detect's 2 levels (see --project above) needs --project
+#   (auto-detect won't find it), --no-skip-ui-tests (UI tests are skipped by
+#   default), and the 3-segment --only -- --test-target is not required here
+#   since a fully-qualified 3-segment --only bypasses auto-prefixing entirely:
+#     ./xcode-test.sh --project myapp/ios/MyApp.xcodeproj --no-skip-ui-tests \
+#       --only "MyAppUITests/MyAppUITests/testSomething"
 #
 # Command-line usage example
 #
@@ -74,15 +124,34 @@
 #
 # Options:
 #   --only <TestClass>       特定のテストクラスのみ実行（例: --only MyFeatureTests）
-#   --project <path>         .xcodeproj のパス（未指定時は WORKSPACE_DIR 内を自動検出）
+#   --project <path>         .xcodeproj のパス。絶対パス、または WORKSPACE_DIR からの相対パス
+#                             （未指定時は WORKSPACE_DIR 内を自動検出するが、深さ2階層までしか
+#                             探索しない -- サブリポジトリの ios/ 配下など、それより深い場所に
+#                             ある場合は明示的に指定すること）
 #   --scheme <scheme>        Xcode スキーム名（デフォルト: .xcodeproj のベース名）
-#   --test-target <name>     UT ターゲット名（デフォルト: <scheme>Tests）
+#   --test-target <name>     UT ターゲット名（デフォルト: <scheme>Tests）。意味を持つのは
+#                             --only に「/」が一切ない場合のみ（下のWARNING参照）-- UIテスト
+#                             クラスをクラス名だけで絞り込む際、実際のターゲット名
+#                             （<scheme>UITests）がこのデフォルトと異なるため必要になる。
 #   --no-skip-ui-tests       UI テストもあわせて実行（デフォルト: UI テストはスキップ）
 #   --destination <dest>     xcodebuild destination（デフォルト: iOS Simulator, 最新 iPhone）
+#   --clean                  素の増分テスト実行の代わりに `xcodebuild clean test` を実行する。
+#                             ソースの変更をxcodebuildが拾えず古いビルド成果物を使い回して
+#                             いる疑いがある時に使う -- 例えば出力に「CoreData: warning:
+#                             Multiple NSEntityDescriptions claim the NSManagedObject
+#                             subclass ...」のような症状が出ている、追加したばかりのテスト
+#                             が「0件実行」と報告されクラス自体は見つかっているのにログに
+#                             コンパイル関連の行が一つもない、などのサイン。フルリビルド
+#                             になるため明確に時間が長くなる -- デフォルトの600秒で足りない
+#                             場合は --timeout / client_timeout_seconds も合わせて延ばす
+#                             こと（下記の二層タイムアウトの説明を参照）。
 #   --help, -h               このヘルプを表示
 #
 # Examples:
 #   ./xcode-test.sh
+#   ./xcode-test.sh --project myapp/ios/MyApp.xcodeproj  # WORKSPACE_DIR からの相対パス。
+#                                                         # 自動検出の2階層より深い場合に必要
+#   ./xcode-test.sh --clean  # 古いビルド成果物が疑われる時にフルリビルドを強制する
 #   ./xcode-test.sh --only MyFeatureTests
 #   ./xcode-test.sh --only "MyFeatureTests/test_something"
 #   ./xcode-test.sh --only "MyAppTests/MyFeatureTests"  # TargetName/ClassName 形式でも可
@@ -104,6 +173,34 @@
 #     ✅ --only HandleFeatureTests → 正常に実行
 #
 #   推奨: ファイル名と同名の外枠 struct を作り、内部 struct を入れ子にする（.sandbox/host-tools/README.md 参照）
+#
+# ⚠️ XCTest（UIテストターゲットなど）: 特定のテスト*メソッド*を1つだけ実行するには
+#   Target/Class/Method の3段すべてが必要。このスクリプトの自動プレフィックスは
+#   --only に「/」が一切ない場合にのみターゲット名を補うので、「/」を1つでも
+#   含めた時点で、渡した2つのセグメントはそのまま xcodebuild に渡り、
+#   -only-testing: はその最初のセグメントを常にターゲット名として解釈する。
+#   クラス名とターゲット名が異なる場合は無害（2段の「Class/Method」形式でも
+#   結果的に正しく解釈される）が、UIテストのクラスは慣習的にターゲットと
+#   同じ名前になる（例: ターゲット MyAppUITests の中のクラス MyAppUITests）ため、
+#   その場合は2段形式が Target/Class として解釈されてしまい、テストが黙って0件になる。
+#
+#   --test-target が実際に意味を持つのもここ: 「/」を一切含まない単一セグメントの
+#   --only（例: UIテストクラスを丸ごと実行する --only MyFeatureUITests）では、
+#   自動プレフィックスが "${TEST_TARGET}/${値}" を組み立てるため、--test-target を
+#   明示的に指定すること -- デフォルト（<scheme>Tests）はUIテストターゲットの
+#   実際の名前（<scheme>UITests）と一致せず、黙って0件になる。
+#
+#   例: クラス MyAppUITests（ターゲット MyAppUITests）内の testSomething()
+#     ❌ --test-target MyAppUITests --only "MyAppUITests/testSomething"
+#        → 0件（Target=MyAppUITests / Class=testSomething と解釈される）
+#     ✅ --test-target MyAppUITests --only "MyAppUITests/MyAppUITests/testSomething"
+#
+#   組み合わせると、自動検出の2階層より深い場所にあるプロジェクト（上の --project 参照）で
+#   UIテストのメソッドを1つだけ実行するには、--project（自動検出が届かない）、
+#   --no-skip-ui-tests（UIテストはデフォルトでスキップされる）、3段の --only が必要になる --
+#   3段すべて指定した --only は自動プレフィックス処理を経由しないため、--test-target は不要:
+#     ./xcode-test.sh --project myapp/ios/MyApp.xcodeproj --no-skip-ui-tests \
+#       --only "MyAppUITests/MyAppUITests/testSomething"
 #
 # コマンドラインからの使用例
 #
@@ -151,6 +248,7 @@ TEST_TARGET=""
 ONLY_TESTING_RAW=""
 DESTINATION=""
 SKIP_UI_TESTS=true
+CLEAN=false
 
 # ────────────────────────────────────────────
 # Argument parsing
@@ -179,6 +277,8 @@ while [[ $# -gt 0 ]]; do
         --destination)
             [[ $# -lt 2 ]] && { error "--destination requires an argument"; exit 1; }
             DESTINATION="$2"; shift 2 ;;
+        --clean)
+            CLEAN=true; shift ;;
         --help|-h)
             show_help ;;
         *)
@@ -279,10 +379,13 @@ echo "  Scheme         : ${SCHEME}"
 echo "  Test target    : ${TEST_TARGET}"
 echo "  Destination    : ${DESTINATION}"
 [ -n "$ONLY_TESTING" ] && echo "  Filter         : ${ONLY_TESTING}"
+[ "$CLEAN" = "true" ] && echo "  Clean          : yes (full rebuild)"
 echo ""
 
-CMD=(
-    xcodebuild test
+CMD=(xcodebuild)
+[ "$CLEAN" = "true" ] && CMD+=(clean)
+CMD+=(
+    test
     -project "${XCODEPROJ}"
     -scheme "${SCHEME}"
     -destination "${DESTINATION}"

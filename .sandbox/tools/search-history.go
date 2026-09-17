@@ -10,7 +10,8 @@
 //   Filters:  -role user|assistant|tool, -tool <name>, -after/-before <YYYY-MM-DD> (local TZ), -i, -human
 //   Scope:    -project <name> (default: workspace, "all" for all projects), -dir <path> (extra JSONL dir)
 //   Display:  -max <n> (default: 50, 0=unlimited), -context <n> (default: 200, 0=full), -no-color
-//   Output:   -csv (CSV format), -tsv (TSV format). Labels auto-detect Japanese locale (LANG).
+//   Output:   -csv (CSV format), -tsv (TSV format), -json (JSON, for editor tooling; search results
+//             and -session view only). Labels auto-detect Japanese locale (LANG).
 //
 //   -human filters to only actual human-typed input, excluding tool_result, IDE events, system reminders.
 //   -stats shows message type breakdown. Combine with -daily for per-day data, -csv/-tsv for export.
@@ -67,6 +68,7 @@
 //   -no-color        カラー出力を無効化
 //   -csv             CSV形式で出力
 //   -tsv             TSV形式で出力（タブ区切り）
+//   -json            JSON形式で出力（エディタ連携用。検索結果と -session 表示のみ対応）
 //   ※ ラベルは LANG 環境変数が ja を含む場合、自動的に日本語になる
 //
 // 日付フィルタの動作:
@@ -130,6 +132,50 @@ type Match struct {
 	MatchLine   string
 }
 
+// JSONMatch is the -json output shape for a search result, consumed by
+// editor tooling (e.g. a VS Code extension) instead of the colored text view.
+type JSONMatch struct {
+	SessionID string `json:"sessionId"`
+	Timestamp string `json:"timestamp"`
+	Role      string `json:"role"`
+	Snippet   string `json:"snippet"`
+}
+
+// SessionEntry is the -json output shape for one message in -session view.
+type SessionEntry struct {
+	Timestamp string `json:"timestamp"`
+	Role      string `json:"role"`
+	Text      string `json:"text"`
+}
+
+// matchesToJSON converts matches to their JSON output shape, applying the
+// same max-results limit as the text view (0 = unlimited).
+func matchesToJSON(matches []Match, max int) []JSONMatch {
+	out := []JSONMatch{}
+	for i, m := range matches {
+		if max > 0 && i >= max {
+			break
+		}
+		out = append(out, JSONMatch{
+			SessionID: m.SessionID,
+			Timestamp: m.Timestamp.Format(time.RFC3339),
+			Role:      m.Role,
+			Snippet:   m.MatchLine,
+		})
+	}
+	return out
+}
+
+// emitJSON writes v to stdout as indented JSON.
+func emitJSON(v interface{}) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	var (
 		roleFilter    string
@@ -150,6 +196,7 @@ func main() {
 	var daily bool
 	var outputCSV bool
 	var outputTSV bool
+	var outputJSON bool
 	var extraDir string
 
 	flag.StringVar(&roleFilter, "role", "", "Filter by role: user, assistant, or tool")
@@ -163,6 +210,7 @@ func main() {
 	flag.BoolVar(&daily, "daily", false, "Show daily breakdown (use with -stats)")
 	flag.BoolVar(&outputCSV, "csv", false, "Output in CSV format")
 	flag.BoolVar(&outputTSV, "tsv", false, "Output in TSV format")
+	flag.BoolVar(&outputJSON, "json", false, "Output in JSON format (search results and -session view; for editor tooling)")
 	flag.IntVar(&maxResults, "max", 50, "Max results to show (0 = unlimited)")
 	flag.IntVar(&contextChars, "context", 200, "Characters of context around match / per line in session view")
 	flag.BoolVar(&ignoreCase, "i", false, "Case-insensitive search")
@@ -225,7 +273,7 @@ func main() {
 	}
 
 	if sessionFilter != "" {
-		viewSession(projectDirs, sessionFilter, roleFilter, toolFilter, maxResults, contextChars, afterTime, beforeTime, humanOnly)
+		viewSession(projectDirs, sessionFilter, roleFilter, toolFilter, maxResults, contextChars, afterTime, beforeTime, humanOnly, outputJSON)
 		return
 	}
 
@@ -275,8 +323,17 @@ func main() {
 	})
 
 	if len(matches) == 0 {
+		if outputJSON {
+			emitJSON([]JSONMatch{})
+			return
+		}
 		fmt.Fprintf(os.Stderr, "%sNo matches found%s (searched %d files, %d entries)\n",
 			colorDim, colorReset, totalFiles, totalEntries)
+		return
+	}
+
+	if outputJSON {
+		emitJSON(matchesToJSON(matches, maxResults))
 		return
 	}
 
@@ -318,7 +375,7 @@ func main() {
 	}
 }
 
-func viewSession(projectDirs []string, sessionPrefix, roleFilter, toolFilter string, maxResults, contextChars int, after, before time.Time, humanOnly bool) {
+func viewSession(projectDirs []string, sessionPrefix, roleFilter, toolFilter string, maxResults, contextChars int, after, before time.Time, humanOnly, jsonOut bool) {
 	// Find session file by prefix match
 	var sessionPath string
 	for _, dir := range projectDirs {
@@ -348,16 +405,22 @@ func viewSession(projectDirs []string, sessionPrefix, roleFilter, toolFilter str
 	defer f.Close()
 
 	sessionID := strings.TrimSuffix(filepath.Base(sessionPath), ".jsonl")
-	fmt.Printf("%s── session: %s ──%s\n\n", colorCyan, sessionID, colorReset)
+	if !jsonOut {
+		fmt.Printf("%s── session: %s ──%s\n\n", colorCyan, sessionID, colorReset)
+	}
 
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
 
+	jsonEntries := []SessionEntry{}
 	shown := 0
+	truncatedByMax := false
+
+sessionLoop:
 	for scanner.Scan() {
 		if maxResults > 0 && shown >= maxResults {
-			fmt.Printf("\n%s(showing first %d entries, use -max 0 for unlimited)%s\n", colorDim, maxResults, colorReset)
-			return
+			truncatedByMax = true
+			break sessionLoop
 		}
 
 		var entry Entry
@@ -401,10 +464,18 @@ func viewSession(projectDirs []string, sessionPrefix, roleFilter, toolFilter str
 				if roleFilter != "" && roleFilter != "tool" {
 					continue
 				}
-				fmt.Printf("  %s%s%s %s%-12s%s %s\n",
-					colorDim, tsStr, colorReset,
-					colorCyan, "tool:"+tt.name, colorReset,
-					truncateView(tt.text, contextChars))
+				if jsonOut {
+					jsonEntries = append(jsonEntries, SessionEntry{
+						Timestamp: ts.Format(time.RFC3339),
+						Role:      "tool:" + tt.name,
+						Text:      tt.text,
+					})
+				} else {
+					fmt.Printf("  %s%s%s %s%-12s%s %s\n",
+						colorDim, tsStr, colorReset,
+						colorCyan, "tool:"+tt.name, colorReset,
+						truncateView(tt.text, contextChars))
+				}
 				shown++
 			}
 		}
@@ -429,21 +500,37 @@ func viewSession(projectDirs []string, sessionPrefix, roleFilter, toolFilter str
 		// Collapse whitespace
 		text = strings.Join(strings.Fields(text), " ")
 
-		roleColor := colorGreen
-		if role == "assistant" {
-			roleColor = colorYellow
+		if jsonOut {
+			jsonEntries = append(jsonEntries, SessionEntry{
+				Timestamp: ts.Format(time.RFC3339),
+				Role:      role,
+				Text:      text,
+			})
+		} else {
+			roleColor := colorGreen
+			if role == "assistant" {
+				roleColor = colorYellow
+			}
+
+			// Truncate long messages for overview
+			display := truncateView(text, contextChars)
+
+			fmt.Printf("  %s%s%s %s%-12s%s %s\n",
+				colorDim, tsStr, colorReset,
+				roleColor, role, colorReset,
+				display)
 		}
-
-		// Truncate long messages for overview
-		display := truncateView(text, contextChars)
-
-		fmt.Printf("  %s%s%s %s%-12s%s %s\n",
-			colorDim, tsStr, colorReset,
-			roleColor, role, colorReset,
-			display)
 		shown++
 	}
 
+	if jsonOut {
+		emitJSON(jsonEntries)
+		return
+	}
+
+	if truncatedByMax {
+		fmt.Printf("\n%s(showing first %d entries, use -max 0 for unlimited)%s\n", colorDim, maxResults, colorReset)
+	}
 }
 
 func truncateView(s string, n int) string {

@@ -7,15 +7,29 @@
 #   ./xcode-build.sh [options]
 #
 # Options:
-#   --project <path>         Path to the .xcodeproj (auto-detected under WORKSPACE_DIR if omitted)
+#   --project <path>         Path to the .xcodeproj. Absolute, or relative to WORKSPACE_DIR
+#                             (auto-detected under WORKSPACE_DIR if omitted, but only up to
+#                             2 levels deep -- pass this explicitly for a project nested
+#                             deeper, e.g. inside a sub-repo's own ios/ subdirectory)
 #   --scheme <scheme>        Xcode scheme name (default: the .xcodeproj's base name)
 #   --destination <dest>     xcodebuild destination (default: iOS Simulator, latest iPhone)
+#   --clean                  Run `xcodebuild clean build` instead of a plain incremental
+#                             build. Use this when you suspect xcodebuild is reusing stale
+#                             build products instead of picking up a source change -- e.g.
+#                             a symptom like "CoreData: warning: Multiple NSEntityDescriptions
+#                             claim the NSManagedObject subclass ..." in the output, or a
+#                             build that finishes suspiciously fast with no compile steps in
+#                             the log even after editing a file. Takes noticeably longer
+#                             (a full rebuild, not incremental).
 #   --help, -h               Show this help
 #
 # Examples:
 #   ./xcode-build.sh
 #   ./xcode-build.sh --project /path/to/MyApp.xcodeproj
+#   ./xcode-build.sh --project myapp/ios/MyApp.xcodeproj  # relative to WORKSPACE_DIR; needed
+#                                                          # when nested deeper than auto-detect's 2 levels
 #   ./xcode-build.sh --scheme MyApp
+#   ./xcode-build.sh --clean  # force a full rebuild if stale build products are suspected
 
 # ---
 # xcode-build.sh
@@ -26,15 +40,29 @@
 #   ./xcode-build.sh [options]
 #
 # Options:
-#   --project <path>         .xcodeproj のパス（未指定時は WORKSPACE_DIR 内を自動検出）
+#   --project <path>         .xcodeproj のパス。絶対パス、または WORKSPACE_DIR からの相対パス
+#                             （未指定時は WORKSPACE_DIR 内を自動検出するが、深さ2階層までしか
+#                             探索しない -- サブリポジトリの ios/ 配下など、それより深い場所に
+#                             ある場合は明示的に指定すること）
 #   --scheme <scheme>        Xcode スキーム名（デフォルト: .xcodeproj のベース名）
 #   --destination <dest>     xcodebuild destination（デフォルト: iOS Simulator, 最新 iPhone）
+#   --clean                  素の増分ビルドの代わりに `xcodebuild clean build` を実行する。
+#                             ソースの変更をxcodebuildが拾えず古いビルド成果物を使い回して
+#                             いる疑いがある時に使う -- 例えば出力に「CoreData: warning:
+#                             Multiple NSEntityDescriptions claim the NSManagedObject
+#                             subclass ...」のような症状が出ている、ファイルを編集した
+#                             はずなのにログにコンパイル関連の行が一つもなく不自然に速く
+#                             終わる、などのサイン。フルリビルドになるため明確に時間が
+#                             長くなる。
 #   --help, -h               このヘルプを表示
 #
 # Examples:
 #   ./xcode-build.sh
 #   ./xcode-build.sh --project /path/to/MyApp.xcodeproj
+#   ./xcode-build.sh --project myapp/ios/MyApp.xcodeproj  # WORKSPACE_DIR からの相対パス。
+#                                                          # 自動検出の2階層より深い場合に必要
 #   ./xcode-build.sh --scheme MyApp
+#   ./xcode-build.sh --clean  # 古いビルド成果物が疑われる時にフルリビルドを強制する
 
 set -euo pipefail
 
@@ -66,6 +94,7 @@ fi
 XCODEPROJ=""
 SCHEME=""
 DESTINATION=""
+CLEAN=false
 
 # ────────────────────────────────────────────
 # Argument parsing
@@ -86,6 +115,8 @@ while [[ $# -gt 0 ]]; do
         --destination)
             [[ $# -lt 2 ]] && { error "--destination requires an argument"; exit 1; }
             DESTINATION="$2"; shift 2 ;;
+        --clean)
+            CLEAN=true; shift ;;
         --help|-h)
             show_help ;;
         *)
@@ -164,10 +195,13 @@ header "Running Xcode build"
 echo "  Project      : ${XCODEPROJ}"
 echo "  Scheme       : ${SCHEME}"
 echo "  destination  : ${DESTINATION}"
+[ "$CLEAN" = "true" ] && echo "  Clean        : yes (full rebuild)"
 echo ""
 
-CMD=(
-    xcodebuild build
+CMD=(xcodebuild)
+[ "$CLEAN" = "true" ] && CMD+=(clean)
+CMD+=(
+    build
     -project "${XCODEPROJ}"
     -scheme "${SCHEME}"
     -destination "${DESTINATION}"

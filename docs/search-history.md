@@ -103,6 +103,7 @@ You can also run the tool directly without asking AI.
 | `-max <n>` | Maximum number of results | 50 (0 = unlimited) |
 | `-context <n>` | Characters per entry | 200 (0 = full text) |
 | `-no-color` | Disable color output | — |
+| `-json` | Output in JSON format, for editor tooling (search results and `-session` view only) | — |
 
 ### Stats Mode Options (combine with `-stats`)
 

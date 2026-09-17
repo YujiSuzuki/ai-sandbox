@@ -51,6 +51,8 @@ Details: [docs/host-access.md](../../docs/host-access.md)
 | `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) | Cross-platform |
 | `check-xcode.sh` | Check whether Xcode is installed and usable (read-only) | Cross-platform (macOS-specific checks) |
 | `xcode-simulator-screenshot.sh` | Build, install, and launch an iOS app on a Simulator, then capture a screenshot (or, via `--ui-test`, a specific screen beyond the launch screen) | macOS only |
+| `restart-simulator.sh` | Shut down all Simulator devices and/or fully quit + reopen Simulator.app | macOS only |
+| `simulator-app-reset.sh` | Uninstall one app from a Simulator device and/or reset one of its privacy grants (e.g. notifications), without restarting the whole Simulator | macOS only |
 
 ---
 
@@ -64,12 +66,22 @@ Auto-detects `.xcodeproj` and runs the build/test/archive.
 # Auto-detect (searches within 2 levels of WORKSPACE_DIR)
 ./xcode-build.sh
 
-# Specify project explicitly
+# Specify project explicitly (absolute path)
 ./xcode-build.sh --project /path/to/MyApp.xcodeproj
+
+# Specify project explicitly (relative to WORKSPACE_DIR — also works, and is
+# the simplest form when the project sits deeper than auto-detect reaches,
+# e.g. a nested sub-repo's own ios/ subdirectory)
+./xcode-build.sh --project myapp/ios/MyApp.xcodeproj
 
 # Specify scheme (default: base name of .xcodeproj)
 ./xcode-build.sh --scheme MyAppDebug
 ```
+
+> Auto-detect only searches **2 levels** under `WORKSPACE_DIR` (`find -maxdepth 2`). A project
+> nested deeper — e.g. `WORKSPACE_DIR/myapp/ios/MyApp.xcodeproj` (3 levels: `myapp` → `ios` →
+> `MyApp.xcodeproj`) inside a sub-repo — won't be found automatically and needs an explicit
+> `--project`, even though it's still "under the workspace" in the everyday sense.
 
 ### `--only` option in xcode-test.sh
 
@@ -104,6 +116,27 @@ struct FeatureTests {
 ```
 
 UI tests are skipped by default. Pass `--no-skip-ui-tests` to include them.
+
+**Single test method, when the XCTest class shares its name with its target**: `--only`'s
+2-segment `Class/Method` shorthand only works because `xcodebuild -only-testing:`'s first
+segment is normally read as the *target* — the script's 2-segment example works because the
+target name (`MyAppTests`) and class name (`MyFeatureTests`) differ, so xcodebuild falls back to
+reading the first segment as a class. But a UI test target's class is conventionally named the
+same as its target (e.g. class `MyAppUITests` inside target `MyAppUITests`), and in that case the
+2-segment form is read as `Target/Class` and silently matches 0 tests — the class-name segment
+is missing. Pass all **three** segments instead:
+
+```bash
+# ❌ 0 tests — read as Target=MyAppUITests / Class=testSomething (no such class)
+./xcode-test.sh --no-skip-ui-tests --test-target MyAppUITests --only "MyAppUITests/testSomething"
+
+# ✅ Target/Class/Method
+./xcode-test.sh --no-skip-ui-tests --test-target MyAppUITests --only "MyAppUITests/MyAppUITests/testSomething"
+
+# ✅ Same, plus the project nested deeper than auto-detect's 2 levels (see above)
+./xcode-test.sh --project myapp/ios/MyApp.xcodeproj --no-skip-ui-tests \
+  --test-target MyAppUITests --only "MyAppUITests/MyAppUITests/testSomething"
+```
 
 ### Checking build errors
 
@@ -326,3 +359,69 @@ the test's own `waitForExistence` controls timing. This mode's build+test run ne
 headroom than a plain build, so this script declares `@timeout: 600` — after pulling a
 change to this script, re-run `hostmcp tools sync` on the host to approve it, and pass
 `--timeout 600` (CLI) or `client_timeout_seconds: 600` (`run_host_tool`) when calling it.
+
+---
+
+## restart-simulator.sh
+
+> **macOS only.** Requires Xcode / Command Line Tools (`xcrun`) on the host OS.
+
+Shuts down all booted Simulator devices (`xcrun simctl shutdown all`) and, by default,
+also fully quits Simulator.app (without relaunching it). Use it when a Simulator is
+stuck — frozen UI, stale app state, a device that won't boot — and a normal relaunch
+from Xcode doesn't clear it.
+
+> **Impact is host-wide, not project-scoped.** Simulator.app and the CoreSimulator
+> daemon are shared by the whole Mac. Running this interrupts any Simulator session
+> the developer has open for unrelated work (other projects, manual testing, an
+> attached debugger), not just this project's.
+
+> **Reopening is opt-in on purpose.** `xcode-test.sh` (`xcodebuild test`) and
+> `xcode-simulator-screenshot.sh` (`xcrun simctl bootstatus -b` + `simctl
+> install`/`launch`) both boot/use the target device headlessly regardless of
+> whether Simulator.app's GUI is open, so running this script right before a
+> build/test needs no reopen. Pass `--reopen` only when you want to look at the
+> simulator yourself afterward.
+
+```bash
+# Shut down all devices and quit Simulator.app (stays closed)
+./restart-simulator.sh
+
+# Only shut down devices -- leaves Simulator.app running untouched
+./restart-simulator.sh --shutdown-only
+
+# Shut down devices, quit, and relaunch Simulator.app -- for manual/visual use
+./restart-simulator.sh --reopen
+
+# Force-kill a frozen Simulator.app instead of a graceful quit
+./restart-simulator.sh --force
+```
+
+---
+
+## simulator-app-reset.sh
+
+> **macOS only.** Requires Xcode / Command Line Tools (`xcrun`) on the host OS.
+
+Uninstalls one app from a Simulator device and/or resets one of its privacy permission
+grants (notifications, camera, photos, ...), without restarting the whole Simulator.
+
+> **Why this exists.** iOS/iPadOS remembers a permission decision (e.g. "Allow"/"Don't
+> Allow" on the notification prompt) per bundle ID in the device's privacy database, not
+> inside the app's own container. Reinstalling the same app via a normal build+install
+> (`xcode-build.sh`, `xcode-test.sh`, `xcode-simulator-screenshot.sh`) does **not** clear
+> that decision. A UI test (or manual check) that needs to see the permission prompt
+> again — to verify what a fresh user actually sees, or to unblock a run stuck on a
+> stale "Don't Allow" from an earlier attempt — has no way back to a clean state without
+> this script.
+
+```bash
+# Uninstall the app entirely (also clears every privacy grant for it)
+./simulator-app-reset.sh --bundle-id com.example.MyApp --uninstall
+
+# Keep the app installed, just re-arm the notification permission prompt
+./simulator-app-reset.sh --bundle-id com.example.MyApp --reset-privacy notifications
+
+# Both at once, on a specific device
+./simulator-app-reset.sh --bundle-id com.example.MyApp --device <udid> --uninstall --reset-privacy all
+```

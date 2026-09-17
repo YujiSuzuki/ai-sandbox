@@ -51,6 +51,8 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 | `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） | クロスプラットフォーム |
 | `check-xcode.sh` | Xcodeがインストールされ使用可能な状態か確認（読み取り専用） | クロスプラットフォーム（macOS固有のチェックあり） |
 | `xcode-simulator-screenshot.sh` | iOSアプリをビルドしシミュレータにインストール・起動してスクリーンショットを撮影（`--ui-test`で起動画面より先の特定画面も可） | macOSのみ |
+| `restart-simulator.sh` | 全シミュレータデバイスのシャットダウン、および/またはSimulator.appの完全終了・再起動 | macOSのみ |
+| `simulator-app-reset.sh` | シミュレータ全体を再起動せずに、特定の1アプリだけをアンインストール、および/または通知など個別のプライバシー許可をリセット | macOSのみ |
 
 ---
 
@@ -64,12 +66,21 @@ SHA256 ハッシュで変更を検知するため、**編集のたびに再承�
 # 自動検出（WORKSPACE_DIR の 2 階層以内を検索）
 ./xcode-build.sh
 
-# プロジェクトを明示指定
+# プロジェクトを明示指定（絶対パス）
 ./xcode-build.sh --project /path/to/MyApp.xcodeproj
+
+# プロジェクトを明示指定（WORKSPACE_DIR からの相対パスでも可 -- 自動検出が
+# 届かないより深い場所にプロジェクトがある場合、これが一番簡単な指定方法)
+./xcode-build.sh --project myapp/ios/MyApp.xcodeproj
 
 # スキームを指定（デフォルト: .xcodeproj のベース名）
 ./xcode-build.sh --scheme MyAppDebug
 ```
+
+> 自動検出は `WORKSPACE_DIR` 配下**2階層まで**しか探索しません(`find -maxdepth 2`)。
+> `WORKSPACE_DIR/myapp/ios/MyApp.xcodeproj` のように、サブリポジトリ内の`ios/`配下など
+> それより深い場所(myapp→ios→MyApp.xcodeprojの3階層)にある場合、「ワークスペース配下」
+> ではあっても自動検出されないため、`--project`を明示的に指定する必要があります。
 
 ### xcode-test.sh の `--only` オプション
 
@@ -104,6 +115,27 @@ struct FeatureTests {
 ```
 
 UI テストは `--no-skip-ui-tests` を付けると実行されます（デフォルトはスキップ）。
+
+**特定のテストメソッドを1つだけ実行したい場合(XCTestのクラス名とターゲット名が同じ場合)**:
+`--only`の2段形式「Class/Method」は、`xcodebuild -only-testing:`が最初のセグメントを
+常に*ターゲット*名として解釈することを前提にした挙動です。上のスクリプトの例が動くのは
+ターゲット名(`MyAppTests`)とクラス名(`MyFeatureTests`)が異なるため、xcodebuildが
+最初のセグメントをクラス名として解釈し直してくれるからです。しかしUIテストのクラスは
+慣習的にターゲットと同じ名前が付けられる(例: ターゲット`MyAppUITests`の中のクラス
+`MyAppUITests`)ため、その場合は2段形式が`Target/Class`と解釈されてしまい、テストが
+黙って0件になります。3段すべてを指定してください。
+
+```bash
+# ❌ 0件 -- Target=MyAppUITests / Class=testSomething と解釈される(該当クラスなし)
+./xcode-test.sh --no-skip-ui-tests --test-target MyAppUITests --only "MyAppUITests/testSomething"
+
+# ✅ Target/Class/Method
+./xcode-test.sh --no-skip-ui-tests --test-target MyAppUITests --only "MyAppUITests/MyAppUITests/testSomething"
+
+# ✅ さらに、自動検出の2階層より深い場所にあるプロジェクトの場合(上記参照)
+./xcode-test.sh --project myapp/ios/MyApp.xcodeproj --no-skip-ui-tests \
+  --test-target MyAppUITests --only "MyAppUITests/MyAppUITests/testSomething"
+```
 
 ### ビルドエラーの確認
 
@@ -327,3 +359,66 @@ AIに見せられる唯一の経路です。
 このスクリプトへの変更を取り込んだ後は、ホスト上で`hostmcp tools sync`を再実行して承認し、
 呼び出し時は`--timeout 600`（CLI）または`client_timeout_seconds: 600`（`run_host_tool`）を
 渡してください。
+
+---
+
+## restart-simulator.sh
+
+> **macOS専用。** ホストOSに Xcode / Command Line Tools（`xcrun`）が必要です。
+
+起動中の全シミュレータデバイスをシャットダウン（`xcrun simctl shutdown all`）し、デフォルトでは
+Simulator.appも完全終了します（再起動はしません）。シミュレータがフリーズした、アプリの状態が
+壊れた、デバイスが起動しなくなったなど、Xcodeからの通常の再起動では直らない場合に使います。
+
+> **影響範囲はプロジェクト単位ではなくホスト全体です。** Simulator.appとCoreSimulator
+> デーモンはMac全体で共有されています。実行すると、他プロジェクトでの作業や手動テスト、
+> アタッチ中のデバッガなど、このプロジェクト以外で開いているシミュレータセッションも
+> 巻き込んで中断されます。
+
+> **再起動はあえてオプトイン（`--reopen`指定時のみ）にしています。** `xcode-test.sh`
+> （`xcodebuild test`）と`xcode-simulator-screenshot.sh`（`xcrun simctl bootstatus -b` +
+> `simctl install`/`launch`）はどちらもSimulator.appのGUIが開いているかに関わらず
+> ヘッドレスに対象デバイスを起動するため、このスクリプトの直後にビルド/テストを走らせる
+> だけなら再起動は不要です。自分の目でシミュレータを確認したい時だけ`--reopen`を付けて
+> ください。
+
+```bash
+# 全デバイスをシャットダウンし、Simulator.appを終了（そのまま閉じたまま）
+./restart-simulator.sh
+
+# デバイスのシャットダウンのみ（Simulator.appはそのまま起動継続）
+./restart-simulator.sh --shutdown-only
+
+# デバイスをシャットダウンし、Simulator.appを終了してから再起動する（手動確認用）
+./restart-simulator.sh --reopen
+
+# フリーズしたSimulator.appを強制終了する
+./restart-simulator.sh --force
+```
+
+---
+
+## simulator-app-reset.sh
+
+> **macOS専用。** ホストOSに Xcode / Command Line Tools（`xcrun`）が必要です。
+
+シミュレータ全体を再起動せずに、特定の1アプリだけをアンインストール、および/または
+通知・カメラ・写真などのプライバシー許可を個別にリセットします。
+
+> **存在理由。** iOS/iPadOSは通知許可ダイアログの「許可」/「許可しない」といった決定を、
+> アプリのコンテナ内ではなくデバイス側のプライバシーデータベースにbundle ID単位で記憶します。
+> `xcode-build.sh`・`xcode-test.sh`・`xcode-simulator-screenshot.sh`による通常の
+> ビルド→インストールでは、この決定は**クリアされません**。フレッシュユーザーが実際に見る
+> ダイアログを確認したい場合や、以前の実行で「許可しない」のまま止まってしまったUIテストを
+> 復旧したい場合、これをクリーンな状態に戻す手段が他にありませんでした。
+
+```bash
+# アプリを完全にアンインストール(このアプリの全プライバシー許可もクリアされる)
+./simulator-app-reset.sh --bundle-id com.example.MyApp --uninstall
+
+# アプリは残したまま、通知許可ダイアログだけ再度出るようにする
+./simulator-app-reset.sh --bundle-id com.example.MyApp --reset-privacy notifications
+
+# 両方を、デバイスを明示して実行
+./simulator-app-reset.sh --bundle-id com.example.MyApp --device <udid> --uninstall --reset-privacy all
+```

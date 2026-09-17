@@ -129,7 +129,7 @@ def write_json_atomic(target: Path, data) -> None:
 
 # ─── Startup config / 起動設定 ──────────────────────────────────
 
-def _workspace_dir() -> Path:
+def workspace_dir() -> Path:
     return Path(os.environ.get("WORKSPACE", "/workspace"))
 
 
@@ -178,7 +178,7 @@ def load_startup_config() -> dict:
     設定キー名が同じ）。環境変数にも設定ファイルにも値が無ければ
     README.md/README.ja.md/verbose/0 にフォールバックする。
     """
-    config_path = _workspace_dir() / ".sandbox" / "config" / "startup.conf"
+    config_path = workspace_dir() / ".sandbox" / "config" / "startup.conf"
     file_values = parse_simple_conf(config_path)
 
     def resolved(env_name: str, file_key: str, default: str) -> str:
@@ -245,7 +245,7 @@ def print_error(text: str) -> None:
 # ─── Sync-ignore / Sync-ignore ───────────────────────────────────
 
 def load_sync_ignore_patterns() -> list:
-    sync_ignore_file = _workspace_dir() / ".sandbox" / "config" / "sync-ignore"
+    sync_ignore_file = workspace_dir() / ".sandbox" / "config" / "sync-ignore"
     if not sync_ignore_file.is_file():
         return []
     patterns = []
@@ -262,7 +262,7 @@ def matches_sync_ignore(file_path: str) -> bool:
     """Usage: matches_sync_ignore("/workspace/path/to/file")
     使用法: matches_sync_ignore("/workspace/path/to/file")
     """
-    prefix = str(_workspace_dir()) + "/"
+    prefix = str(workspace_dir()) + "/"
     rel_path = file_path[len(prefix):] if file_path.startswith(prefix) else file_path
     filename = os.path.basename(file_path)
 
@@ -302,7 +302,7 @@ def add_sync_ignore_pattern(pattern: str) -> None:
     既に存在しなければ sync-ignore にパターンを追記する（冪等 -- 同じ項目を
     2回トリアージしても重複行が増えない）。
     """
-    sync_ignore_file = _workspace_dir() / ".sandbox" / "config" / "sync-ignore"
+    sync_ignore_file = workspace_dir() / ".sandbox" / "config" / "sync-ignore"
     if sync_ignore_file.is_file() and pattern in sync_ignore_file.read_text().splitlines():
         return
     sync_ignore_file.parent.mkdir(parents=True, exist_ok=True)
@@ -320,7 +320,7 @@ def backup_file(file_path: str, label: str = "") -> str:
 
     ファイルを .sandbox/backups/ にバックアップし、バックアップ先のパスを返す。
     """
-    backup_dir = _workspace_dir() / ".sandbox" / "backups"
+    backup_dir = workspace_dir() / ".sandbox" / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -349,7 +349,7 @@ def cleanup_backups(pattern: str, keep) -> None:
     if keep_n <= 0:
         return
 
-    backup_dir = _workspace_dir() / ".sandbox" / "backups"
+    backup_dir = workspace_dir() / ".sandbox" / "backups"
     if not backup_dir.is_dir():
         return
 

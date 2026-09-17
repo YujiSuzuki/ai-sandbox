@@ -10,6 +10,7 @@ package main
 import (
 	"os"
 	"testing"
+	"time"
 )
 
 // TestClassifyUserMessage verifies that classifyUserMessage correctly categorizes
@@ -244,6 +245,56 @@ func TestIsJapaneseLocale(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestMatchesToJSON verifies that matchesToJSON converts Match values into the
+// -json output shape and respects the max-results limit.
+// TestMatchesToJSON は matchesToJSON が Match を -json 出力形式へ変換し、
+// 件数上限を正しく反映することを検証する。
+func TestMatchesToJSON(t *testing.T) {
+	ts := time.Date(2026, 2, 9, 14, 32, 0, 0, time.UTC)
+	matches := []Match{
+		{SessionID: "sess-1", Timestamp: ts, Role: "user", MatchLine: "hello world"},
+		{SessionID: "sess-1", Timestamp: ts.Add(time.Minute), Role: "assistant", MatchLine: "hi there"},
+		{SessionID: "sess-2", Timestamp: ts.Add(2 * time.Minute), Role: "tool:Bash", MatchLine: "[Bash] git status"},
+	}
+
+	t.Run("empty input returns empty (non-nil) slice", func(t *testing.T) {
+		got := matchesToJSON(nil, 0)
+		if got == nil {
+			t.Fatal("matchesToJSON(nil, 0) = nil, want non-nil empty slice")
+		}
+		if len(got) != 0 {
+			t.Errorf("len = %d, want 0", len(got))
+		}
+	})
+
+	t.Run("max=0 returns all matches", func(t *testing.T) {
+		got := matchesToJSON(matches, 0)
+		if len(got) != len(matches) {
+			t.Fatalf("len = %d, want %d", len(got), len(matches))
+		}
+	})
+
+	t.Run("max limits the result count", func(t *testing.T) {
+		got := matchesToJSON(matches, 2)
+		if len(got) != 2 {
+			t.Fatalf("len = %d, want 2", len(got))
+		}
+	})
+
+	t.Run("fields map from Match", func(t *testing.T) {
+		got := matchesToJSON(matches, 0)
+		want := JSONMatch{
+			SessionID: "sess-1",
+			Timestamp: ts.Format(time.RFC3339),
+			Role:      "user",
+			Snippet:   "hello world",
+		}
+		if got[0] != want {
+			t.Errorf("got[0] = %+v, want %+v", got[0], want)
+		}
+	})
 }
 
 // TestStatsCount verifies TotalUser and Total calculations.

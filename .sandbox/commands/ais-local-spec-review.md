@@ -120,6 +120,13 @@ Check within each spec document for contradictions or ambiguities that would con
 - Numbered items that are out of order, skip numbers, or have duplicate numbers
 - A phase or step listed as a prerequisite for itself (directly or transitively)
 - Behavior described as both synchronous and asynchronous in different sections without reconciliation
+- The same fact, wording, label, or numeric value restated in more than one place within the document
+  that no longer agree with each other (e.g., a confirmation dialog's text quoted differently in two
+  sections, a cross-reference label that doesn't match how the referenced section actually labels
+  itself) — a common byproduct of incremental edits that touched only one occurrence
+- A status/date/version stamp (e.g. "as of YYYY-MM-DD", "Status: ...") that no longer matches the
+  content it's attached to (e.g. content describes something as already shipped while the stamp
+  still reads "idea stage", or the stamp wasn't updated when the content nearby was rewritten)
 
 Report format:
 ```

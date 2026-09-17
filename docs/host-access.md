@@ -116,6 +116,8 @@ A tool that regularly needs more time than the global `timeout` (e.g. `xcode-tes
 | `check-gvisor.sh` | Check whether gVisor (runsc) is usable as a Docker runtime (read-only) |
 | `check-xcode.sh` | Check whether Xcode is installed and usable (read-only) |
 | `xcode-simulator-screenshot.sh` | Build, install, and launch an iOS app on a Simulator, then capture a screenshot |
+| `restart-simulator.sh` | Shut down all Simulator devices and/or fully quit + reopen Simulator.app (macOS only) |
+| `simulator-app-reset.sh` | Uninstall one app from a Simulator device and/or reset one of its privacy grants (macOS only) |
 
 > See [.sandbox/host-tools/README.md](../.sandbox/host-tools/README.md) for full usage details of each tool.
 

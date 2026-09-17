@@ -64,9 +64,9 @@ import re
 import sys
 from pathlib import Path
 
-from _python_common import is_lang_ja, msg, pick
+from _python_common import is_lang_ja, msg, pick, workspace_dir
 
-WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent
+WORKSPACE_ROOT = workspace_dir()
 COMMANDS_SRC_DIR = WORKSPACE_ROOT / ".sandbox" / "commands"
 COMMANDS_DIR = WORKSPACE_ROOT / ".claude" / "commands"
 
@@ -121,6 +121,17 @@ def extract_field(path: Path, field: str) -> str:
     return "\n".join(matches)
 
 
+def is_command_file(path: Path) -> bool:
+    """Front matter (a leading `---` block) distinguishes a real command file
+    from plain docs (README.md, README.ja.md) that also live in COMMANDS_SRC_DIR."""
+    lines = path.read_text().split("\n")
+    return bool(lines) and lines[0].startswith("---")
+
+
+def command_files() -> list:
+    return sorted(f for f in COMMANDS_SRC_DIR.glob("*.md") if is_command_file(f))
+
+
 def get_description(path: Path, lang_ja: bool) -> str:
     if lang_ja:
         ja_desc = extract_field(path, "description-ja")
@@ -150,7 +161,7 @@ def list_commands(lang_ja: bool) -> None:
             f"コマンドディレクトリが見つかりません: {COMMANDS_SRC_DIR}")
         sys.exit(1)
 
-    files = sorted(COMMANDS_SRC_DIR.glob("*.md"))
+    files = command_files()
     if not files:
         msg(lang_ja, f"No commands available in {COMMANDS_SRC_DIR}",
             f"利用可能なコマンドがありません: {COMMANDS_SRC_DIR}")
@@ -177,7 +188,7 @@ def list_commands(lang_ja: bool) -> None:
 def install_command(name: str, lang_ja: bool) -> int:
     src = COMMANDS_SRC_DIR / f"{name}.md"
 
-    if not src.is_file():
+    if not src.is_file() or not is_command_file(src):
         msg(lang_ja, f"Command not found: {name} (no file at {src})",
             f"コマンドが見つかりません: {name} ({src} が存在しません)")
         return 1
@@ -200,7 +211,7 @@ def install_command(name: str, lang_ja: bool) -> int:
 
 
 def install_all(lang_ja: bool) -> None:
-    files = sorted(COMMANDS_SRC_DIR.glob("*.md"))
+    files = command_files()
     if not files:
         msg(lang_ja, "No commands available to install", "インストール可能なコマンドがありません")
         sys.exit(0)
@@ -247,7 +258,7 @@ def uninstall_commands(lang_ja: bool) -> None:
 # ─── Interactive selection / 対話選択 ────────────────────────────────────────
 
 def interactive_select(lang_ja: bool) -> None:
-    files = sorted(COMMANDS_SRC_DIR.glob("*.md"))
+    files = command_files()
     if not files:
         msg(lang_ja, "No commands available to install", "インストール可能なコマンドがありません")
         sys.exit(0)

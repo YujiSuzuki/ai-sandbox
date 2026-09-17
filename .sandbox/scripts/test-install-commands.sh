@@ -92,7 +92,7 @@ trap cleanup EXIT
 # Helper to run script in test workspace
 # テストワークスペース内でスクリプトを実行するヘルパー
 run_script() {
-    "$TEST_DIR/.sandbox/scripts/$(basename "$SCRIPT")" "$@"
+    WORKSPACE="$TEST_DIR" "$TEST_DIR/.sandbox/scripts/$(basename "$SCRIPT")" "$@"
 }
 
 # ─── Tests / テスト ────────────────────────────────────────────────────
@@ -538,6 +538,48 @@ EOF
     cleanup
 }
 
+# Test: Files without front matter (e.g. README.md) are not treated as commands
+# テスト: フロントマターのないファイル（README.md等）はコマンド扱いされない
+test_non_command_files_excluded() {
+    echo ""
+    echo "=== Test: Files without front matter are excluded ==="
+
+    setup
+
+    cat > "$TEST_DIR/.sandbox/commands/README.md" << 'EOF'
+# AI-Sandbox Built-in Custom Commands
+This documents the commands in this directory, it is not one itself.
+EOF
+
+    local list_output
+    list_output=$(run_script --list 2>&1)
+
+    if echo "$list_output" | grep -q "/README"; then
+        fail "--list included README.md as a command"
+    else
+        pass "--list excludes README.md"
+    fi
+
+    run_script --all > /dev/null 2>&1
+
+    if [ -f "$TEST_DIR/.claude/commands/README.md" ]; then
+        fail "--all installed README.md as a command"
+    else
+        pass "--all does not install README.md"
+    fi
+
+    local exit_code=0
+    run_script README > /dev/null 2>&1 || exit_code=$?
+
+    if [ "$exit_code" -ne 0 ]; then
+        pass "Explicit install of README by name returns error"
+    else
+        fail "Explicit install of README by name did not return error"
+    fi
+
+    cleanup
+}
+
 # ─── Run all tests / 全テスト実行 ─────────────────────────────
 
 main() {
@@ -563,6 +605,7 @@ main() {
     test_list_ja_description
     test_localize_no_ja_field
     test_localize_no_space_after_colon_untouched
+    test_non_command_files_excluded
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

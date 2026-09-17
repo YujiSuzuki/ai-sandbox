@@ -117,6 +117,8 @@ host_access:
 | `check-gvisor.sh` | gVisor(runsc)をDockerランタイムとして使える状態か確認（読み取り専用） |
 | `check-xcode.sh` | Xcodeがインストールされ使用可能な状態か確認（読み取り専用） |
 | `xcode-simulator-screenshot.sh` | iOSアプリをビルドしシミュレータにインストール・起動してスクリーンショットを撮影 |
+| `restart-simulator.sh` | 全シミュレータデバイスのシャットダウン、および/またはSimulator.appの完全終了・再起動（macOSのみ） |
+| `simulator-app-reset.sh` | シミュレータから特定の1アプリをアンインストール、および/またはプライバシー許可をリセット（macOSのみ） |
 
 > 各ツールの詳しい使い方は [.sandbox/host-tools/README.ja.md](../.sandbox/host-tools/README.ja.md) を参照してください。
 
